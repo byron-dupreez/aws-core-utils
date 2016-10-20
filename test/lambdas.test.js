@@ -15,17 +15,17 @@ const getFunctionName = lambdas.getFunctionName;
 const getFunctionVersion = lambdas.getFunctionVersion;
 const getFunctionNameVersionAndAlias = lambdas.getFunctionNameVersionAndAlias;
 const getAlias = lambdas.getAlias;
-const getInvokedFunctionArn = lambdas.getInvokedFunctionArn;
+//const getInvokedFunctionArn = lambdas.getInvokedFunctionArn;
 const getInvokedFunctionArnFunctionName = lambdas.getInvokedFunctionArnFunctionName;
 
-const Strings = require('core-functions/strings');
-const isBlank = Strings.isBlank;
-const isNotBlank = Strings.isNotBlank;
-const trim = Strings.trim;
-const trimOrEmpty = Strings.trimOrEmpty;
+// const Strings = require('core-functions/strings');
+// const isBlank = Strings.isBlank;
+// const isNotBlank = Strings.isNotBlank;
+// const trim = Strings.trim;
+// const trimOrEmpty = Strings.trimOrEmpty;
 
 const samples = require('./samples');
-const sampleInvokedFunctionArn = samples.sampleInvokedFunctionArn;
+//const sampleInvokedFunctionArn = samples.sampleInvokedFunctionArn;
 const sampleAwsContext = samples.sampleAwsContext;
 
 function shorten(s) {

@@ -1,5 +1,12 @@
 'use strict';
 
+/**
+ * Utilities for working with AWS Lambda - enables extraction of function names, versions and, most importantly, aliases
+ * from AWS contexts and their invoked function ARNs.
+ * @module aws-core-utils/lambdas.js
+ * @author Byron du Preez
+ */
+
 module.exports = {
   getFunctionName: getFunctionName,
   getFunctionVersion: getFunctionVersion,

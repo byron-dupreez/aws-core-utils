@@ -1,4 +1,4 @@
-# aws-core-utils v0.9.0
+# aws-core-utils v1.0.0
 
 Core utilities for working with Amazon Web Services (AWS), including arns, regions, stages, etc.
 
@@ -12,7 +12,10 @@ Currently includes:
     - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources (primarily for 
     AWS Lambda usage).
 - lambdas.js 
-    - Utilities for working with AWS Lambdas.
+    - Utilities for working with AWS Lambda, which enable extraction of function names, versions and, most importantly, 
+    aliases from AWS contexts and their invoked function ARNs.
+- aws-errors.js
+    - Utilities for working with AWS errors.
 
 This module is exported as a [Node.js](https://nodejs.org/) module.
 
@@ -34,6 +37,12 @@ const regions = require('aws-core-utils/regions');
 
 // To derive stages from AWS events 
 const stages = require('aws-core-utils/stages');
+
+// To use the L from AWS events 
+const lambdas = require('aws-core-utils/lambdas');
+
+// To use the AWS errors utilities 
+const awsErros = require('aws-core-utils/aws-errors');
 ```
 
 ## Unit tests
@@ -54,3 +63,14 @@ $ tape test/*.js
 ```
 
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
+
+## Changes
+### 0.9.0
+- Initial commit
+
+### 1.0.0
+- Completed changes needed to release 1.0.0
+- Added unit tests for stages.js
+- Simplified regions.js API down to relevant methods
+- Fixed defects attempting to source awsRegion and eventSourceARN from event instead of Kinesis records within event.
+- Patched repository in package.json

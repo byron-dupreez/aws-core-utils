@@ -1,6 +1,6 @@
 {
   "name": "aws-core-utils",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "Core utilities for working with Amazon Web Services (AWS), including arns, regions, stages, lambdas, etc.",
   "author": "Byron du Preez",
   "license": "Apache-2.0",
@@ -11,7 +11,7 @@
     "test": "tape ./test/*.test.js"
   },
   "dependencies": {
-    "core-functions": "^1.1.0"
+    "core-functions": "^1.1.1"
   },
-  "repository": "https://github.com/byron-dupreez/task-utils"
+  "repository": "https://github.com/byron-dupreez/aws-core-utils"
 }

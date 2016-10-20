@@ -13,10 +13,6 @@ const sampleIdentityArn = 'DUMMY_IDENTITY_ARN';
 const sampleFunctionName = "testFunc";
 const latestFunctionVersion = "$LATEST";
 
-const INVOKED_FUNCTION_ARN_REGION = 'INVOKED_FUNCTION_ARN_REGION';
-const EVENT_AWS_REGION = 'EVENT_AWS_REGION';
-const EVENT_SOURCE_ARN_REGION = 'EVENT_SOURCE_ARN_REGION';
-
 const sampleMessage = {
   key1: 'value1',
   key2: 'value2',
@@ -29,10 +25,6 @@ module.exports = {
   sampleFunctionName: sampleFunctionName,
   sampleMessage: sampleMessage,
   latestFunctionVersion: latestFunctionVersion,
-
-  INVOKED_FUNCTION_ARN_REGION: INVOKED_FUNCTION_ARN_REGION,
-  EVENT_AWS_REGION: EVENT_AWS_REGION,
-  EVENT_SOURCE_ARN_REGION: EVENT_SOURCE_ARN_REGION,
 
   // General
   sampleNumberString: sampleNumberString,
@@ -79,14 +71,14 @@ function sampleStreamName(streamNamePrefix, streamNameSuffix) {
 }
 
 function sampleInvokedFunctionArn(invokedFunctionArnRegion, functionName, functionAlias) {
-  const region = isNotBlank(invokedFunctionArnRegion) ? invokedFunctionArnRegion : INVOKED_FUNCTION_ARN_REGION;
+  const region = isNotBlank(invokedFunctionArnRegion) ? invokedFunctionArnRegion : 'IF_ARN_REGION';
   const funcName = isNotBlank(functionName) ? functionName : sampleFunctionName;
   const aliasSuffix = isNotBlank(functionAlias) ? `:${functionAlias}` : '';
   return `arn:aws:lambda:${region}:${sampleAwsAccountId}:function:${funcName}${aliasSuffix}`
 }
 
 function sampleEventSourceArn(eventSourceArnRegion, streamName) {
-  const region = isNotBlank(eventSourceArnRegion) ? eventSourceArnRegion : EVENT_SOURCE_ARN_REGION;
+  const region = isNotBlank(eventSourceArnRegion) ? eventSourceArnRegion : 'EF_ARN_REGION';
   const streamName1 = isNotBlank(streamName) ? streamName : sampleStreamName();
   return `arn:aws:kinesis:${region}:${sampleAwsAccountId}:stream/${streamName1}`;
 }
@@ -123,7 +115,7 @@ function sampleKinesisRecord(partitionKey, data, eventSourceArn, eventAwsRegion)
   const kinesisPartitionKey = isNotBlank(partitionKey) ? partitionKey : uuid.v4();
   const kinesisData = data !== undefined ? data : "SGVsbG8sIHRoaXMgaXMgYSB0ZXN0IDEyMy4=";
   const sequenceNumber = sampleNumberString(56);
-  const awsRegion = eventAwsRegion ? eventAwsRegion : EVENT_AWS_REGION;
+  const awsRegion = eventAwsRegion ? eventAwsRegion : 'EVENT_AWS_REGION';
   return {
     eventID: `shardId-000000000000:${shardId}`,
     eventVersion: "1.0",
