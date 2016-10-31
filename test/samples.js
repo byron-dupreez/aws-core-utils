@@ -38,18 +38,11 @@ module.exports = {
   sampleEventSourceArn: sampleEventSourceArn,
   sampleEventSourceArnFromPrefixSuffix: sampleEventSourceArnFromPrefixSuffix,
   sampleBase64Data: sampleBase64Data,
+  sampleKinesisRecord: sampleKinesisRecord,
   sampleKinesisEventWithSampleRecord: sampleKinesisEventWithSampleRecord,
   sampleKinesisEventWithRecord: sampleKinesisEventWithRecord,
   sampleKinesisEventWithRecords: sampleKinesisEventWithRecords
 };
-
-// const arns = require('../arns');
-// const getArnComponent = arns.getArnComponent;
-// const getArnPartition = arns.getArnPartition;
-// const getArnService = arns.getArnService;
-// const getArnRegion = arns.getArnRegion;
-// const getArnAccountId = arns.getArnAccountId;
-// const getArnResources = arns.getArnResources;
 
 const Strings = require('core-functions/strings');
 //const isBlank = Strings.isBlank;
@@ -116,7 +109,7 @@ function sampleKinesisRecord(partitionKey, data, eventSourceArn, eventAwsRegion)
   const kinesisData = data !== undefined ? data : "SGVsbG8sIHRoaXMgaXMgYSB0ZXN0IDEyMy4=";
   const sequenceNumber = sampleNumberString(56);
   const awsRegion = eventAwsRegion ? eventAwsRegion : 'EVENT_AWS_REGION';
-  return {
+  const event = {
     eventID: `shardId-000000000000:${shardId}`,
     eventVersion: "1.0",
     kinesis: {
@@ -127,10 +120,14 @@ function sampleKinesisRecord(partitionKey, data, eventSourceArn, eventAwsRegion)
     },
     invokeIdentityArn: sampleIdentityArn,
     eventName: "aws:kinesis:record",
-    eventSourceARN: eventSourceArn,
+    //eventSourceARN: eventSourceArn,
     eventSource: "aws:kinesis",
     awsRegion: awsRegion
   };
+  if (eventSourceArn !== undefined) {
+    event.eventSourceARN = eventSourceArn;
+  }
+  return event;
 }
 
 function sampleKinesisEventWithSampleRecord(partitionKey, data, eventSourceArn, eventAwsRegion) {

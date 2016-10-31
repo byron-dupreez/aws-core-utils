@@ -1,19 +1,26 @@
 'use strict';
 
 /**
- * Utilities for working with AWS Lambda - enables extraction of function names, versions and, most importantly, aliases
- * from AWS contexts and their invoked function ARNs.
+ * Utilities for working with AWS Lambda:
+ * - Enables extraction of function names, versions and, most importantly, aliases from AWS contexts and their invoked
+ *   function ARNs.
+ * - Utilities to fail Lambda callbacks with standard app errors to facilitate mapping of errors to HTTP status codes
+ *   on API Gateway.
  * @module aws-core-utils/lambdas.js
+ * @see core-functions/app-errors.js
  * @author Byron du Preez
  */
-
 module.exports = {
+  // Functions to extract Lambda-related information from an AWS context
   getFunctionName: getFunctionName,
   getFunctionVersion: getFunctionVersion,
   getFunctionNameVersionAndAlias: getFunctionNameVersionAndAlias,
   getAlias: getAlias,
   getInvokedFunctionArn: getInvokedFunctionArn,
-  getInvokedFunctionArnFunctionName: getInvokedFunctionArnFunctionName
+  getInvokedFunctionArnFunctionName: getInvokedFunctionArnFunctionName,
+  // Functions to assist with failing an AWS Lambda callback (and preserve the information of the error thrown)
+  failCallback: failCallback,
+  failCallbackForApiGateway: failCallbackForApiGateway
 };
 
 //const LATEST_VERSION = '$LATEST';
@@ -26,6 +33,9 @@ const Strings = require('core-functions/strings');
 const trimOrEmpty = Strings.trimOrEmpty;
 //const isBlank = Strings.isBlank;
 const isNotBlank = Strings.isNotBlank;
+
+const appErrors = require('core-functions/app-errors');
+//const AppError = appErrors.AppError;
 
 /**
  * Returns the function name from the given AWS context
@@ -107,3 +117,51 @@ function getFunctionNameVersionAndAlias(awsContext) {
 function getAlias(awsContext) {
   return getFunctionNameVersionAndAlias(awsContext).alias;
 }
+
+/**
+ * Fails the given AWS Lambda callback with the given error, by first attempting to convert the given error into one of
+ * the standard app errors (see {@linkcode core-functions/app-errors}) and then invoking the given lambdaCallback with a
+ * JSON stringified version of the converted error. The given AWS context is used to add your Lambda's AWS request ID to
+ * the error.
+ *
+ * Note that this function must NOT be used for any Lambda invoked by API Gateway (for these you MUST instead use
+ * the failCallbackForApiGateway function below).
+ *
+ * @see core-functions/app-errors.js
+ *
+ * @param {Function} lambdaCallback - the callback function passed as the last argument to your Lambda function on invocation.
+ * @param {Error} error - the error with which you need to fail your Lambda
+ * @param {Object|undefined} [awsContext] - the AWS context passed as the second argument to your Lambda function on invocation
+ * @param {string|undefined} [message] - an optional message; will use error's message if not specified and needed
+ * @param {string|undefined} [code] - an optional code; will use error's code if not specified and needed
+ */
+function failCallback(lambdaCallback, error, awsContext, message, code) {
+  const appError = appErrors.toAppError(error, message, code);
+  if (awsContext && !appError.awsRequestId) appError.awsRequestId = awsContext.awsRequestId;
+  lambdaCallback(JSON.stringify(appError));
+}
+
+/**
+ * Fails the given AWS Lambda callback with the given error, by first attempting to convert the given error into one of
+ * the standard app errors (see {@linkcode core-functions/app-errors}) that will be mappable on API Gateway, and then
+ * invoking the given lambdaCallback with a JSON stringified version of the converted app error. The given AWS context
+ * is used to add your Lambda's AWS request ID to the error.
+ *
+ * @see core-functions/app-errors.js
+ *
+ * @param {Function} lambdaCallback - the callback function passed as the last argument to your Lambda function on invocation.
+ * @param {Error} error - the error with which you need to fail your Lambda
+ * @param {Object|undefined} [awsContext] - the AWS context passed as the second argument to your Lambda function on invocation
+ * @param {string|undefined} [message] - an optional message (will use error's message if not specified)
+ * @param {string|undefined} [code] - an optional code (will use error's code if not specified)
+ * @param {number[]|undefined} [allowedHttpStatusCodes] - an optional array of HTTP status codes that are allowed to be
+ * returned directly to API Gateway (without conversion to either 400 or 500). NB: 400 and 500 CANNOT be excluded and
+ * are assumed to be present if omitted! If not defined, the app-errors module's list of supported HTTP status codes
+ * will be used as the allowed HTTP status codes
+ */
+function failCallbackForApiGateway(lambdaCallback, error, awsContext, message, code, allowedHttpStatusCodes) {
+  const appError = appErrors.toAppErrorForApiGateway(error, message, code, allowedHttpStatusCodes);
+  if (awsContext && !appError.awsRequestId) appError.awsRequestId = awsContext.awsRequestId;
+  lambdaCallback(JSON.stringify(appError));
+}
+

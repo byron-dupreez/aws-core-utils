@@ -9,18 +9,37 @@ const test = require("tape");
 
 // The test subject
 const stages = require('../stages');
-const isResolveStageConfigured = stages.isResolveStageConfigured;
-const configureResolveStage = stages.configureResolveStage;
-const configureResolveStageWithDefaults = stages.configureResolveStageWithDefaults;
+
+// Configuration
+const isStageHandlingConfigured = stages.isStageHandlingConfigured;
+const configureStageHandling = stages.configureStageHandling;
+const configureDefaultStageHandling = stages.configureDefaultStageHandling;
+const getStageHandlingSetting = stages.getStageHandlingSetting;
+// Stage resolution
 const resolveStage = stages.resolveStage;
-const getResolveStageSetting = stages.getResolveStageSetting;
-const convertAliasToStage = stages.convertAliasToStage;
-const convertStreamNameSuffixToStage = stages.convertStreamNameSuffixToStage;
-//const appendStage = stages.appendStage;
-const toCase = stages.FOR_TESTING_ONLY.toCase;
+// Stream name qualification
+const toStageQualifiedStreamName = stages.toStageQualifiedStreamName;
+const extractStageFromQualifiedStreamName = stages.extractStageFromQualifiedStreamName;
+// Resource name qualification
+const toStageQualifiedResourceName = stages.toStageQualifiedResourceName;
+const extractStageFromQualifiedResourceName = stages.extractStageFromQualifiedResourceName;
+
+// DEFAULTS - default implementations
+// ==================================
+// Alias conversion
+const convertAliasToStage = stages.DEFAULTS.convertAliasToStage;
+// Stage-suffixed stream name qualification
+const toStageSuffixedStreamName = stages.DEFAULTS.toStageSuffixedStreamName;
+const extractStageFromSuffixedStreamName = stages.DEFAULTS.extractStageFromSuffixedStreamName;
+// Stage-suffixed resource name qualification
+const toStageSuffixedResourceName = stages.DEFAULTS.toStageSuffixedResourceName;
+const extractStageFromSuffixedResourceName = stages.DEFAULTS.extractStageFromSuffixedResourceName;
+// Generic utils
+const toStageSuffixedName = stages.DEFAULTS.toStageSuffixedName;
+const toCase = stages.DEFAULTS.toCase
 
 const Strings = require('core-functions/strings');
-const trim = Strings.trim;
+//const trim = Strings.trim;
 const trimOrEmpty = Strings.trimOrEmpty;
 //const isBlank = Strings.isBlank;
 const isNotBlank = Strings.isNotBlank;
@@ -37,26 +56,25 @@ const sampleNumberString = samples.sampleNumberString;
 const sampleInvokedFunctionArn = samples.sampleInvokedFunctionArn;
 const sampleAwsContext = samples.sampleAwsContext;
 
-// For Kinesis events
-const sampleStreamName = samples.sampleStreamName;
+// For Kinesis stream events
+//const sampleStreamName = samples.sampleStreamName;
 const sampleEventSourceArn = samples.sampleEventSourceArn;
-const sampleEventSourceArnFromPrefixSuffix = samples.sampleEventSourceArnFromPrefixSuffix;
-const sampleBase64Data = samples.sampleBase64Data;
+// const sampleEventSourceArnFromPrefixSuffix = samples.sampleEventSourceArnFromPrefixSuffix;
+// const sampleBase64Data = samples.sampleBase64Data;
 const sampleKinesisEventWithSampleRecord = samples.sampleKinesisEventWithSampleRecord;
-const sampleKinesisEventWithRecord = samples.sampleKinesisEventWithRecord;
-const sampleKinesisEventWithRecords = samples.sampleKinesisEventWithRecords;
+// const sampleKinesisEventWithRecord = samples.sampleKinesisEventWithRecord;
+// const sampleKinesisEventWithRecords = samples.sampleKinesisEventWithRecords;
 
 
-function checkConvertAliasToStage(alias, expected, t) {
+function checkConvertAliasToStage(t, alias, expected) {
   t.equal(convertAliasToStage(alias, undefined, undefined, undefined), expected, `'${alias}' must be '${expected}'`);
 }
 
-function checkConvertStreamNameSuffixToStage(streamName, context, expected, t) {
-  t.equal(convertStreamNameSuffixToStage(streamName, undefined, undefined, context), expected
-    , `'${streamName}' must be '${expected}'`);
+function checkExtractStageFromSuffixedStreamName(t, streamName, context, expected) {
+  t.equal(extractStageFromSuffixedStreamName(streamName, context), expected, `'${streamName}' must be '${expected}'`);
 }
 
-function checkResolveStage(eventStage, functionVersion, functionAlias, streamName, context, expected, t) {
+function checkResolveStage(t, eventStage, functionVersion, functionAlias, streamName, context, expected) {
   // Create an AWS context
   const invokedFunctionArn = sampleInvokedFunctionArn('invokedFunctionArnRegion', 'functionName', functionAlias);
   const awsContext = sampleAwsContext('functionName', functionVersion, invokedFunctionArn);
@@ -71,137 +89,223 @@ function checkResolveStage(eventStage, functionVersion, functionAlias, streamNam
   // Resolve the stage
   const actual = resolveStage(event, awsContext, context);
 
-  t.equal(actual, expected, `resolve: alias(${functionAlias}) stream(${streamName}) context(${context.stage}, ${context.defaultStage}) -> '${actual}' must be '${expected}'`);
+  t.equal(actual, expected, `resolve = stages.alias(${functionAlias}) stream(${streamName}) context(${context.stage}, ${context.defaultStage}) -> '${actual}' must be '${expected}'`);
 }
 
-function checkConfigureResolveStage(context, convertAliasToStage, convertStreamNameToStage, streamNameStageSeparator,
-                                    defaultStage, inCase, forceConfiguration, t) {
-  const before = context.resolveStageConfig;
+function checkConfigureStageHandling(t, context, customToStage, convertAliasToStage,
+  injectStageIntoStreamName, extractStageFromStreamName, streamNameStageSeparator,
+  injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator,
+  injectInCase, extractInCase, defaultStage, forceConfiguration) {
+
+  const before = context.stageHandling;
+
+  const customToStageBefore = before ? before.customToStage : undefined;
 
   const convertAliasToStageBefore = before ? before.convertAliasToStage : undefined;
-  const convertStreamNameToStageBefore = before ? before.convertStreamNameToStage : undefined;
+
+  const injectStageIntoStreamNameBefore = before ? before.injectStageIntoStreamName : undefined;
+  const extractStageFromStreamNameBefore = before ? before.extractStageFromStreamName : undefined;
   const streamNameStageSeparatorBefore = before ? before.streamNameStageSeparator : undefined;
+
+  const injectStageIntoResourceNameBefore = before ? before.injectStageIntoResourceName : undefined;
+  const extractStageFromResourceNameBefore = before ? before.extractStageFromResourceName : undefined;
+  const resourceNameStageSeparatorBefore = before ? before.resourceNameStageSeparator : undefined;
+
+  const injectInCaseBefore = before ? before.injectInCase : undefined;
+  const extractInCaseBefore = before ? before.extractInCase : undefined;
   const defaultStageBefore = before ? before.defaultStage : undefined;
-  const inCaseBefore = before ? before.inCase : undefined;
 
   const mustChange = forceConfiguration || !before;
 
   // Configure it
-  configureResolveStage(context, convertAliasToStage, convertStreamNameToStage, streamNameStageSeparator, defaultStage,
-    inCase, forceConfiguration, t);
+  configureStageHandling(context, customToStage, convertAliasToStage,
+    injectStageIntoStreamName, extractStageFromStreamName, streamNameStageSeparator,
+    injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator,
+    injectInCase, extractInCase, defaultStage, forceConfiguration);
 
-  const after = context.resolveStageConfig;
+  const after = context.stageHandling;
+
+  const customToStageAfter = after ? after.customToStage : undefined;
+
   const convertAliasToStageAfter = after ? after.convertAliasToStage : undefined;
-  const convertStreamNameToStageAfter = after ? after.convertStreamNameToStage : undefined;
-  const streamNameStageSeparatorAfter = after ? after.streamNameStageSeparator : undefined;
-  const defaultStageAfter = after ? after.defaultStage : undefined;
-  const inCaseAfter = after ? after.inCase : undefined;
 
-  t.ok(isResolveStageConfigured(context), `resolve stage settings must be configured now`);
+  const injectStageIntoStreamNameAfter = after ? after.injectStageIntoStreamName : undefined;
+  const extractStageFromStreamNameAfter = after ? after.extractStageFromStreamName : undefined;
+  const streamNameStageSeparatorAfter = after ? after.streamNameStageSeparator : undefined;
+
+  const injectStageIntoResourceNameAfter = after ? after.injectStageIntoResourceName : undefined;
+  const extractStageFromResourceNameAfter = after ? after.extractStageFromResourceName : undefined;
+  const resourceNameStageSeparatorAfter = after ? after.resourceNameStageSeparator : undefined;
+
+  const injectInCaseAfter = after ? after.injectInCase : undefined;
+  const extractInCaseAfter = after ? after.extractInCase : undefined;
+  const defaultStageAfter = after ? after.defaultStage : undefined;
+
+
+  t.ok(isStageHandlingConfigured(context), `stage handling settings must be configured now`);
 
   // Set up the right expectations
+  const customToStageExpected = mustChange ? customToStage : customToStageBefore;
+
   const convertAliasToStageExpected = mustChange ? convertAliasToStage : convertAliasToStageBefore;
-  const convertStreamNameToStageExpected = mustChange ? convertStreamNameToStage : convertStreamNameToStageBefore;
+
+  const injectStageIntoStreamNameExpected = mustChange ? injectStageIntoStreamName : injectStageIntoStreamNameBefore;
+  const extractStageFromStreamNameExpected = mustChange ? extractStageFromStreamName : extractStageFromStreamNameBefore;
   const streamNameStageSeparatorExpected = mustChange ? streamNameStageSeparator : streamNameStageSeparatorBefore;
+
+  const injectStageIntoResourceNameExpected = mustChange ? injectStageIntoResourceName : injectStageIntoResourceNameBefore;
+  const extractStageFromResourceNameExpected = mustChange ? extractStageFromResourceName : extractStageFromResourceNameBefore;
+  const resourceNameStageSeparatorExpected = mustChange ? resourceNameStageSeparator : resourceNameStageSeparatorBefore;
+
+  const injectInCaseExpected = mustChange ? injectInCase : injectInCaseBefore;
+  const extractInCaseExpected = mustChange ? extractInCase : extractInCaseBefore;
   const defaultStageExpected = mustChange ? defaultStage : defaultStageBefore;
-  const inCaseExpected = mustChange ? inCase : inCaseBefore;
 
-  t.deepEqual(getResolveStageSetting(context, 'convertAliasToStage'), convertAliasToStageExpected, `convertAliasToStage (${stringify(convertAliasToStageAfter)}) must be ${stringify(convertAliasToStageExpected)}`);
-  t.deepEqual(getResolveStageSetting(context, 'convertStreamNameToStage'), convertStreamNameToStageExpected, `convertStreamNameToStage (${stringify(convertStreamNameToStageAfter)}) must be ${stringify(convertStreamNameToStageExpected)}`);
-  t.equal(getResolveStageSetting(context, 'streamNameStageSeparator'), streamNameStageSeparatorExpected, `streamNameStageSeparator (${stringify(streamNameStageSeparatorAfter)}) must be ${stringify(streamNameStageSeparatorExpected)}`);
-  t.equal(getResolveStageSetting(context, 'defaultStage'), defaultStageExpected, `defaultStage (${stringify(defaultStageAfter)}) must be ${stringify(defaultStageExpected)}`);
-  t.equal(getResolveStageSetting(context, 'inCase'), inCaseExpected, `inCase (${stringify(inCaseAfter)}) must be ${stringify(inCaseExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'customToStage'), customToStageExpected, `customToStage (${stringify(customToStageAfter)}) must be ${stringify(customToStageExpected)}`);
 
-  // Check whether resolve stage works with this configuration
-  const expected = mustChange ? toCase(trimOrEmpty(defaultStageExpected), inCaseExpected) : toCase(trimOrEmpty(defaultStageBefore), inCaseBefore);
-  checkResolveStage('', '', '', '', context, expected, t);
+  t.deepEqual(getStageHandlingSetting(context, 'convertAliasToStage'), convertAliasToStageExpected, `convertAliasToStage (${stringify(convertAliasToStageAfter)}) must be ${stringify(convertAliasToStageExpected)}`);
+
+  t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoStreamName'), injectStageIntoStreamNameExpected, `injectStageIntoStreamName (${stringify(injectStageIntoStreamNameAfter)}) must be ${stringify(injectStageIntoStreamNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractStageFromStreamName'), extractStageFromStreamNameExpected, `extractStageFromStreamName (${stringify(extractStageFromStreamNameAfter)}) must be ${stringify(extractStageFromStreamNameExpected)}`);
+  t.equal(getStageHandlingSetting(context, 'streamNameStageSeparator'), streamNameStageSeparatorExpected, `streamNameStageSeparator (${stringify(streamNameStageSeparatorAfter)}) must be ${stringify(streamNameStageSeparatorExpected)}`);
+
+  t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoResourceName'), injectStageIntoResourceNameExpected, `injectStageIntoResourceName (${stringify(injectStageIntoResourceNameAfter)}) must be ${stringify(injectStageIntoResourceNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractStageFromResourceName'), extractStageFromResourceNameExpected, `extractStageFromResourceName (${stringify(extractStageFromResourceNameAfter)}) must be ${stringify(extractStageFromResourceNameExpected)}`);
+  t.equal(getStageHandlingSetting(context, 'resourceNameStageSeparator'), resourceNameStageSeparatorExpected, `resourceNameStageSeparator (${stringify(resourceNameStageSeparatorAfter)}) must be ${stringify(resourceNameStageSeparatorExpected)}`);
+
+  t.equal(getStageHandlingSetting(context, 'injectInCase'), injectInCaseExpected, `injectInCase (${stringify(injectInCaseAfter)}) must be ${stringify(injectInCaseExpected)}`);
+  t.equal(getStageHandlingSetting(context, 'extractInCase'), extractInCaseExpected, `extractInCase (${stringify(extractInCaseAfter)}) must be ${stringify(extractInCaseExpected)}`);
+
+  t.equal(getStageHandlingSetting(context, 'defaultStage'), defaultStageExpected, `defaultStage (${stringify(defaultStageAfter)}) must be ${stringify(defaultStageExpected)}`);
+
+  // Check whether stage handling works with this configuration
+  const expected = mustChange ? toCase(trimOrEmpty(defaultStageExpected), extractInCaseExpected) : toCase(trimOrEmpty(defaultStageBefore), extractInCaseBefore);
+  checkResolveStage(t, '', '', '', '', context, expected);
 }
 
 
-function checkConfigureResolveStageWithDefaults(context, forceConfiguration, t) {
-  const before = context.resolveStageConfig;
+function checkConfigureDefaultStageHandling(t, context, forceConfiguration) {
+  const before = context.stageHandling;
+
+  const customToStageBefore = before ? before.customToStage : undefined;
 
   const convertAliasToStageBefore = before ? before.convertAliasToStage : undefined;
-  const convertStreamNameToStageBefore = before ? before.convertStreamNameToStage : undefined;
+
+  const injectStageIntoStreamNameBefore = before ? before.injectStageIntoStreamName : undefined;
+  const extractStageFromStreamNameBefore = before ? before.extractStageFromStreamName : undefined;
   const streamNameStageSeparatorBefore = before ? before.streamNameStageSeparator : undefined;
+
+  const injectStageIntoResourceNameBefore = before ? before.injectStageIntoResourceName : undefined;
+  const extractStageFromResourceNameBefore = before ? before.extractStageFromResourceName : undefined;
+  const resourceNameStageSeparatorBefore = before ? before.resourceNameStageSeparator : undefined;
+
+  const injectInCaseBefore = before ? before.injectInCase : undefined;
+  const extractInCaseBefore = before ? before.extractInCase : undefined;
   const defaultStageBefore = before ? before.defaultStage : undefined;
-  const inCaseBefore = before ? before.inCase : undefined;
 
   const mustChange = forceConfiguration || !before;
 
   // Configure it
-  configureResolveStageWithDefaults(context, forceConfiguration, t);
+  configureDefaultStageHandling(context, forceConfiguration, t);
 
-  const after = context.resolveStageConfig;
+  const after = context.stageHandling;
+
+  const customToStageAfter = after ? after.customToStage : undefined;
+
   const convertAliasToStageAfter = after ? after.convertAliasToStage : undefined;
-  const convertStreamNameToStageAfter = after ? after.convertStreamNameToStage : undefined;
-  const streamNameStageSeparatorAfter = after ? after.streamNameStageSeparator : undefined;
-  const defaultStageAfter = after ? after.defaultStage : undefined;
-  const inCaseAfter = after ? after.inCase : undefined;
 
-  t.ok(isResolveStageConfigured(context), `resolve stage settings must be configured now`);
+  const injectStageIntoStreamNameAfter = after ? after.injectStageIntoStreamName : undefined;
+  const extractStageFromStreamNameAfter = after ? after.extractStageFromStreamName : undefined;
+  const streamNameStageSeparatorAfter = after ? after.streamNameStageSeparator : undefined;
+
+  const injectStageIntoResourceNameAfter = after ? after.injectStageIntoResourceName : undefined;
+  const extractStageFromResourceNameAfter = after ? after.extractStageFromResourceName : undefined;
+  const resourceNameStageSeparatorAfter = after ? after.resourceNameStageSeparator : undefined;
+
+  const injectInCaseAfter = after ? after.injectInCase : undefined;
+  const extractInCaseAfter = after ? after.extractInCase : undefined;
+  const defaultStageAfter = after ? after.defaultStage : undefined;
+
+  t.ok(isStageHandlingConfigured(context), `stage handling settings must be configured now`);
 
   // Expect the defaults to be in place
+  const customToStageExpected = mustChange ? undefined : customToStageBefore;
+
   const convertAliasToStageExpected = mustChange ? convertAliasToStage : convertAliasToStageBefore;
-  const convertStreamNameToStageExpected = mustChange ? convertStreamNameSuffixToStage : convertStreamNameToStageBefore;
+
+  const injectStageIntoStreamNameExpected = mustChange ? toStageSuffixedStreamName : injectStageIntoStreamNameBefore;
+  const extractStageFromStreamNameExpected = mustChange ? extractStageFromSuffixedStreamName : extractStageFromStreamNameBefore;
   const streamNameStageSeparatorExpected = mustChange ? '_' : streamNameStageSeparatorBefore;
+
+  const injectStageIntoResourceNameExpected = mustChange ? toStageSuffixedResourceName : injectStageIntoResourceNameBefore;
+  const extractStageFromResourceNameExpected = mustChange ? extractStageFromSuffixedResourceName : extractStageFromResourceNameBefore;
+  const resourceNameStageSeparatorExpected = mustChange ? '_' : resourceNameStageSeparatorBefore;
+
+  const injectInCaseExpected = mustChange ? 'upper' : injectInCaseBefore;
+  const extractInCaseExpected = mustChange ? 'lower' : extractInCaseBefore;
   const defaultStageExpected = mustChange ? undefined : defaultStageBefore;
-  const inCaseExpected = mustChange ? 'lowercase' : inCaseBefore;
 
-  t.deepEqual(getResolveStageSetting(context, 'convertAliasToStage'), convertAliasToStageExpected, `convertAliasToStage (${stringify(convertAliasToStageAfter)}) must be ${stringify(convertAliasToStageExpected)}`);
-  t.deepEqual(getResolveStageSetting(context, 'convertStreamNameToStage'), convertStreamNameToStageExpected, `convertStreamNameToStage (${stringify(convertStreamNameToStageAfter)}) must be ${stringify(convertStreamNameToStageExpected)}`);
-  t.equal(getResolveStageSetting(context, 'streamNameStageSeparator'), streamNameStageSeparatorExpected, `streamNameStageSeparator (${stringify(streamNameStageSeparatorAfter)}) must be ${stringify(streamNameStageSeparatorExpected)}`);
-  t.equal(getResolveStageSetting(context, 'defaultStage'), defaultStageExpected, `defaultStage (${stringify(defaultStageAfter)}) must be ${stringify(defaultStageExpected)}`);
-  t.equal(getResolveStageSetting(context, 'inCase'), inCaseExpected, `inCase (${stringify(inCaseAfter)}) must be ${stringify(inCaseExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'customToStage'), customToStageExpected, `customToStage (${stringify(customToStageAfter)}) must be ${stringify(customToStageExpected)}`);
 
-  // Check whether resolve stage works with this configuration
-  const expected = toCase(trimOrEmpty(defaultStageExpected), inCaseExpected);
-  checkResolveStage('', '', '', '', context, expected, t);
+  t.deepEqual(getStageHandlingSetting(context, 'convertAliasToStage'), convertAliasToStageExpected, `convertAliasToStage (${stringify(convertAliasToStageAfter)}) must be ${stringify(convertAliasToStageExpected)}`);
+
+  t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoStreamName'), injectStageIntoStreamNameExpected, `injectStageIntoStreamName (${stringify(injectStageIntoStreamNameAfter)}) must be ${stringify(injectStageIntoStreamNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractStageFromStreamName'), extractStageFromStreamNameExpected, `extractStageFromStreamName (${stringify(extractStageFromStreamNameAfter)}) must be ${stringify(extractStageFromStreamNameExpected)}`);
+  t.equal(getStageHandlingSetting(context, 'streamNameStageSeparator'), streamNameStageSeparatorExpected, `streamNameStageSeparator (${stringify(streamNameStageSeparatorAfter)}) must be ${stringify(streamNameStageSeparatorExpected)}`);
+
+  t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoResourceName'), injectStageIntoResourceNameExpected, `injectStageIntoResourceName (${stringify(injectStageIntoResourceNameAfter)}) must be ${stringify(injectStageIntoResourceNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractStageFromResourceName'), extractStageFromResourceNameExpected, `extractStageFromResourceName (${stringify(extractStageFromResourceNameAfter)}) must be ${stringify(extractStageFromResourceNameExpected)}`);
+  t.equal(getStageHandlingSetting(context, 'resourceNameStageSeparator'), resourceNameStageSeparatorExpected, `resourceNameStageSeparator (${stringify(resourceNameStageSeparatorAfter)}) must be ${stringify(resourceNameStageSeparatorExpected)}`);
+
+  t.equal(getStageHandlingSetting(context, 'injectInCase'), injectInCaseExpected, `injectInCase (${stringify(injectInCaseAfter)}) must be ${stringify(injectInCaseExpected)}`);
+  t.equal(getStageHandlingSetting(context, 'extractInCase'), extractInCaseExpected, `extractInCase (${stringify(extractInCaseAfter)}) must be ${stringify(extractInCaseExpected)}`);
+  t.equal(getStageHandlingSetting(context, 'defaultStage'), defaultStageExpected, `defaultStage (${stringify(defaultStageAfter)}) must be ${stringify(defaultStageExpected)}`);
+
+  // Check whether stage handling works with this configuration
+  const expected = toCase(trimOrEmpty(defaultStageExpected), extractInCaseExpected);
+  checkResolveStage(t, '', '', '', '', context, expected);
 }
 
 // =====================================================================================================================
-// Tests for configureResolveStage and isResolveStageConfigured
+// Tests for configureStageHandling and isStageHandlingConfigured
 // =====================================================================================================================
 
-test('configureResolveStage with all undefined', t => {
+test('configureStageHandling with all undefined', t => {
   const context = {};
-  t.notOk(isResolveStageConfigured(context), `resolve stage settings must not be configured yet`);
+  t.notOk(isStageHandlingConfigured(context), `stage handling settings must not be configured yet`);
 
   // Configure it
-  checkConfigureResolveStage(context, undefined, undefined, undefined, undefined, undefined, false, t);
+  checkConfigureStageHandling(t, context, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, false);
 
   // Must NOT be able to reconfigure it with force false
-  checkConfigureResolveStage(context, 'convertAliasToStage', 'convertStreamNameToStage', 'streamNameStageSeparator', 'defaultStage',
-    'inCase', false, t);
+  checkConfigureStageHandling(t, context, undefined, 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName', 'extractStageFromResourceName', 'resourceNameStageSeparator', 'injectInCase', 'extractInCase', 'defaultStage', false);
 
   // Must be able to reconfigure it with force true
-  checkConfigureResolveStage(context, 'convertAliasToStage', 'convertStreamNameToStage', 'streamNameStageSeparator', 'defaultStage',
-    'inCase', true, t);
+  checkConfigureStageHandling(t, context, undefined, 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator, injectInCase', 'extractInCase', 'defaultStage', true);
 
   t.end();
 });
 
 
 // =====================================================================================================================
-// Tests for configureResolveStageWithDefaults and isResolveStageConfigured
+// Tests for configureStageHandlingWithDefaults and isStageHandlingConfigured
 // =====================================================================================================================
 
-test('configureResolveStageWithDefaults with all undefined', t => {
+test('configureStageHandlingWithDefaults with all undefined', t => {
   const context = {};
-  t.notOk(isResolveStageConfigured(context), `resolve stage settings must not be configured yet`);
+  t.notOk(isStageHandlingConfigured(context), `stage handling settings must not be configured yet`);
 
   // Configure it
-  checkConfigureResolveStageWithDefaults(context, false, t);
+  checkConfigureDefaultStageHandling(t, context, false);
 
   // Overwrite it with arbitrary values to be able to check if defaults are NOT re-instated in next step
-  configureResolveStage(context, 'convertAliasToStage', 'convertStreamNameToStage', 'streamNameStageSeparator',
-    'defaultStage', 'inCase', true);
+  checkConfigureStageHandling(t, context, undefined, 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator, injectInCase', 'extractInCase', 'defaultStage', true);
 
   // Must NOT be able to reconfigure it with force false
-  checkConfigureResolveStageWithDefaults(context, false, t);
+  checkConfigureDefaultStageHandling(t, context, false);
 
   // Must be able to reconfigure it with force true
-  checkConfigureResolveStageWithDefaults(context, true, t);
+  checkConfigureDefaultStageHandling(t, context, true);
 
   t.end();
 });
@@ -212,14 +316,14 @@ test('configureResolveStageWithDefaults with all undefined', t => {
 // =====================================================================================================================
 
 test('convertAliasToStage', t => {
-  checkConvertAliasToStage(undefined, '', t);
-  checkConvertAliasToStage(null, '', t);
-  checkConvertAliasToStage('', '', t);
-  checkConvertAliasToStage('DEV', 'DEV', t);
-  checkConvertAliasToStage('prod', 'prod', t);
-  checkConvertAliasToStage('Prod', 'Prod', t);
-  checkConvertAliasToStage('  QA  ', 'QA', t);
-  checkConvertAliasToStage(' PROD 2016-10-19 ', 'PROD 2016-10-19', t);
+  checkConvertAliasToStage(t, undefined, '');
+  checkConvertAliasToStage(t, null, '');
+  checkConvertAliasToStage(t, '', '');
+  checkConvertAliasToStage(t, 'DEV', 'DEV');
+  checkConvertAliasToStage(t, 'prod', 'prod');
+  checkConvertAliasToStage(t, 'Prod', 'Prod');
+  checkConvertAliasToStage(t, '  QA  ', 'QA');
+  checkConvertAliasToStage(t, ' PROD 2016-10-19 ', 'PROD 2016-10-19');
   t.end();
 });
 
@@ -227,80 +331,121 @@ test('convertAliasToStage', t => {
 // Tests for convertStreamNameSuffixToStage
 // =====================================================================================================================
 
-test('convertStreamNameSuffixToStage with default settings, should use default "_" as separator', t => {
-  const context = configureResolveStageWithDefaults({});
-  checkConvertStreamNameSuffixToStage(undefined, context, '', t);
-  checkConvertStreamNameSuffixToStage(null, context, '', t);
-  checkConvertStreamNameSuffixToStage('', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream1', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream2_', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream3_Dev', context, 'Dev', t);
-  checkConvertStreamNameSuffixToStage('Stream4_QA', context, 'QA', t);
-  checkConvertStreamNameSuffixToStage('Stream_5_qa', context, 'qa', t);
-  checkConvertStreamNameSuffixToStage('Test_Stream_6_Prod', context, 'Prod', t);
-  checkConvertStreamNameSuffixToStage(' Test_Stream_7_Prod-01 ', context, 'Prod-01', t);
+test('convertStreamNameSuffixToStage with default settings, should use default "_" as separator and lowercase', t => {
+  const context = configureDefaultStageHandling({});
+  const extractInCase = context.stageHandling.extractInCase;
+  t.ok(extractInCase === 'lower' || extractInCase === 'lowercase', `extractInCase (${extractInCase}) defaults to lowercase`);
+  checkExtractStageFromSuffixedStreamName(t, undefined, context, '');
+  checkExtractStageFromSuffixedStreamName(t, null, context, '');
+  checkExtractStageFromSuffixedStreamName(t, '', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream1', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream2_', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream3_Dev', context, 'dev');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream4_QA', context, 'qa');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_5_qa', context, 'qa');
+  checkExtractStageFromSuffixedStreamName(t, 'Test_Stream_6_Prod', context, 'prod');
+  checkExtractStageFromSuffixedStreamName(t, ' Test_Stream_7_Prod-01 ', context, 'prod-01');
 
-  checkConvertStreamNameSuffixToStage('Stream_SS', context, 'SS', t);
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_Ss', context, 'ss');
   t.end();
 });
 
-test('convertStreamNameSuffixToStage with streamNameStageSeparator set to undefined, should use default "_" as separator', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.streamNameStageSeparator = undefined;
-  checkConvertStreamNameSuffixToStage(undefined, context, '', t);
-  checkConvertStreamNameSuffixToStage(null, context, '', t);
-  checkConvertStreamNameSuffixToStage('', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream1', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream2_', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream3_Dev', context, 'Dev', t);
-  checkConvertStreamNameSuffixToStage('Stream4_QA', context, 'QA', t);
-  checkConvertStreamNameSuffixToStage('Stream_5_qa', context, 'qa', t);
-  checkConvertStreamNameSuffixToStage('Test_Stream_6_Prod', context, 'Prod', t);
-  checkConvertStreamNameSuffixToStage(' Test_Stream_7_Prod-01 ', context, 'Prod-01', t);
+test('convertStreamNameSuffixToStage with default settings and extractInCase "as_is", should keep stream suffixes as is', t => {
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.extractInCase = 'as_is';
+  checkExtractStageFromSuffixedStreamName(t, undefined, context, '');
+  checkExtractStageFromSuffixedStreamName(t, null, context, '');
+  checkExtractStageFromSuffixedStreamName(t, '', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream1', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream2_', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream3_Dev', context, 'Dev');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream4_QA', context, 'QA');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_5_qa', context, 'qa');
+  checkExtractStageFromSuffixedStreamName(t, 'Test_Stream_6_Prod', context, 'Prod');
+  checkExtractStageFromSuffixedStreamName(t, ' Test_Stream_7_Prod-01 ', context, 'Prod-01');
 
-  checkConvertStreamNameSuffixToStage('Stream_SS', context, 'SS', t);
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_Ss', context, 'Ss');
   t.end();
 });
 
-test('convertStreamNameSuffixToStage with streamNameStageSeparator set to "", should still use default "_" as separator', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.streamNameStageSeparator = '';
+test('convertStreamNameSuffixToStage with default settings and extractInCase "uppercase", should give uppercase stream suffixes', t => {
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.extractInCase = 'uppercase';
+  checkExtractStageFromSuffixedStreamName(t, undefined, context, '');
+  checkExtractStageFromSuffixedStreamName(t, null, context, '');
+  checkExtractStageFromSuffixedStreamName(t, '', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream1', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream2_', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream3_Dev', context, 'DEV');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream4_QA', context, 'QA');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_5_qa', context, 'QA');
+  checkExtractStageFromSuffixedStreamName(t, 'Test_Stream_6_Prod', context, 'PROD');
+  checkExtractStageFromSuffixedStreamName(t, ' Test_Stream_7_Prod-01 ', context, 'PROD-01');
 
-  checkConvertStreamNameSuffixToStage(undefined, context, '', t);
-  checkConvertStreamNameSuffixToStage(null, context, '', t);
-  checkConvertStreamNameSuffixToStage('', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream1', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream2_', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream3_Dev', context, 'Dev', t);
-  checkConvertStreamNameSuffixToStage('Stream4_QA', context, 'QA', t);
-  checkConvertStreamNameSuffixToStage('Stream_5_qa', context, 'qa', t);
-  checkConvertStreamNameSuffixToStage('Test_Stream_6_Prod', context, 'Prod', t);
-  checkConvertStreamNameSuffixToStage(' Test_Stream_7_Prod-01 ', context, 'Prod-01', t);
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_Ss', context, 'SS');
+  t.end();
+});
+
+test('convertStreamNameSuffixToStage with streamNameStageSeparator set to undefined, should disable stream names as a source', t => {
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.streamNameStageSeparator = undefined;
+  context.stageHandling.extractInCase = 'as_is';
+  checkExtractStageFromSuffixedStreamName(t, undefined, context, '');
+  checkExtractStageFromSuffixedStreamName(t, null, context, '');
+  checkExtractStageFromSuffixedStreamName(t, '', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream1', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream2_', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream3_Dev', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream4_QA', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_5_qa', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Test_Stream_6_Prod', context, '');
+  checkExtractStageFromSuffixedStreamName(t, ' Test_Stream_7_Prod-01 ', context, '');
+
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_Ss', context, '');
+  t.end();
+});
+
+test('convertStreamNameSuffixToStage with streamNameStageSeparator set to "", should also disable stream names as a source', t => {
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.streamNameStageSeparator = '';
+  context.stageHandling.extractInCase = 'upper';
+
+  checkExtractStageFromSuffixedStreamName(t, undefined, context, '');
+  checkExtractStageFromSuffixedStreamName(t, null, context, '');
+  checkExtractStageFromSuffixedStreamName(t, '', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream1', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream2_', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream3_Dev', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream4_QA', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_5_qa', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Test_Stream_6_Prod', context, '');
+  checkExtractStageFromSuffixedStreamName(t, ' Test_Stream_7_Prod-01 ', context, '');
 
   t.end();
 });
 
 test('convertStreamNameSuffixToStage with context.streamNameStageSeparator set to "-", should NOT use default "_" as separator', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.streamNameStageSeparator = '-';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.streamNameStageSeparator = '-';
+  context.stageHandling.extractInCase = 'as_is';
 
-  checkConvertStreamNameSuffixToStage(undefined, context, '', t);
-  checkConvertStreamNameSuffixToStage(null, context, '', t);
-  checkConvertStreamNameSuffixToStage('', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream1', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream2_', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream3_Dev', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream3_QA', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream_3_qa', context, '', t);
-  checkConvertStreamNameSuffixToStage('Test_Stream3_Prod', context, '', t);
-  checkConvertStreamNameSuffixToStage(' Test_Stream3_Prod_01 ', context, '', t);
+  checkExtractStageFromSuffixedStreamName(t, undefined, context, '');
+  checkExtractStageFromSuffixedStreamName(t, null, context, '');
+  checkExtractStageFromSuffixedStreamName(t, '', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream1', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream2_', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream3_Dev', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream3_QA', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_3_qa', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Test_Stream3_Prod', context, '');
+  checkExtractStageFromSuffixedStreamName(t, ' Test_Stream3_Prod_01 ', context, '');
 
-  checkConvertStreamNameSuffixToStage('Stream_2-', context, '', t);
-  checkConvertStreamNameSuffixToStage('Stream_3-Dev', context, 'Dev', t);
-  checkConvertStreamNameSuffixToStage('Stream_3-QA', context, 'QA', t);
-  checkConvertStreamNameSuffixToStage('Stream_3-qa', context, 'qa', t);
-  checkConvertStreamNameSuffixToStage('Test_Stream3-Prod', context, 'Prod', t);
-  checkConvertStreamNameSuffixToStage(' Test_Stream3-Prod_01 ', context, 'Prod_01', t);
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_2-', context, '');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_3-Dev', context, 'Dev');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_3-QA', context, 'QA');
+  checkExtractStageFromSuffixedStreamName(t, 'Stream_3-qa', context, 'qa');
+  checkExtractStageFromSuffixedStreamName(t, 'Test_Stream3-Prod', context, 'Prod');
+  checkExtractStageFromSuffixedStreamName(t, ' Test_Stream3-Prod_01 ', context, 'Prod_01');
 
   t.end();
 });
@@ -312,213 +457,275 @@ test('convertStreamNameSuffixToStage with context.streamNameStageSeparator set t
 test('resolveStage with undefined/null/empty alias, stream name & context must return empty', t => {
   const context = {};
 
-  checkResolveStage(undefined, undefined, undefined, undefined, context, '', t);
-  checkResolveStage(null, null, null, null, context, '', t);
-  checkResolveStage('', '', '', '', context, '', t);
+  checkResolveStage(t, undefined, undefined, undefined, undefined, context, '');
+  checkResolveStage(t, null, null, null, null, context, '');
+  checkResolveStage(t, '', '', '', '', context, '');
 
   t.end();
 });
 
 test('resolveStage with no defaultStage', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.inCase = '';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.extractInCase = 'as_is';
 
   // No default stage and nothing else
-  checkResolveStage('', '', '', '', context, '', t);
+  checkResolveStage(t, '', '', '', '', context, '');
   // No default stage and stream without suffix must be empty
-  checkResolveStage('', '', '', 'Stream', context, '', t);
+  checkResolveStage(t, '', '', '', 'Stream', context, '');
   // No default stage and stream with suffix must use suffix
-  checkResolveStage('', '', '', 'Stream_SS', context, 'SS', t);
+  checkResolveStage(t, '', '', '', 'Stream_Ss', context, 'Ss');
   // No default stage and Lambda without alias must be empty
-  checkResolveStage('', '1.0.1', '1.0.1', '', context, '', t);
+  checkResolveStage(t, '', '1.0.1', '1.0.1', '', context, '');
   // No default stage and Lambda with alias must use alias stage
-  checkResolveStage('', '1.0.1', 'AS', '', context, 'AS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', '', context, 'As');
   // No default stage and event with stage must use event stage
-  checkResolveStage('ES', '', '', '', context, 'ES', t);
+  checkResolveStage(t, 'Es', '', '', '', context, 'Es');
 
   t.end();
 });
 
 
 test('resolveStage with defaultStage', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.inCase = '';
-  context.resolveStageConfig.defaultStage = 'DS';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.extractInCase = 'as_is';
+  context.stageHandling.defaultStage = 'Ds';
 
   // Default stage and nothing else must be default stage
-  checkResolveStage('', '', '', '', context, 'DS', t);
+  checkResolveStage(t, '', '', '', '', context, 'Ds');
   // Default stage must override stream without suffix
-  checkResolveStage('', '', '', 'Stream', context, 'DS', t);
+  checkResolveStage(t, '', '', '', 'Stream', context, 'Ds');
   // Default stage must not override stream with suffix
-  checkResolveStage('', '', '', 'Stream_SS', context, 'SS', t);
+  checkResolveStage(t, '', '', '', 'Stream_Ss', context, 'Ss');
   // Default stage must override Lambda without alias
-  checkResolveStage('', '1.0.1', '1.0.1', '', context, 'DS', t);
+  checkResolveStage(t, '', '1.0.1', '1.0.1', '', context, 'Ds');
   // Default stage must not override Lambda with alias
-  checkResolveStage('', '1.0.1', 'AS', '', context, 'AS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', '', context, 'As');
   // Default stage must not override event stage
-  checkResolveStage('ES', '', '', '', context, 'ES', t);
+  checkResolveStage(t, 'Es', '', '', '', context, 'Es');
 
   t.end();
 });
 
 test('resolveStage with stream without suffix', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.defaultStage = 'DS';
-  context.resolveStageConfig.inCase = '';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
 
   // Stream without suffix must not override default stage
-  checkResolveStage('', '', '', 'Stream', context, 'DS', t);
+  checkResolveStage(t, '', '', '', 'Stream', context, 'Ds');
   // Stream without suffix must not override default stage when Lambda without alias
-  checkResolveStage('', '1.0.1', '1.0.1', 'Stream', context, 'DS', t);
+  checkResolveStage(t, '', '1.0.1', '1.0.1', 'Stream', context, 'Ds');
   // Stream without suffix must not override Lambda with alias
-  checkResolveStage('', '1.0.1', 'AS', 'Stream', context, 'AS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', 'Stream', context, 'As');
   // Stream without suffix must not override event stage
-  checkResolveStage('ES', '', '', 'Stream', context, 'ES', t);
+  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'Es');
 
   t.end();
 });
 
 test('resolveStage with stream with suffix', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.defaultStage = 'DS';
-  context.resolveStageConfig.inCase = '';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
 
   // Stream with suffix must override default stage
-  checkResolveStage('', '', '', 'Stream_SS', context, 'SS', t);
+  checkResolveStage(t, '', '', '', 'Stream_Ss', context, 'Ss');
   // Stream with suffix must override default stage when Lambda without alias
-  checkResolveStage('', '1.0.1', '1.0.1', 'Stream_SS', context, 'SS', t);
+  checkResolveStage(t, '', '1.0.1', '1.0.1', 'Stream_Ss', context, 'Ss');
   // Stream with suffix must not override Lambda with alias
-  checkResolveStage('', '1.0.1', 'AS', 'Stream_SS', context, 'AS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', 'Stream_Ss', context, 'As');
   // Stream with suffix must not override event stage
-  checkResolveStage('ES', '', '', 'Stream_SS', context, 'ES', t);
+  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'Es');
 
   t.end();
 });
 
 
 test('resolveStage with Lambda without alias', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.defaultStage = 'DS';
-  context.resolveStageConfig.inCase = '';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
 
   // Lambda without alias must not override default stage
-  checkResolveStage('', '1.0.1', '1.0.1', '', context, 'DS', t);
+  checkResolveStage(t, '', '1.0.1', '1.0.1', '', context, 'Ds');
   // Lambda without alias must not override default stage when stream without suffix
-  checkResolveStage('', '1.0.1', '1.0.1', 'Stream', context, 'DS', t);
+  checkResolveStage(t, '', '1.0.1', '1.0.1', 'Stream', context, 'Ds');
   // Lambda without alias must not override stream with suffix
-  checkResolveStage('', '1.0.1', '1.0.1', 'Stream_SS', context, 'SS', t);
+  checkResolveStage(t, '', '1.0.1', '1.0.1', 'Stream_Ss', context, 'Ss');
   // Lambda without alias must not override event stage
-  checkResolveStage('ES', '1.0.1', '1.0.1', 'Stream_SS', context, 'ES', t);
+  checkResolveStage(t, 'Es', '1.0.1', '1.0.1', 'Stream_Ss', context, 'Es');
 
   t.end();
 });
 
 test('resolveStage with Lambda with alias', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.defaultStage = 'DS';
-  context.resolveStageConfig.inCase = '';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
 
   // Lambda with alias must override default stage
-  checkResolveStage('', '1.0.1', 'AS', '', context, 'AS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', '', context, 'As');
   // Lambda with alias must override default stage when stream without suffix
-  checkResolveStage('', '1.0.1', 'AS', 'Stream', context, 'AS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', 'Stream', context, 'As');
   // Lambda with alias must override stream with suffix
-  checkResolveStage('', '1.0.1', 'AS', 'Stream_SS', context, 'AS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', 'Stream_Ss', context, 'As');
   // Lambda with alias must not override event stage
-  checkResolveStage('ES', '1.0.1', 'AS', 'Stream_SS', context, 'ES', t);
+  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Es');
 
   t.end();
 });
 
 test('resolveStage with event stage', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.defaultStage = 'DS';
-  context.resolveStageConfig.inCase = '';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
 
   // Event stage must override default stage
-  checkResolveStage('ES', '', '', '', context, 'ES', t);
+  checkResolveStage(t, 'Es', '', '', '', context, 'Es');
   // Event stage must override stream without suffix and default
-  checkResolveStage('ES', '', '', 'Stream', context, 'ES', t);
+  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'Es');
   // Event stage must override stream with suffix and default
-  checkResolveStage('ES', '', '', 'Stream_SS', context, 'ES', t);
+  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'Es');
 
   // Event stage must override Lambda without alias and default
-  checkResolveStage('ES', '1.0.1', '1.01', '', context, 'ES', t);
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'Es');
   // Event stage must override Lambda without alias and stream without suffix and default
-  checkResolveStage('ES', '1.0.1', '1.01', 'Stream', context, 'ES', t);
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Es');
   // Event stage must override Lambda without alias and stream with suffix and default
-  checkResolveStage('ES', '1.0.1', '1.01', 'Stream_SS', context, 'ES', t);
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Es');
 
   // Event stage must override Lambda with alias and default
-  checkResolveStage('ES', '1.0.1', 'AS', '', context, 'ES', t);
+  checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'Es');
   // Event stage must override Lambda with alias and stream without suffix and default
-  checkResolveStage('ES', '1.0.1', 'AS', 'Stream', context, 'ES', t);
+  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Es');
   // Event stage must override Lambda with alias and stream with suffix and default
-  checkResolveStage('ES', '1.0.1', 'AS', 'Stream_SS', context, 'ES', t);
+  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Es');
 
   t.end();
 });
 
 
 test('resolveStage with context stage and without event stage', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.defaultStage = 'DS';
-  context.resolveStageConfig.inCase = '';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
 
-  context.stage = 'CS';
+  context.stage = 'Cs';
 
   // Context stage must override default stage
-  checkResolveStage('', '', '', '', context, 'CS', t);
+  checkResolveStage(t, '', '', '', '', context, 'Cs');
 
   // Context stage must override stream without suffix and default
-  checkResolveStage('', '', '', 'Stream', context, 'CS', t);
+  checkResolveStage(t, '', '', '', 'Stream', context, 'Cs');
   // Context stage must override stream with suffix and default
-  checkResolveStage('', '', '', 'Stream_SS', context, 'CS', t);
+  checkResolveStage(t, '', '', '', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override Lambda without alias and default
-  checkResolveStage('', '1.0.1', '1.01', '', context, 'CS', t);
+  checkResolveStage(t, '', '1.0.1', '1.01', '', context, 'Cs');
   // Context stage must override Lambda without alias and stream without suffix and default
-  checkResolveStage('', '1.0.1', '1.01', 'Stream', context, 'CS', t);
+  checkResolveStage(t, '', '1.0.1', '1.01', 'Stream', context, 'Cs');
   // Context stage must override Lambda without alias and stream with suffix and default
-  checkResolveStage('', '1.0.1', '1.01', 'Stream_SS', context, 'CS', t);
+  checkResolveStage(t, '', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override Lambda with alias and default
-  checkResolveStage('', '1.0.1', 'AS', '', context, 'CS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', '', context, 'Cs');
   // Context stage must override Lambda with alias and stream without suffix and default
-  checkResolveStage('', '1.0.1', 'AS', 'Stream', context, 'CS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', 'Stream', context, 'Cs');
   // Context stage must override Lambda with alias and stream with suffix and default
-  checkResolveStage('', '1.0.1', 'AS', 'Stream_SS', context, 'CS', t);
+  checkResolveStage(t, '', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
 
   t.end();
 });
 
 test('resolveStage with context stage and with event stage', t => {
-  const context = configureResolveStageWithDefaults({});
-  context.resolveStageConfig.defaultStage = 'DS';
-  context.resolveStageConfig.inCase = '';
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
 
-  context.stage = 'CS';
+  context.stage = 'Cs';
 
   // Context stage must override default stage
-  checkResolveStage('ES', '', '', '', context, 'CS', t);
+  checkResolveStage(t, 'Es', '', '', '', context, 'Cs');
   // Context stage must override stream without suffix and default
-  checkResolveStage('ES', '', '', 'Stream', context, 'CS', t);
+  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'Cs');
   // Context stage must override stream with suffix and default
-  checkResolveStage('ES', '', '', 'Stream_SS', context, 'CS', t);
+  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override event stage and Lambda without alias and default
-  checkResolveStage('ES', '1.0.1', '1.01', '', context, 'CS', t);
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'Cs');
   // Context stage must override event stage and Lambda without alias and stream without suffix and default
-  checkResolveStage('ES', '1.0.1', '1.01', 'Stream', context, 'CS', t);
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Cs');
   // Context stage must override event stage and Lambda without alias and stream with suffix and default
-  checkResolveStage('ES', '1.0.1', '1.01', 'Stream_SS', context, 'CS', t);
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override event stage and Lambda with alias and default
-  checkResolveStage('ES', '1.0.1', 'AS', '', context, 'CS', t);
+  checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'Cs');
   // Context stage must override event stage and Lambda with alias and stream without suffix and default
-  checkResolveStage('ES', '1.0.1', 'AS', 'Stream', context, 'CS', t);
+  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Cs');
   // Context stage must override event stage and Lambda with alias and stream with suffix and default
-  checkResolveStage('ES', '1.0.1', 'AS', 'Stream_SS', context, 'CS', t);
+  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
+
+  t.end();
+});
+
+test('resolveStage with custom-to-stage, event stage, but no context stage', t => {
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
+  context.stageHandling.customToStage = () => { return 'CustomStage'; };
+
+  // Context stage must override default stage
+  checkResolveStage(t, 'Es', '', '', '', context, 'CustomStage');
+  // Context stage must override stream without suffix and default
+  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'CustomStage');
+  // Context stage must override stream with suffix and default
+  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'CustomStage');
+
+  // Context stage must override event stage and Lambda without alias and default
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'CustomStage');
+  // Context stage must override event stage and Lambda without alias and stream without suffix and default
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'CustomStage');
+  // Context stage must override event stage and Lambda without alias and stream with suffix and default
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'CustomStage');
+
+  // Context stage must override event stage and Lambda with alias and default
+  checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'CustomStage');
+  // Context stage must override event stage and Lambda with alias and stream without suffix and default
+  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'CustomStage');
+  // Context stage must override event stage and Lambda with alias and stream with suffix and default
+  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'CustomStage');
+
+  t.end();
+});
+
+test('resolveStage with custom-to-stage and context stage and event stage', t => {
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
+  context.stageHandling.customToStage = () => { return 'CustomStage'; };
+
+  context.stage = 'Cs';
+
+  // Context stage must override default stage
+  checkResolveStage(t, 'Es', '', '', '', context, 'Cs');
+  // Context stage must override stream without suffix and default
+  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'Cs');
+  // Context stage must override stream with suffix and default
+  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'Cs');
+
+  // Context stage must override event stage and Lambda without alias and default
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'Cs');
+  // Context stage must override event stage and Lambda without alias and stream without suffix and default
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Cs');
+  // Context stage must override event stage and Lambda without alias and stream with suffix and default
+  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
+
+  // Context stage must override event stage and Lambda with alias and default
+  checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'Cs');
+  // Context stage must override event stage and Lambda with alias and stream without suffix and default
+  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Cs');
+  // Context stage must override event stage and Lambda with alias and stream with suffix and default
+  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
 
   t.end();
 });

@@ -12,6 +12,7 @@ module.exports = {
   getInvokedFunctionArnRegion: getInvokedFunctionArnRegion,
   getEventAwsRegions: getEventAwsRegions,
   getEventSourceArnRegions: getEventSourceArnRegions,
+  configureRegion: configureRegion,
   //resolveRegion: resolveRegion,
   ONLY_FOR_TESTING: {
     getRegionRaw: getRegionRaw,
@@ -35,16 +36,29 @@ const getArnRegion = arns.getArnRegion;
 // const getArnResources = arns.getArnResources;
 
 /**
- * Gets the region in which this function is running from the AWS_REGION environment variable (if it exists); otherwise
- * returns an empty string.
+ * Gets the region in which this function is running from the AWS_REGION environment variable (if it exists, which
+ * should always be true for a live AWS Lambda); otherwise logs a warning and returns an empty string.
  *
  * This is the best option to use to get the region within AWS Lambda code (and the only option to use at module-level
  * scope), since these environment variables will be set by AWS Lambda.
  *
+ * An optional hidden 'failFast' boolean argument, which defaults to false, can be passed as true to raise an error if
+ * the AWS_REGION env variable is not available
+ *
  * @returns {string} the AWS region (if it exists); otherwise an empty string.
  */
 function getRegion() {
-  return trimOrEmpty(process.env.AWS_REGION);
+  const region = trimOrEmpty(process.env.AWS_REGION);
+  if (!region) {
+    const errorMsg = 'Failed to get AWS_REGION from env - for unit testing either call setRegionIfNotBlank(...) in your tests or set your AWS_REGION env variable';
+    const failFast = arguments.length > 0 && arguments[0] === true;
+    if (failFast) {
+      console.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    console.warn(errorMsg);
+  }
+  return region;
 }
 
 /**
@@ -65,7 +79,7 @@ function setRegionIfNotSet(awsRegion) {
   const newRegion = trimOrEmpty(awsRegion);
 
   // Check if AWS region is already set or not
-  const region = getRegion();
+  const region = getRegionRaw();
   if (isBlank(region)) {
     // Attempt to set the AWS_REGION
     try {
@@ -194,5 +208,23 @@ function getRegionRaw() {
  */
 function getDefaultRegionRaw() {
   return trim(process.env.AWS_DEFAULT_REGION);
+}
+
+/**
+ * Returns the context.region if it is already configured on the given context, otherwise gets the current AWS_REGION
+ * and then, if its not blank, sets it on the context as context.region; otherwise either raises an error if failFast is
+ * explicitly true or logs a warning.
+ * @param {Object} context - a context on which to set the region
+ * @param {boolean|undefined} [failFast] - an optional flag that is only used when AWS_REGION is needed and blank and
+ * that determines whether the error will be raised (if failFast is explicitly true) or simply logged as a warning
+ * @throws {Error} if failFast is explicitly true and an AWS_REGION env variable is needed and not available
+ * @returns {Object} the context with its existing region or the current AWS_REGION env variable value.
+ */
+function configureRegion(context, failFast) {
+  // Resolve the AWS region, if it is not already defined on the context
+  if (!context.region) {
+    context.region = getRegion(failFast === true);
+  }
+  return context;
 }
 

@@ -1,21 +1,65 @@
 'use strict';
 
+// Stage handling setting names
+const CUSTOM_TO_STAGE_SETTING = 'customToStage';
+const CONVERT_ALIAS_TO_STAGE_SETTING = 'convertAliasToStage';
+
+const STREAM_NAME_STAGE_SEPARATOR_SETTING = 'streamNameStageSeparator';
+const INJECT_STAGE_INTO_STREAM_NAME_SETTING = 'injectStageIntoStreamName';
+const EXTRACT_STAGE_FROM_STREAM_NAME_SETTING = 'extractStageFromStreamName';
+
+const RESOURCE_NAME_STAGE_SEPARATOR_SETTING = 'resourceNameStageSeparator';
+const INJECT_STAGE_INTO_RESOURCE_NAME_SETTING = 'injectStageIntoResourceName';
+const EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING = 'extractStageFromResourceName';
+
+const INJECT_IN_CASE_SETTING = 'injectInCase';
+const EXTRACT_IN_CASE_SETTING = 'extractInCase';
+
+//TODO perhaps consider adding a default region to stage mapping, e.g. us-west-2 = qa(?); eu-west-1 = prod(?); ... BUT this wouldn't be perfect either :(
+
 /**
- * Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources (primarily for AWS Lambda usage).
+ * Stage handling utilities (primarily for AWS Lambda usage), which include the following:
+ * - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources.
+ * - Utilities for configuration of stage handling.
+ * - Configurable and default functions for generating stage-qualified stream and resource names.
+ * - Configurable and default functions for extracting stages from stage-qualified stream and resource names.
+ *
  * @module aws-core-utils/stages
  * @author Byron du Preez
  */
-
 module.exports = {
-  isResolveStageConfigured: isResolveStageConfigured,
-  configureResolveStage: configureResolveStage,
-  configureResolveStageWithDefaults: configureResolveStageWithDefaults,
+  // Configuration
+  isStageHandlingConfigured: isStageHandlingConfigured,
+  configureStageHandling: configureStageHandling,
+  configureDefaultStageHandling: configureDefaultStageHandling,
+  getStageHandlingSetting: getStageHandlingSetting,
+  getStageHandlingFunction: getStageHandlingFunction,
+  // Stage resolution
   resolveStage: resolveStage,
-  getResolveStageSetting: getResolveStageSetting,
-  appendStage: appendStage,
-  convertAliasToStage: convertAliasToStage,
-  convertStreamNameSuffixToStage: convertStreamNameSuffixToStage,
-  FOR_TESTING_ONLY: {
+  configureStage: configureStage,
+  // Stream name qualification
+  toStageQualifiedStreamName: toStageQualifiedStreamName,
+  extractStageFromQualifiedStreamName: extractStageFromQualifiedStreamName,
+  // Resource name qualification
+  toStageQualifiedResourceName: toStageQualifiedResourceName,
+  extractStageFromQualifiedResourceName: extractStageFromQualifiedResourceName,
+
+  /**
+   * Default implementations of specialized versions of some of the above functions, which are NOT meant to be used
+   * directly and are ONLY exposed to facilitate re-using some of these functions if needed in a customised stage
+   * handling configuration.
+   */
+  DEFAULTS: {
+    // Alias conversion
+    convertAliasToStage: convertAliasToStage,
+    // Stage-suffixed stream name qualification
+    toStageSuffixedStreamName: toStageSuffixedStreamName,
+    extractStageFromSuffixedStreamName: extractStageFromSuffixedStreamName,
+    // Stage-suffixed resource name qualification
+    toStageSuffixedResourceName: toStageSuffixedResourceName,
+    extractStageFromSuffixedResourceName: extractStageFromSuffixedResourceName,
+    // Generic utils
+    toStageSuffixedName: toStageSuffixedName,
     toCase: toCase
   }
 };
@@ -23,210 +67,361 @@ module.exports = {
 const Strings = require('core-functions/strings');
 const trim = Strings.trim;
 const trimOrEmpty = Strings.trimOrEmpty;
-//const isBlank = Strings.isBlank;
+const isBlank = Strings.isBlank;
 const isNotBlank = Strings.isNotBlank;
+const stringify = Strings.stringify;
 
-const arns = require('./arns');
-const getArnResources = arns.getArnResources;
+const streamEvents = require('./stream-events');
 
-const lambdas = require('./lambdas');
-const getAlias = lambdas.getAlias;
+const Lambdas = require('./lambdas');
 
-const Functions = require('core-functions/functions');
-const isFunction = Functions.isFunction;
+const Arrays = require('core-functions/arrays');
 
-const DEFAULT_STREAM_NAME_STAGE_SEPARATOR = '_';
-const DEFAULT_IN_CASE = 'lowercase';
+const logging = require('logging-utils/logging-utils');
 
 /**
- * Returns true if resolve stage settings are already configured on the given context; false otherwise.
- * @param context the context to check
+ * Returns true if stage handling is already configured on the given context; false otherwise.
+ * @param {Object} context - the context to check
  * @returns {boolean} true if configured; false otherwise
  */
-function isResolveStageConfigured(context) {
-  return context && typeof context.resolveStageConfig === 'object';
+function isStageHandlingConfigured(context) {
+  return context && typeof context.stageHandling === 'object';
 }
 
 /**
- * Configures the given context with the given resolve stage settings, but only if there are no resolve stage settings
- * already configured on the given context OR if forceConfiguration is true. The resolve stage settings determine how
- * {@linkcode resolveStage} will behave when invoked.
+ * Configures the given context with the given stage handling settings, but only if stage handling is not already
+ * configured on the given context OR if forceConfiguration is true. The stage handling settings determine how
+ * {@linkcode resolveStage}, {@linkcode toStageQualifiedStreamName}, {@linkcode extractStageFromQualifiedStreamName},
+ * {@linkcode toStageQualifiedResourceName}, {@linkcode extractStageFromQualifiedStreamName} and other internal
+ * functions will behave when invoked.
  *
- * @param {Object} context the context onto which to configure resolve stage settings
- * @param {Function|undefined} convertAliasToStage - an optional function that accepts: an extracted alias (if any);
- * an AWS event; an AWS context; and a context, and converts the alias into a stage or returns an empty string
- * @param {Function|undefined} convertStreamNameToStage - an optional function that accepts: a stream name; an AWS
- * event; an AWS context; and a context, and extracts a stage from the stream name or returns an empty string
- * @param {string|undefined} streamNameStageSeparator - an optional non-blank separator to use instead of '_' to
- * extract a stage from a stream name
- * @param {string|undefined} defaultStage - an optional default stage to use as a last resort if all other attempts fail
- * @param {string|undefined} inCase - specifies whether to convert a resolved stage to uppercase (if 'uppercase' or
- * 'upper') or to lowercase (if 'lowercase' or 'lower') or keep it as resolved (if anything else)
- * @param {boolean|undefined} forceConfiguration whether or not to force configuration of the given settings, which will
- * override any previously configured resolve stage settings on the given context
- * @return {Object} the updated context object
+ * Notes:
+ * - If injectInCase is set to 'upper' then extractInCase should typically be set to 'lower'.
+ * - If injectInCase is set to 'lower' then extractInCase should typically be set to 'upper'.
+ * - If injectInCase is set to 'as_is' then extractInCase should typically be set to 'as_is'.
+ *
+ * - Recommendation: For clarity, use 'as_is' to keep extracted and resolved stages as is (i.e. to NOT convert them to
+ *   either upper or lowercase). Technically any non-blank value will achieve the same result, but the 'as_is' is less
+ *   confusing.
+ *
+ * @param {Object} context the context onto which to configure stage handling settings
+ *
+ * @param {Function|undefined} [customToStage] - an optional custom function that accepts: an AWS event; an AWS context;
+ * and a context, and somehow extracts a usable stage from the AWS event and/or AWS context.
+ *
+ * @param {Function|undefined} [convertAliasToStage] - an optional function that accepts: an extracted alias (if any);
+ * an AWS event; an AWS context; and a context, and converts the alias into a stage
+
+ * @param {Function|undefined} [injectStageIntoStreamName] - an optional function that accepts: an unqualified stream
+ * name; a stage; and a context, and returns a stage-qualified stream name (effectively the reverse function of the
+ * extractStageFromStreamName function)
+ *
+ * @param {Function|undefined} [extractStageFromStreamName] - an optional function that accepts: a stage-qualified
+ * stream name; and a context, and extracts a stage from the stream name
+ *
+ * @param {string|undefined} [streamNameStageSeparator] - an optional non-blank separator to use to extract a stage from
+ * a stage-qualified stream name or inject a stage into an unqualified stream name
+ *
+ * @param {Function|undefined} [injectStageIntoResourceName] - an optional function that accepts: an unqualified
+ * resource name; a stage; and a context, and returns a stage-qualified resource name (effectively the reverse function
+ * of the extractStageFromResourceName function)
+ *
+ * @param {Function|undefined} [extractStageFromResourceName] - an optional function that accepts: a stage-qualified
+ * resource name; and a context, and extracts a stage from the resource name
+ *
+ * @param {string|undefined} [resourceNameStageSeparator] - an optional non-blank separator to use to extract a stage
+ * from a stage-qualified resource name or inject a stage into an unqualified resource name
+ *
+ * @param {string|undefined} [injectInCase] - optionally specifies whether to convert an injected stage to uppercase (if
+ * 'upper' or 'uppercase') or to lowercase (if 'lowercase' or 'lower') or keep it as given (if 'as_is' or anything else)
+ *
+ * @param {string|undefined} [extractInCase] - optionally specifies whether to convert an extracted stage to uppercase
+ * (if 'upper' or 'uppercase') or to lowercase (if 'lowercase' or 'lower') or keep it as extracted (if 'as_is' or
+ * anything else)
+ *
+ * @param {string|undefined} [defaultStage] - an optional default stage to use as a last resort if all other attempts fail
+ *
+ * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
+ * will override any previously configured stage handling settings on the given context
+ *
+ * @return {Object} the context object configured with stage handling settings
  */
-function configureResolveStage(context, convertAliasToStage, convertStreamNameToStage, streamNameStageSeparator,
-    defaultStage, inCase, forceConfiguration) {
+function configureStageHandling(context, customToStage, convertAliasToStage,
+  injectStageIntoStreamName, extractStageFromStreamName, streamNameStageSeparator,
+  injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator,
+  injectInCase, extractInCase, defaultStage, forceConfiguration) {
 
   // If forceConfiguration is false check if the given context already has stage resolution configured on it
   // and, if so, do nothing more and simply return the context as is (to prevent overriding an earlier configuration)
-  if (!forceConfiguration && isResolveStageConfigured(context)) {
+  if (!forceConfiguration && isStageHandlingConfigured(context)) {
     return context;
   }
-  // Configure the resolve stage settings
-  context.resolveStageConfig = {
+  // Configure the stage handling settings
+  context.stageHandling = {
+    customToStage: customToStage,
     convertAliasToStage: convertAliasToStage,
-    convertStreamNameToStage: convertStreamNameToStage,
+
+    injectStageIntoStreamName: injectStageIntoStreamName,
+    extractStageFromStreamName: extractStageFromStreamName,
     streamNameStageSeparator: streamNameStageSeparator,
+
+    injectStageIntoResourceName: injectStageIntoResourceName,
+    extractStageFromResourceName: extractStageFromResourceName,
+    resourceNameStageSeparator: resourceNameStageSeparator,
+
+    injectInCase: injectInCase,
+    extractInCase: extractInCase,
+
     defaultStage: defaultStage,
-    inCase: inCase
   };
   return context;
 }
 
 /**
- * Configures the given context with the default resolve stage settings, but only if there are no resolve stage settings
- * already configured on the given context OR if forceConfiguration is true. The resolve stage settings determine how
- * {@linkcode resolveStage} will behave when invoked.
+ * Configures the given context with the default stage handling settings, but only if stage handling is NOT already
+ * configured on the given context OR if forceConfiguration is true.
  *
- * @param {Object} context the context onto which to configure resolve stage settings
- * @param {boolean|undefined} forceConfiguration whether or not to force configuration of the given settings, which will
- * override any previously configured resolve stage settings on the given context
- * @return {Object} the updated context object
+ * The default stage handling makes the following assumptions:
+ * - Stages are all lowercase.
+ * - Lambda aliases are stages.
+ * - The customToStage function is left undefined.
+ * - A defaultStage is NOT defined (and it is probably not a good idea to set it in general).
+ * - Stream names will be suffixed with an underscore and an uppercase stage.
+ *   For example:
+ *   - Injecting an unqualified stream name of "TestStream" with a stage of "qa" would give "TestStream_QA"
+ *   - Extracting the stage from a qualified stream name of "My_Stream_PROD" would give "prod"
+ * - Other resource names will also be suffixed with an underscore and an uppercase stage.
+ *
+ * Some or all of this default behaviour can be overridden using {@linkcode configureStageHandling}.
+ *
+ * @see {@linkcode configureStageHandling} for more information.
+ *
+ * @param {Object} context - the context onto which to configure stage handling settings
+ * @param {boolean|undefined} forceConfiguration - whether or not to force configuration of the given settings, which
+ * will override any previously configured stage handling settings on the given context
+ * @return {Object} the context object configured with stage handling settings (either existing or defaults)
  */
-function configureResolveStageWithDefaults(context, forceConfiguration) {
-  return configureResolveStage(context, convertAliasToStage, convertStreamNameSuffixToStage,
-    DEFAULT_STREAM_NAME_STAGE_SEPARATOR, undefined, DEFAULT_IN_CASE, forceConfiguration);
+function configureDefaultStageHandling(context, forceConfiguration) {
+  // Load local defaults for separators and in case settings
+  const config = require('./config.json');
+
+  // Use the locally configured default stream name stage separator (if non-blank); otherwise use underscore
+  const streamNameStageSeparator = config.stages && isNotBlank(config.stages.defaultStreamNameStageSeparator) ?
+    trim(config.stages.defaultStreamNameStageSeparator) : '_';
+
+  // Use the locally configured default resource name stage separator (if non-blank); otherwise use underscore
+  const resourceNameStageSeparator = config.stages && isNotBlank(config.stages.defaultResourceNameStageSeparator) ?
+    trim(config.stages.defaultResourceNameStageSeparator) : '_';
+
+  // Use the locally configured default extract in case (if non-blank); otherwise use 'lower'
+  const extractInCase = config.stages && isNotBlank(config.stages.defaultExtractInCase) ?
+    trim(config.stages.defaultExtractInCase) : 'lower';
+
+  // Use the locally configured default inject in case (if non-blank); otherwise use 'upper'
+  const injectInCase = config.stages && isNotBlank(config.stages.defaultInjectInCase) ?
+    trim(config.stages.defaultInjectInCase) : 'upper';
+
+  return configureStageHandling(context, undefined, convertAliasToStage,
+    toStageSuffixedStreamName, extractStageFromSuffixedStreamName, streamNameStageSeparator,
+    toStageSuffixedResourceName, extractStageFromSuffixedResourceName, resourceNameStageSeparator,
+    injectInCase, extractInCase, undefined, forceConfiguration);
+}
+
+/**
+ * Returns the value of the named stage handling setting (if any) on the given context.
+ * @param context - the context from which to fetch the named setting's value
+ * @param settingName - the name of the stage handling setting
+ * @returns {*|undefined} the value of the named setting (if any); otherwise undefined
+ */
+function getStageHandlingSetting(context, settingName) {
+  return context && context.stageHandling && isNotBlank(settingName) && context.stageHandling[settingName] ?
+    context.stageHandling[settingName] : undefined;
+}
+
+/**
+ * Returns the function configured at the named stage handling setting on the given context (if any and if it's a real
+ * function); otherwise returns undefined.
+ * @param context - the context from which to fetch the function
+ * @param settingName - the name of the stage handling setting
+ * @returns {*|undefined} the named function (if it's a function); otherwise undefined
+ */
+function getStageHandlingFunction(context, settingName) {
+  const fn = getStageHandlingSetting(context, settingName);
+  return typeof fn === 'function' ? fn : undefined;
+}
+
+/**
+ * If no stage handling settings have been configured yet, then configure the given context with the default settings.
+ */
+function configureDefaultStageHandlingIfNotConfigured(context, caller) {
+  // Also configure logging if not already configured
+  if (!logging.isLoggingConfigured(context)) {
+    logging.configureDefaultLogging(context);
+    context.warn(`Logging was not configured before calling ${caller} - using default logging configuration`);
+  }
+  // Configure stage handling if not already configured
+  if (!isStageHandlingConfigured(context)) {
+    context.warn(`Stage handling was not configured before calling ${caller} - using default stage handling configuration`);
+    configureDefaultStageHandling(context, true);
+  }
 }
 
 /**
  * Attempts to resolve the stage from the given AWS event, AWS context and context using the following process:
- * 1. Uses context.stage (if non-blank).
+ * 1. Uses an explicit (or previously resolved) context.stage (if non-blank).
  *
- * 2. Uses the AWS event's stage (if non-blank).
+ * 2. Uses the given context's stageHandling.customToStage function (if any) to attempt to somehow extract a stage from
+ *    the AWS event and/or AWS context. This function has no default implementation and is merely provided as a hook for
+ *    callers to add their own custom technique for resolving a stage, which will take precedence over all other steps
+ *    other step 1, which uses an explicit context.stage.
+ *
+ * 3. Uses the AWS event's stage (if non-blank).
  *    NB: event.stage is NOT a standard AWS event property, but it may be set by API Gateway or tools like serverless.
  *    TODO check whether API Gateway sets the stage on the event and if so confirm WHERE it sets it!
  *
- * 3. Extracts the alias from the AWS context's invokedFunctionArn (if any) and then uses the given context's
- *    resolveStageConfig.convertAliasToStage function (if any) to convert the extracted alias (if any) into a stage.
+ * 4. Extracts the alias from the AWS context's invokedFunctionArn (if any) and then uses the given context's
+ *    stageHandling.convertAliasToStage function (if any) to convert the extracted alias (if any) into a stage.
  *
- *    NB: This step relies on a convention of using stages as Lambda aliases and, hence, should be skipped, if you
- *    are NOT using such a convention, by simply NOT configuring a resolveStageConfig.convertAliasToStage function
- *    on the given context.
+ *    NB: This step relies on a convention of using Lambda aliases as stages. If you are NOT using such a convention,
+ *    then disable this step by simply NOT configuring a stageHandling.convertAliasToStage function on the context (see
+ *    {@linkcode configureStageHandling}).
  *
- * 4. Extracts the stream names from the AWS event's records' eventSourceARNs (if any) and then uses the given context's
- *    resolveStageConfig.convertStreamNameToStage function (if any) to convert the extracted stream names into stages
- *    and returns the first non-blank stage (if any).
+ * 5. Extracts the stream names from the AWS event's records' eventSourceARNs (if any) and then uses the given context's
+ *    configured stageHandling.extractStageFromStreamName function (if defined) to extract the stages from these stream
+ *    names and returns the first non-blank stage (if any and if there are NOT multiple distinct results).
  *
- *    NB: This step relies on a convention of qualifying stream names with a stage and, hence, should be skipped, if you
- *    are NOT using such a convention, by simply NOT configuring a resolveStageConfig.convertStreamNameToStage function
- *    on the given context.
+ *    NB: This step relies on a convention of qualifying stream names with a stage. If you are NOT using such a
+ *    convention, then disable this step by simply NOT configuring a stageHandling.extractStageFromStreamName function
+ *    on the context (see {@linkcode configureStageHandling}). Note that doing this will also disable the
+ *    {@linkcode extractStageFromQualifiedStreamName} function.
  *
- * 5. Uses context.resolveStageConfig.defaultStage (if non-blank).
+ * 6. Uses context.stageHandling.defaultStage (if non-blank).
  *
- * 6. Gives up and returns an empty string.
+ * 7. Uses context.defaultStage (if non-blank).
  *
- * NB: If no resolve stage settings have been configured by the time this function is first called, then the given
- * context will be configured with the default resolve stage settings (see {@linkcode configureResolveStageWithDefaults}).
+ * 8. Gives up and returns an empty string.
+ *
+ * NB: If no stage handling settings have been configured by the time this function is first called, then the given
+ * context will be configured with the default stage handling settings (see {@linkcode configureDefaultStageHandling}).
  *
  * @param {Object} event - the AWS event
  * @param {Object} awsContext - the AWS context, which was passed to your lambda
  * @param {Object} context - the context, which can also be used to pass additional configuration through to any custom
- * convertAliasToStage or convertStreamNameToStage functions that you configured
+ * convertAliasToStage or extractStageFromStreamName functions that you configured
  * @param {string|undefined} [context.stage] - an optional stage on the given context, which will short-circuit
  * resolution to this stage (if non-blank)
- * @param {Function|undefined} [context.resolveStageConfig.convertAliasToStage] - an optional function on the given
+ * @param {Function|undefined} [context.stageHandling.customToStage] - an optional custom function that accepts: an
+ * AWS event; an AWS context; and a context, and somehow extracts and returns a usable stage from the AWS event and/or
+ * AWS context
+ * @param {Function|undefined} [context.stageHandling.convertAliasToStage] - an optional function on the given
  * context that accepts: an extracted alias (if any); an AWS event; an AWS context; and a context, and converts the
- * alias into a stage or returns an empty string
- * @param {Function|undefined} [context.resolveStageConfig.convertStreamNameToStage] - an optional function on the given
- * context that accepts: a Kinesis stream name; an AWS event; an AWS context; and a context, and extracts a stage from
- * the stream name or returns an empty string
- * @param {string|undefined} [context.resolveStageConfig.defaultStage] - an optional default stage on the given context
- * to use as a last resort if all other attempts fail
- * @param {string|undefined} [context.resolveStageConfig.inCase] - specifies whether to convert the resolved stage to
- * uppercase (if 'uppercase' or 'upper') or to lowercase (if 'lowercase' or 'lower') or keep it as resolved (if anything else)
+ * alias into a stage
+ * @param {Function|undefined} [context.stageHandling.extractStageFromStreamName] - an optional function on the given
+ * context that accepts: a stage-qualified stream name; and a context, and extracts a stage from the stream name
+ * @param {string|undefined} [context.stageHandling.defaultStage] - an optional default stage on the given context to
+ * use as a second last resort if all other attempts fail (configure this via configureStageHandling)
+ * @param {string|undefined} [context.defaultStage] - an optional default stage on the given context to use as the LAST
+ * resort if all other attempts fail
+ * @param {string|undefined} [context.stageHandling.extractInCase] - specifies whether to convert the resolved stage to
+ * uppercase (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as resolved (if 'as_is'
+ * or anything else)
  * @returns {string} the resolved stage (if non-blank); otherwise an empty string
  */
 function resolveStage(event, awsContext, context) {
-  // If no resolve stage settings have been configured yet, then configure the given context with the default settings
-  if (!isResolveStageConfigured(context)) {
-    configureResolveStageWithDefaults(context, true);
-  }
+  // Ensure at least default configuration is in place at this point
+  configureDefaultStageHandlingIfNotConfigured(context, resolveStage.name);
 
-  const inCase = getResolveStageSetting(context, 'inCase');
+  // Resolve extractInCase
+  const extractInCase = getStageHandlingSetting(context, EXTRACT_IN_CASE_SETTING);
 
   // Attempt 1
   if (context && isNotBlank(context.stage)) {
-    return toCase(trim(context.stage), inCase);
+    context.debug(`Resolved stage (${context.stage}) from context.stage)`);
+    return toCase(trim(context.stage), extractInCase);
   }
 
   // Attempt 2
-  if (event && isNotBlank(event.stage)) {
-    return toCase(trim(event.stage), inCase);
+  const customToStage = getStageHandlingFunction(context, CUSTOM_TO_STAGE_SETTING);
+
+  if (customToStage) {
+    const stage = customToStage(event, awsContext, context);
+
+    if (isNotBlank(stage)) {
+      context.debug(`Resolved stage (${stage}) from custom function`);
+      return toCase(trim(stage), extractInCase);
+    }
   }
 
   // Attempt 3
-  // Check have all the pieces needed to extract an alias and apply the given convertAliasToStage function to it
-  const convertAliasToStage = getResolveStageSetting(context, 'convertAliasToStage');
-
-  if (awsContext && isNotBlank(awsContext.functionVersion) && isNotBlank(awsContext.invokedFunctionArn) &&
-    isFunction(convertAliasToStage)) {
-    // Extract the alias
-    const alias = getAlias(awsContext);
-
-    // If the alias is not blank, apply the convertAliasToStage function to it to derive a stage
-    const stage = isNotBlank(alias) ? convertAliasToStage(alias, event, awsContext, context) : '';
-    if (isNotBlank(stage)) {
-      return toCase(trim(stage), inCase);
-    }
+  if (event && isNotBlank(event.stage)) {
+    context.debug(`Resolved stage (${event.stage}) from event.stage)`);
+    return toCase(trim(event.stage), extractInCase);
   }
 
   // Attempt 4
-  function extractStageFromEventSourceARN(record) {
-    if (record && isNotBlank(record.eventSourceARN)) {
-      // Extract the stream name
-      const streamName = getArnResources(record.eventSourceARN).resource;
+  // Check have all the pieces needed to extract an alias and apply the given convertAliasToStage function to it
+  const convertAliasToStage = getStageHandlingFunction(context, CONVERT_ALIAS_TO_STAGE_SETTING);
 
-      // If the stream name is not blank, apply the convertStreamNameToStage function to it to derive a stage
-      return isNotBlank(streamName) ? convertStreamNameToStage(streamName, event, awsContext, context) : '';
-    }
-    return '';
-  }
+  if (convertAliasToStage && awsContext && isNotBlank(awsContext.functionVersion) && isNotBlank(awsContext.invokedFunctionArn)) {
+    // Extract the alias
+    const alias = Lambdas.getAlias(awsContext);
 
-  // Check have all the pieces needed to extract a stream name and apply the given convertStreamNameToStage function to it
-  const convertStreamNameToStage = getResolveStageSetting(context, 'convertStreamNameToStage');
+    // If the alias is not blank, apply the convertAliasToStage function to it to derive a stage
+    const stage = isNotBlank(alias) ? convertAliasToStage(trim(alias), event, awsContext, context) : '';
 
-  if (event && event.Records && event.Records.length > 0 && isFunction(convertStreamNameToStage)) {
-    const stage = event.Records.map(extractStageFromEventSourceARN).find(s => isNotBlank(s));
     if (isNotBlank(stage)) {
-      return toCase(trim(stage), inCase);
+      context.debug(`Resolved stage (${stage}) from alias (${alias})`);
+      return toCase(trim(stage), extractInCase);
     }
   }
 
   // Attempt 5
-  const defaultStage = getResolveStageSetting(context, 'defaultStage');
-  if (isNotBlank(defaultStage)) {
-    return toCase(trim(defaultStage), inCase);
+  // Check have all the pieces needed to extract a stream name and apply the given extractStageFromStreamName function to it
+  const extractStageFromStreamName = getStageHandlingFunction(context, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING);
+
+  if (extractStageFromStreamName && event && event.Records) {
+    const stages = streamEvents.getEventSourceStreamNames(event)
+      .map(streamName => isNotBlank(streamName) ? extractStageFromStreamName(trim(streamName), context) : '');
+
+    let stage = stages.find(s => isNotBlank(s));
+
+    if (stages.length > 1) {
+      const distinctStages = Arrays.distinct(stages);
+      if (distinctStages > 1) {
+        context.warn(`WARNING - Ignoring arbitrary first stage (${stage}), since found MULTIPLE distinct stages ${stringify(distinctStages)} on event (${stringify(event)})!`);
+        stage = ''; // too many choices, so choose none
+      }
+    }
+
+    if (isNotBlank(stage)) {
+      context.debug(`Resolved stage (${stage}) from event source ARN stream name`);
+      return toCase(trim(stage), extractInCase);
+    }
   }
 
-  // Give up
+  // Attempt 6
+  const stageHandlingDefaultStage = getStageHandlingSetting(context, 'defaultStage');
+
+  if (isNotBlank(stageHandlingDefaultStage)) {
+    context.debug(`Resolved stage (${event.stage}) from context.stageHandling.defaultStage)`);
+    return toCase(trim(stageHandlingDefaultStage), extractInCase);
+  }
+
+  // Attempt 7
+  const defaultStage = context && context.defaultStage ? context.defaultStage : undefined;
+
+  if (isNotBlank(defaultStage)) {
+    context.debug(`Resolved stage (${event.stage}) from context.defaultStage)`);
+    return toCase(trim(defaultStage), extractInCase);
+  }
+
+  // Give up 8
   return '';
 }
 
 /**
- * Returns the value of the named resolve stage setting (if any) on the given context.
- * @param context the context from which to fetch the named setting's value
- * @param settingName the name of the resolve stage setting
- * @returns {*|undefined} the value of the named setting (if any); otherwise undefined
- */
-function getResolveStageSetting(context, settingName) {
-  return context && context.resolveStageConfig && isNotBlank(settingName) && context.resolveStageConfig[settingName] ?
-    context.resolveStageConfig[settingName] : undefined;
-}
-
-/**
  * A default convertAliasToStage function that simply returns the given alias (if any) exactly as it is as the stage.
+ *
  * @param {string} [alias] the alias (if any) previously extracted from the AWS context's invokedFunctionArn
  * @param {Object} event - the AWS event
  * @param {Object} awsContext - the AWS context
@@ -237,50 +432,259 @@ function convertAliasToStage(alias, event, awsContext, context) {
   return isNotBlank(alias) ? trim(alias) : '';
 }
 
+// =====================================================================================================================
+// Stream name qualification
+// =====================================================================================================================
+
 /**
- * A default convertStreamNameToStage function that extracts and returns the "stage" suffix of the given event source
- * stream name. The suffix is extracted from the given stream name by taking everything after the last occurrence of
- * the configured streamNameStageSeparator (if any) or the default separator ('_').
- * @param {string} streamName the name of the source stream (originally extracted from the AWS event's eventSourceArn)
- * @param {Object} event the AWS event
- * @param {Object} awsContext the AWS context
- * @param {Object} context the context
- * @param {string|undefined} [context.resolveStageConfig.streamNameStageSeparator] - an optional non-blank separator to
- * use instead of '_'
- * @returns {string} the stage or an empty string
+ * Converts the given unqualified stream name (if non-blank) into a stage-qualified stream name by injecting the given
+ * stage into it (if an injectStageIntoStreamName function is configured); otherwise returns the given stream name.
+ *
+ * This function uses the configured injectStageIntoStreamName function (if any) on the given context to determine its
+ * actual behaviour.
+ *
+ * @param {string} unqualifiedStreamName - the unqualified name of the stream
+ * @param {string} stage - the stage to inject
+ * @param {Object} context - the context, which can also be used to pass additional configuration through to a custom
+ * injectStageIntoStreamName function that you configured
+ * @param {Function|undefined} [context.stageHandling.injectStageIntoStreamName] - an optional function that accepts:
+ * an unqualified stream name; a stage; and a context, and returns a stage-qualified stream name
+ * @returns {string} a stage-qualified stream name (or the given stream name)
  */
-function convertStreamNameSuffixToStage(streamName, event, awsContext, context) {
-  if (isNotBlank(streamName)) {
-    const separatorSetting = getResolveStageSetting(context, 'streamNameStageSeparator');
-    const separator = isNotBlank(separatorSetting) ? separatorSetting : '_';
-    const suffixStartPos = streamName.lastIndexOf(separator);
-    return suffixStartPos !== -1 ? trimOrEmpty(streamName.substring(suffixStartPos + 1)) : '';
+function toStageQualifiedStreamName(unqualifiedStreamName, stage, context) {
+  return _toStageQualifiedName(unqualifiedStreamName, stage, INJECT_STAGE_INTO_STREAM_NAME_SETTING,
+    toStageQualifiedStreamName.name, context);
+}
+
+/**
+ * Extracts the stage from the given stage-qualified stream name (if non-blank and an extractStageFromStreamName
+ * function is configured); otherwise returns an empty string.
+ *
+ * This function uses the configured extractStageFromStreamName function (if any) on the given context to determine its
+ * actual behaviour.
+ *
+ * @param {string} qualifiedStreamName - the stage-qualified stream name
+ * @param {Object} context - the context, which can also be used to pass additional configuration through to a custom
+ * extractStageFromStreamName function that you configured
+ * @param {Function|undefined} [context.stageHandling.extractStageFromStreamName] - an optional function that accepts:
+ * a stage-qualified stream name; and a context, and extracts a stage from the stream name
+ * @returns {string} the stage extracted from the stage-qualified stream name or an empty string
+ */
+function extractStageFromQualifiedStreamName(qualifiedStreamName, context) {
+  return _extractStageFromQualifiedName(qualifiedStreamName, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING,
+    extractStageFromQualifiedStreamName.name, context);
+}
+
+// =====================================================================================================================
+// Stream name qualification (default)
+// =====================================================================================================================
+
+/**
+ * Returns a stage-suffixed version of the given unsuffixed stream name with an appended stage suffix, which will
+ * contain the configured streamNameToStageSeparator followed by the given stage, which will be appended in uppercase,
+ * lowercase or kept as is according to the configured injectInCase.
+ *
+ * @param {string} unsuffixedStreamName - the unsuffixed name of the stream
+ * @param {string} stage - the stage to append
+ * @param {Object} context - the context
+ * @param {string|undefined} [context.stageHandling.streamNameStageSeparator] - an optional non-blank separator to use
+ * to append a stage suffix to an unsuffixed stream name
+ * @param {string|undefined} [context.stageHandling.injectInCase] - specifies whether to convert the stage to uppercase
+ * (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as is (if 'as_is' or anything else)
+ * @returns {string} the stage-suffixed stream name
+ */
+function toStageSuffixedStreamName(unsuffixedStreamName, stage, context) {
+  return _toStageSuffixedName(unsuffixedStreamName, stage, STREAM_NAME_STAGE_SEPARATOR_SETTING,
+    toStageSuffixedStreamName.name, context);
+}
+
+/**
+ * A default extractStageFromStreamName function that extracts the stage from the given stage-suffixed stream name.
+ *
+ * The suffix is extracted from the given stream name by taking everything after the last occurrence of the configured
+ * streamNameStageSeparator (if any).
+ *
+ * @param {string} stageSuffixedStreamName - the stage-suffixed name of the stream
+ * @param {Object} context - the context
+ * @param {string|undefined} [context.stageHandling.streamNameStageSeparator] - an optional non-blank separator to use
+ * @param {string|undefined} [context.stageHandling.extractInCase] - specifies whether to convert the stage to uppercase
+ * (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as is (if anything else);
+ * @returns {string} the stage (if extracted) or an empty string
+ */
+function extractStageFromSuffixedStreamName(stageSuffixedStreamName, context) {
+  return _extractStageFromSuffixedName(stageSuffixedStreamName, STREAM_NAME_STAGE_SEPARATOR_SETTING,
+    extractStageFromSuffixedStreamName.name, context);
+}
+
+// =====================================================================================================================
+// Resource name qualification
+// =====================================================================================================================
+
+/**
+ * Converts the given unqualified resource name (if non-blank) into a stage-qualified resource name by injecting the
+ * given stage into it (if an injectStageIntoResourceName function is configured); otherwise returns the given resource
+ * name as is.
+ *
+ * This function uses the configured injectStageIntoResourceName function (if any) on the given context function to
+ * determine its actual behaviour.
+ *
+ * @param {string} unqualifiedResourceName - the unqualified name of the resource
+ * @param {string} stage - the stage to inject
+ * @param {Object} context - the context, which can also be used to pass additional configuration through to a custom
+ * injectStageIntoResourceName function that you configured
+ * @param {Function|undefined} context.stageHandling.injectStageIntoResourceName - an optional function that accepts:
+ * an unqualified resource name; a stage; and a context, and returns a stage-qualified resource name
+ * @returns {string} a stage-qualified resource name
+ */
+function toStageQualifiedResourceName(unqualifiedResourceName, stage, context) {
+  return _toStageQualifiedName(unqualifiedResourceName, stage, INJECT_STAGE_INTO_RESOURCE_NAME_SETTING,
+    toStageQualifiedResourceName.name, context);
+}
+
+/**
+ * Extracts the stage from the given stage-qualified resource name (if non-blank and an extractStageFromResourceName
+ * function is configured); otherwise returns an empty string.
+ *
+ * This function uses the configured extractStageFromResourceName function (if any) on the given context to determine
+ * its actual behaviour.
+ *
+ * @param {string} qualifiedResourceName - the stage-qualified resource name
+ * @param {Object} context - the context, which can also be used to pass additional configuration through to a custom
+ * extractStageFromResourceName function that you configured
+ * @param {Function|undefined} [context.stageHandling.extractStageFromResourceName] - an optional function that accepts:
+ * a stage-qualified resource name; and a context, and extracts a stage from the resource name
+ * @returns {string} the stage extracted from the stage-qualified resource name; or an empty string
+ */
+function extractStageFromQualifiedResourceName(qualifiedResourceName, context) {
+  return _extractStageFromQualifiedName(qualifiedResourceName, EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING,
+    extractStageFromQualifiedResourceName.name, context);
+}
+
+// =====================================================================================================================
+// Resource name qualification (default)
+// =====================================================================================================================
+
+/**
+ * Returns a stage-suffixed version of the given unsuffixed resource name with an appended stage suffix, which will
+ * contain the configured resourceNameToStageSeparator followed by the given stage, which will be appended in uppercase,
+ * lowercase or kept as is according to the configured injectInCase.
+ * @param {string} unsuffixedResourceName - the unsuffixed name of the resource (e.g. an unsuffixed DynamoDB table name)
+ * @param {string} stage - the stage to append
+ * @param {Object} context - the context
+ * @param {string|undefined} [context.stageHandling.resourceNameStageSeparator] - an optional non-blank separator to use
+ * to append a stage suffix to an unsuffixed stream name
+ * @param {string|undefined} [context.stageHandling.injectInCase] - specifies whether to convert the stage to uppercase
+ * (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as is (if 'as_is' or anything else)
+ * @returns {string} the stage-suffixed resource name
+ */
+function toStageSuffixedResourceName(unsuffixedResourceName, stage, context) {
+  return _toStageSuffixedName(unsuffixedResourceName, stage, RESOURCE_NAME_STAGE_SEPARATOR_SETTING,
+    toStageSuffixedResourceName.name, context);
+}
+
+/**
+ * A default extractStageFromResourceName function that extracts the stage from the given stage-suffixed resource name.
+ * The suffix is extracted from the given resource name by taking everything after the last occurrence of the configured
+ * resourceNameStageSeparator (if any).
+ *
+ * @param {string} stageSuffixedResourceName the stage-suffixed name of the resource
+ * @param {Object} context the context
+ * @param {string|undefined} [context.stageHandling.resourceNameStageSeparator] - an optional non-blank separator to use
+ * @param {string|undefined} [context.stageHandling.extractInCase] - specifies whether to convert the stage to uppercase
+ * (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as is (if 'as-is' or anything else)
+ * @returns {string} the stage (if extracted) or an empty string
+ */
+function extractStageFromSuffixedResourceName(stageSuffixedResourceName, context) {
+  return _extractStageFromSuffixedName(stageSuffixedResourceName, RESOURCE_NAME_STAGE_SEPARATOR_SETTING,
+    extractStageFromSuffixedResourceName.name, context)
+}
+
+// =====================================================================================================================
+// Generic name qualification
+// =====================================================================================================================
+
+function _toStageQualifiedName(unqualifiedName, stage, injectStageIntoNameSettingName, caller, context) {
+  if (isNotBlank(unqualifiedName)) {
+    configureDefaultStageHandlingIfNotConfigured(context, caller);
+
+    // Resolve injectStageIntoName function to use
+    const injectStageIntoName = getStageHandlingFunction(context, injectStageIntoNameSettingName);
+
+    return injectStageIntoName ? injectStageIntoName(trim(unqualifiedName), stage, context) : unqualifiedName;
+  }
+  return unqualifiedName;
+}
+
+function _extractStageFromQualifiedName(qualifiedName, extractStageFromNameSettingName, caller, context) {
+  if (isNotBlank(qualifiedName)) {
+    configureDefaultStageHandlingIfNotConfigured(context, caller);
+
+    // Resolve extractStageFromName function to use
+    const extractStageFromName = getStageHandlingFunction(context, extractStageFromNameSettingName);
+
+    return extractStageFromName ? extractStageFromName(trim(qualifiedName), context) : '';
+  }
+  return '';
+}
+
+// =====================================================================================================================
+// Generic name qualification (default)
+// =====================================================================================================================
+
+function _toStageSuffixedName(unsuffixedName, stage, separatorSettingName, caller, context) {
+  if (isNotBlank(unsuffixedName)) {
+    configureDefaultStageHandlingIfNotConfigured(context, caller);
+
+    // Resolve separator
+    const separator = getStageHandlingSetting(context, separatorSettingName);
+
+    // Resolve injectInCase
+    const injectInCase = getStageHandlingSetting(context, INJECT_IN_CASE_SETTING);
+
+    return toStageSuffixedName(unsuffixedName, separator, stage, injectInCase);
+  }
+  return '';
+}
+
+function _extractStageFromSuffixedName(stageSuffixedName, separatorSettingName, caller, context) {
+  if (isNotBlank(stageSuffixedName)) {
+    configureDefaultStageHandlingIfNotConfigured(context, caller);
+
+    // Resolve separator
+    const separator = getStageHandlingSetting(context, separatorSettingName);
+
+    // Resolve extractInCase
+    const extractInCase = getStageHandlingSetting(context, EXTRACT_IN_CASE_SETTING);
+
+    // Extract stage using separator and convert to case specified by extractInCase
+    const suffixStartPos = stageSuffixedName.lastIndexOf(separator);
+    return suffixStartPos !== -1 ? trimOrEmpty(toCase(stageSuffixedName.substring(suffixStartPos + 1), extractInCase)) : '';
   }
   return '';
 }
 
 /**
- * Returns a stage-qualified version of the given base resource name with an appended "stage" suffix, which will contain
- * the given separator followed by the given stage, which will be appended in uppercase, lowercase or as is according to
- * the given inCase. If the given stage is blank, then the given resource name will be returned as is.
- *
- * @param {string} resourceName - the unqualified name of the resource (e.g. an unqualified DynamoDB table name or a
- * Kinesis stream name)
+ * Returns a stage-suffixed version of the given unsuffixed name with an appended stage suffix, which will contain the
+ * given separator followed by the given stage, which will be appended in uppercase, lowercase or kept as is according
+ * to the given inCase.
+ * @param {string} unsuffixedName - the unsuffixed name
  * @param {string} separator - the separator to use to separate the resource name from the stage
  * @param {string} stage - the stage to append
  * @param {string} inCase - specifies whether to convert the stage to uppercase (if 'uppercase' or 'upper') or to
- * lowercase (if 'lowercase' or 'lower') or keep it as provided (if anything else)
- * @return {string} a "stage"-qualified resource name with an appended stage suffix
+ * lowercase (if 'lowercase' or 'lower') or keep it as provided (if 'as_is' or anything else)
+ * @return {string} the stage-suffixed name
  */
-function appendStage(resourceName, separator, stage, inCase) {
-  return isNotBlank(stage) ? `${resourceName}${trimOrEmpty(separator)}${toCase(trim(stage), inCase)}` : resourceName;
+function toStageSuffixedName(unsuffixedName, separator, stage, inCase) {
+  const name = trim(unsuffixedName);
+  const stageSuffix = isNotBlank(stage) ? `${trimOrEmpty(separator)}${toCase(trim(stage), inCase)}` : '';
+  return isNotBlank(name) && isNotBlank(stageSuffix) && !name.endsWith(stageSuffix) ? `${name}${stageSuffix}` : name;
 }
 
 /**
  * Converts the given value to uppercase, lowercase or keeps it as is according to the given asCase argument.
- * @param value the value to convert or keep as is
+ * @param value - the value to convert or keep as is
  * @param {string} asCase - specifies whether to convert the value to uppercase (if 'uppercase' or 'upper') or to
- * lowercase (if 'lowercase' or 'lower') or to keep it as provided (if anything else)
+ * lowercase (if 'lowercase' or 'lower') or to keep it as provided (if 'as_is' or anything else)
  * @return {string} the converted or given value
  */
 function toCase(value, asCase) {
@@ -295,3 +699,35 @@ function toCase(value, asCase) {
   return value;
 }
 
+/**
+ * Returns context.stage from the given context if it is already defined; otherwise attempts to resolve the stage and
+ * then, if non-blank, configure the stage on the given context (as context.stage); otherwise either raises an error
+ * (if failFast is explicitly true) or logs a warning.
+ * @param {Object} context - a context on which to set the stage
+ * @param {Object} event - the AWS event
+ * @param {Object} awsContext - the AWS context, which was passed to your lambda
+ * @param {boolean|undefined} [failFast] - an optional failFast flag, which is only used when a needed resolved stage is
+ * blank and which determines whether the error will be raised (if failFast is explicitly true) or logged as a warning
+ * @throws {Error} if failFast is explicitly true and a needed resolved stage is blank
+ * @returns {Object} the context with its existing stage or the resolved stage or an empty string stage.
+ */
+function configureStage(context, event, awsContext, failFast) {
+  if (!context.stage) {
+    const stage = resolveStage(event, awsContext, context);
+    if (isBlank(stage)) {
+      const errorMsg = `Failed to resolve stage from event (${JSON.stringify(event)}) and awsContext (${JSON.stringify(awsContext)}) - consider configuring a fallback stage on context.defaultStage (or on context.stageHandling.defaultStage via configureStageHandling); or, less preferable, on context.stage (as a complete override)`;
+      // If failFast is explicitly true, then log and raise this error
+      if (failFast === true) {
+        context.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+      // Otherwise log the error as a warning and set context.stage to an empty string
+      context.warn(errorMsg);
+      context.stage = '';
+    } else {
+      // Resolved a non-blank stage!
+      context.stage = stage;
+    }
+  }
+  return context;
+}

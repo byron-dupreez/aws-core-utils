@@ -1,21 +1,26 @@
-# aws-core-utils v1.0.0
+# aws-core-utils v2.0.0
 
-Core utilities for working with Amazon Web Services (AWS), including arns, regions, stages, etc.
+Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, etc.
 
 
 Currently includes:
 - arns.js 
     - Utilities for working with Amazon Resource Names (ARNs)
-- regions.js 
-    - Utilities for resolving the AWS region from various sources (primarily for AWS Lambda usage).
-  stages.js
-    - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources (primarily for 
-    AWS Lambda usage).
+- aws-errors.js
+    - Utilities for working with AWS errors.
 - lambdas.js 
     - Utilities for working with AWS Lambda, which enable extraction of function names, versions and, most importantly, 
     aliases from AWS contexts and their invoked function ARNs.
-- aws-errors.js
-    - Utilities for working with AWS errors.
+- regions.js 
+    - Utilities for resolving the AWS region from various sources (primarily for AWS Lambda usage).
+- stages.js
+    - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources (primarily for 
+    AWS Lambda usage).
+    - Utilities for configuration of stage handling.
+    - Configurable and default functions for generating stage-qualified stream and resource names.
+    - Configurable and default functions for extracting stages from stage-qualified stream and resource names.
+- stream-events.js
+    - Utilities for extracting information from AWS Kinesis and AWS DynamoDB stream events.
 
 This module is exported as a [Node.js](https://nodejs.org/) module.
 
@@ -74,3 +79,27 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 - Simplified regions.js API down to relevant methods
 - Fixed defects attempting to source awsRegion and eventSourceARN from event instead of Kinesis records within event.
 - Patched repository in package.json
+
+### 2.0.0
+- Major changes to `stages`:
+    - Changed existing configuration API from `resolveStage`-specific configuration to general stage handling configuration.
+        - Added support for a custom to stage function.
+        - Added support for configuration of stream and resource name qualification.
+    - Added `configureStage` function.
+    - Added configurable `toStageQualifiedStreamName` and default `toStageSuffixedStreamName` functions.
+    - Added configurable `extractStageFromQualifiedStreamName` and default `extractStageFromSuffixedStreamName` functions.
+    - Added configurable `toStageQualifiedResourceName` and default `toStageSuffixedResourceName` functions.
+    - Added configurable `extractStageFromQualifiedResourceName` and default `extractStageFromSuffixedResourceName` functions.
+    - Changed and added unit tests for revamped `stages` module.
+- Changes to `regions`:
+    - Added `configureRegion` function.
+    - Added optional, hidden failFast argument to `getRegion` function needed for `configureRegion` function.
+- Changes to `aws-errors`:
+    - Fixed incorrect usage in comments.
+    - Moved exported object's methods bodies to module-level functions.
+- Changes to `lambdas`:
+    - Added `failCallback` function to fail non-API Gateway Lambda callbacks with standard app errors to facilitate mapping of errors to HTTP status codes
+    - Added `failCallbackForApiGateway` function to fail API Gateway Lambda callbacks with standard app errors to facilitate mapping of errors to HTTP status codes
+- Added `stream-events` module and unit tests for it.    
+- Updated `core-functions` dependency to version 1.2.0.
+- Added `logging-utils` 1.0.2 dependency. 
