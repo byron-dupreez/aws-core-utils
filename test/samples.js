@@ -41,7 +41,12 @@ module.exports = {
   sampleKinesisRecord: sampleKinesisRecord,
   sampleKinesisEventWithSampleRecord: sampleKinesisEventWithSampleRecord,
   sampleKinesisEventWithRecord: sampleKinesisEventWithRecord,
-  sampleKinesisEventWithRecords: sampleKinesisEventWithRecords
+  sampleKinesisEventWithRecords: sampleKinesisEventWithRecords,
+
+  awsKinesisStreamsSampleEvent: awsKinesisStreamsSampleEvent,
+
+  // For DynamoDB stream events
+  awsDynamoDBUpdateSampleEvent: awsDynamoDBUpdateSampleEvent
 };
 
 const Strings = require('core-functions/strings');
@@ -147,3 +152,119 @@ function sampleKinesisEventWithRecords(kinesisRecords) {
     Records: kinesisRecords
   };
 }
+
+function awsKinesisStreamsSampleEvent(identityArn, eventSourceArn) {
+  return {
+    "Records": [
+      {
+        "eventID": "shardId-000000000000:49545115243490985018280067714973144582180062593244200961",
+        "eventVersion": "1.0",
+        "kinesis": {
+          "partitionKey": "partitionKey-3",
+          "data": "SGVsbG8sIHRoaXMgaXMgYSB0ZXN0IDEyMy4=",
+          "kinesisSchemaVersion": "1.0",
+          "sequenceNumber": "49545115243490985018280067714973144582180062593244200961"
+        },
+        "invokeIdentityArn": identityArn,
+        "eventName": "aws:kinesis:record",
+        "eventSourceARN": eventSourceArn,
+        "eventSource": "aws:kinesis",
+        "awsRegion": "us-east-1"
+      }
+    ]
+  };
+}
+
+function awsDynamoDBUpdateSampleEvent(eventSourceArn) {
+  return {
+    "Records": [
+      {
+        "eventID": "1",
+        "eventVersion": "1.0",
+        "dynamodb": {
+          "Keys": {
+            "Id": {
+              "N": "101"
+            }
+          },
+          "NewImage": {
+            "Message": {
+              "S": "New item!"
+            },
+            "Id": {
+              "N": "101"
+            }
+          },
+          "StreamViewType": "NEW_AND_OLD_IMAGES",
+          "SequenceNumber": "111",
+          "SizeBytes": 26
+        },
+        "awsRegion": "us-west-2",
+        "eventName": "INSERT",
+        "eventSourceARN": eventSourceArn,
+        "eventSource": "aws:dynamodb"
+      },
+      {
+        "eventID": "2",
+        "eventVersion": "1.0",
+        "dynamodb": {
+          "OldImage": {
+            "Message": {
+              "S": "New item!"
+            },
+            "Id": {
+              "N": "101"
+            }
+          },
+          "SequenceNumber": "222",
+          "Keys": {
+            "Id": {
+              "N": "101"
+            }
+          },
+          "SizeBytes": 59,
+          "NewImage": {
+            "Message": {
+              "S": "This item has changed"
+            },
+            "Id": {
+              "N": "101"
+            }
+          },
+          "StreamViewType": "NEW_AND_OLD_IMAGES"
+        },
+        "awsRegion": "us-west-2",
+        "eventName": "MODIFY",
+        "eventSourceARN": eventSourceArn,
+        "eventSource": "aws:dynamodb"
+      },
+      {
+        "eventID": "3",
+        "eventVersion": "1.0",
+        "dynamodb": {
+          "Keys": {
+            "Id": {
+              "N": "101"
+            }
+          },
+          "SizeBytes": 38,
+          "SequenceNumber": "333",
+          "OldImage": {
+            "Message": {
+              "S": "This item has changed"
+            },
+            "Id": {
+              "N": "101"
+            }
+          },
+          "StreamViewType": "NEW_AND_OLD_IMAGES"
+        },
+        "awsRegion": "us-west-2",
+        "eventName": "REMOVE",
+        "eventSourceARN": eventSourceArn,
+        "eventSource": "aws:dynamodb"
+      }
+    ]
+  };
+}
+

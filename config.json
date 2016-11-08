@@ -1,8 +1,8 @@
 {
   "stages": {
-    "defaultStreamNameStageSeparator" : "_",
-    "defaultResourceNameStageSeparator" : "_",
-    "defaultExtractInCase" : "lower",
-    "defaultInjectInCase" : "upper"
+    "defaultStreamNameStageSeparator": "_",
+    "defaultResourceNameStageSeparator": "_",
+    "defaultExtractInCase": "lower",
+    "defaultInjectInCase": "upper"
   }
 }

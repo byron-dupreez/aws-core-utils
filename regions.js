@@ -89,7 +89,9 @@ function setRegionIfNotSet(awsRegion) {
       console.error(`Failed to set AWS_REGION env variable to (${newRegion}) - ${err}`, err.stack);
     }
   } else {
-    console.log(`Ignoring attempt to change ALREADY set AWS_REGION env variable (${process.env.AWS_REGION}) to (${newRegion})`);
+    if (process.env.AWS_REGION !== newRegion) {
+      console.log(`Ignoring attempt to change ALREADY set AWS_REGION env variable (${process.env.AWS_REGION}) to (${newRegion})`);
+    }
   }
   return false;
 }
