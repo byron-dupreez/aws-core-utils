@@ -118,10 +118,24 @@ function checkConfigureStageHandling(t, context, customToStage, convertAliasToSt
   const mustChange = forceConfiguration || !before;
 
   // Configure it
-  configureStageHandling(context, customToStage, convertAliasToStage,
-    injectStageIntoStreamName, extractStageFromStreamName, streamNameStageSeparator,
-    injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator,
-    injectInCase, extractInCase, defaultStage, forceConfiguration);
+  const settings = {
+    customToStage: customToStage,
+    convertAliasToStage: convertAliasToStage,
+
+    injectStageIntoStreamName: injectStageIntoStreamName,
+    extractStageFromStreamName: extractStageFromStreamName,
+    streamNameStageSeparator: streamNameStageSeparator,
+
+    injectStageIntoResourceName: injectStageIntoResourceName,
+    extractStageFromResourceName: extractStageFromResourceName,
+    resourceNameStageSeparator: resourceNameStageSeparator,
+
+    injectInCase: injectInCase,
+    extractInCase: extractInCase,
+
+    defaultStage: defaultStage,
+  };
+  configureStageHandling(context, settings, forceConfiguration);
 
   const after = context.stageHandling;
 

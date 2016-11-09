@@ -1,4 +1,4 @@
-# aws-core-utils v2.0.1
+# aws-core-utils v2.1.0
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Kinesis, Lambdas, AWS errors, stream events, etc.
 
@@ -9,7 +9,7 @@ Currently includes:
 - aws-errors.js
     - Utilities for working with AWS errors.
 - kinesis-utils.js
-    - Utilities for working with AWS.Kinesis and a module-scope cache for a single AWS.Kinesis instance for Lambda.
+    - Utilities for working with AWS.Kinesis and a module-scope cache of AWS.Kinesis instances by region for Lambda.
 - lambdas.js 
     - Utilities for working with AWS Lambda, which enable extraction of function names, versions and, most importantly, 
     aliases from AWS contexts and their invoked function ARNs.
@@ -63,13 +63,42 @@ const region = regions.getRegion();
 regions.configureRegion(context, failFast)
 ```
 
-* To use the Kinesis utilities
+* To use the Kinesis utilities to cache and configure an AWS Kinesis instance per region
 ```js
 const kinesisUtils = require('aws-core-utils/kinesis-utils');
 
+// Preamble to create a context and configure logging on the context
+const context = {};
+const logging = require('logging-utils');
+logging.configureDefaultLogging(context);
+
+// Define the Kinesis constructor options that you want to use, e.g.
+const kinesisOptions = {
+  // See http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Kinesis.html#constructor-property for full details
+  maxRetries: 0
+  // ...
+};
+
+// To create and cache a new AWS Kinesis instance with the given Kinesis constructor options for either the current 
+// region or the region specified in the given options OR reuse a previously cached Kinesis instance (if any) that is 
+// compatible with the given options
+const kinesis = kinesisUtils.setKinesis(kinesisOptions, context);
+
 // To configure a new AWS.Kinesis instance (or re-use a cached instance) on a context 
-// Currently only creates a new AWS.Kinesis instance with the current AWS region & given maxRetries
-kinesisUtils.configureKinesis(context, maxRetries);
+kinesisUtils.configureKinesis(context, kinesisOptions);
+console.log(context.kinesis);
+
+// To get a previously set or configured AWS Kinesis instance for the current AWS region
+const kinesis1 = kinesisUtils.getKinesis();
+// ... or for a specified region
+const kinesis2 = kinesisUtils.getKinesis('us-west-2');
+
+// To get the original options that were used to construct a cached AWS Kinesis instance for the current or specified AWS region
+const optionsUsed1 = kinesisUtils.getKinesisOptionsUsed();
+const optionsUsed2 = kinesisUtils.getKinesisOptionsUsed('us-west-1');
+
+// To delete and remove a cached Kinesis instance from the cache
+const deleted = kinesisUtils.deleteKinesis('eu-west-1');
 ```
 
 * To use the Lambda utilities
@@ -116,11 +145,33 @@ const stageQualifiedStreamName = stages.toStageQualifiedStreamName(unqualifiedSt
 const qualifiedStreamName = 'TestStream_PROD';
 const stage2 = stages.extractStageFromQualifiedStreamName(qualifiedStreamName, context);
 
-// To configure completely customised stage handling of the above 4 functions
-stages.configureStageHandling(context, customToStage, convertAliasToStage,
-         injectStageIntoStreamName, extractStageFromStreamName, streamNameStageSeparator,
-         injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator,
-         injectInCase, extractInCase, defaultStage, forceConfiguration);
+// 5. To qualify an unqualified resource name with a stage
+const unqualifiedResourceName = 'TestResource';
+const stageQualifiedResourceName = stages.toStageQualifiedResourceName(unqualifiedResourceName, stage, context);
+
+// 6. To extract a stage from a qualified resource name
+const qualifiedResourceName = 'TestResource_QA';
+const stage3 = stages.extractStageFromQualifiedResourceName(qualifiedResourceName, context);
+
+// To configure completely customised stage handling of the above 6 functions
+const settings = {
+    customToStage: customToStage,
+    convertAliasToStage: convertAliasToStage,
+
+    injectStageIntoStreamName: injectStageIntoStreamName,
+    extractStageFromStreamName: extractStageFromStreamName,
+    streamNameStageSeparator: streamNameStageSeparator,
+
+    injectStageIntoResourceName: injectStageIntoResourceName,
+    extractStageFromResourceName: extractStageFromResourceName,
+    resourceNameStageSeparator: resourceNameStageSeparator,
+
+    injectInCase: injectInCase,
+    extractInCase: extractInCase,
+
+    defaultStage: defaultStage,
+}
+stages.configureStageHandling(context, settings, forceConfiguration);
          
 // To check if stage handling is configured
 stages.isStageHandlingConfigured(context);
@@ -170,6 +221,19 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 2.1.0
+
+- Changes to `stages` module:
+  - Changed API of `configureStageHandling` function to accept a setting object instead of the multiple fixed parameters, 
+    to simplify configuration of new, custom settings.
+  - Minor changes and fixes to code & unit tests to accommodate this change.
+- Major overhaul of `kinesis-utils` module to enable full configuration of an AWS Kinesis instance and caching of a Kinesis
+  instance per region.
+  - Added `setKinesis`, `getKinesis`, `getKinesisOptionsUsed` & `deleteKinesis` functions and unit tests for same.
+  - Rewrote and changed API of `configureKinesis` function to use the new `setKinesis` function and patched its unit tests.
+- Technically should have been a 3.0.0 release semantically speaking, since I changed the APIs of two existing functions, 
+  but it did not seem warranted.
 
 ### 2.0.1
 - Added new `kinesis-utils` module to provide basic configuration and caching of an AWS.Kinesis instance for Lambda

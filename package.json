@@ -1,6 +1,6 @@
 {
   "name": "aws-core-utils",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, etc.",
   "author": "Byron du Preez",
   "license": "Apache-2.0",
@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "core-functions": "^2.0.2",
-    "logging-utils": "^1.0.5"
+    "logging-utils": "^1.0.5",
+    "deep-equal": "^1.0.1"
   },
   "devDependencies": {
     "aws-sdk": "2.4.9"
