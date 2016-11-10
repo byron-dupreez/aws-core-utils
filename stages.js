@@ -32,6 +32,7 @@ module.exports = {
   isStageHandlingConfigured: isStageHandlingConfigured,
   configureStageHandling: configureStageHandling,
   configureDefaultStageHandling: configureDefaultStageHandling,
+  getDefaultStageHandlingSettings: getDefaultStageHandlingSettings,
   getStageHandlingSetting: getStageHandlingSetting,
   getStageHandlingFunction: getStageHandlingFunction,
   // Stage resolution
@@ -149,7 +150,7 @@ function isStageHandlingConfigured(context) {
  */
 function configureStageHandling(context, settings, forceConfiguration) {
 
-  // If forceConfiguration is false check if the given context already has stage resolution configured on it
+  // If forceConfiguration is false check if the given context already has stage handling configured on it
   // and, if so, do nothing more and simply return the context as is (to prevent overriding an earlier configuration)
   if (!forceConfiguration && isStageHandlingConfigured(context)) {
     return context;
@@ -185,26 +186,59 @@ function configureStageHandling(context, settings, forceConfiguration) {
  * @return {Object} the context object configured with stage handling settings (either existing or defaults)
  */
 function configureDefaultStageHandling(context, forceConfiguration) {
-  // Load local defaults for separators and in case settings
+  // If forceConfiguration is false check if the given context already has stage handling configured on it
+  // and, if so, do nothing more and simply return the context as is (to prevent overriding an earlier configuration)
+  if (!forceConfiguration && isStageHandlingConfigured(context)) {
+    return context;
+  }
+
+  // Load local defaults for stage handling settings
   const config = require('./config.json');
 
-  // Use the locally configured default stream name stage separator (if non-blank); otherwise use underscore
-  const streamNameStageSeparator = config.stages && isNotBlank(config.stages.defaultStreamNameStageSeparator) ?
-    trim(config.stages.defaultStreamNameStageSeparator) : '_';
+  const defaultSettings = getDefaultStageHandlingSettings(config.stageHandlingSettings);
 
-  // Use the locally configured default resource name stage separator (if non-blank); otherwise use underscore
-  const resourceNameStageSeparator = config.stages && isNotBlank(config.stages.defaultResourceNameStageSeparator) ?
-    trim(config.stages.defaultResourceNameStageSeparator) : '_';
+  return configureStageHandling(context, defaultSettings, forceConfiguration);
+}
 
-  // Use the locally configured default extract in case (if non-blank); otherwise use 'lower'
-  const extractInCase = config.stages && isNotBlank(config.stages.defaultExtractInCase) ?
-    trim(config.stages.defaultExtractInCase) : 'lower';
+/**
+ * Simply returns the default stage handling settings, preferring settings in the given config object (if any) or in
+ * config.stageHandlingSettings (if any) over the static default settings.
+ *
+ * This function is used internally by {@linkcode configureDefaultStageHandling}, but could also be used in custom
+ * configurations to get the default settings as a base and override with your customisations before calling
+ * {@linkcode configureStageHandling}.
+ *
+ * @param {Object} [config] - an optional config object containing either stage handling settings or a stageHandlingSettings object
+ * @param {Object} [config.stageHandlingSettings] - an optional stageHandlingSettings object on the given config
+ * object containing stage handling settings
+ * @returns {StageHandlingSettings} a stage handling settings object
+ */
+function getDefaultStageHandlingSettings(config) {
+  if (config && config.stageHandlingSettings) {
+    return getDefaultStageHandlingSettings(config.stageHandlingSettings);
+  }
 
-  // Use the locally configured default inject in case (if non-blank); otherwise use 'upper'
-  const injectInCase = config.stages && isNotBlank(config.stages.defaultInjectInCase) ?
-    trim(config.stages.defaultInjectInCase) : 'upper';
+  function select(config, propertyName, defaultValue) {
+    const configuredValue = config ? config[propertyName] : undefined;
+    return isNotBlank(configuredValue) ? trim(configuredValue) : defaultValue
+  }
 
-  const settings = {
+  // Use the configured default stream name stage separator (if non-blank); otherwise use underscore
+  const streamNameStageSeparator = select(config, 'streamNameStageSeparator', '_');
+
+  // Use the configured default resource name stage separator (if non-blank); otherwise use underscore
+  const resourceNameStageSeparator = select(config, 'resourceNameStageSeparator', '_');
+
+  // Use the configured default extract in case (if non-blank); otherwise use 'lower'
+  const extractInCase = select(config, 'extractInCase', 'lower');
+
+  // Use the configured default inject in case (if non-blank); otherwise use 'upper'
+  const injectInCase = select(config, 'injectInCase', 'upper');
+
+  // Use the configured default default stage (if non-blank); otherwise use undefined
+  const defaultStage = select(config, 'defaultStage', undefined);
+
+  return {
     customToStage: undefined,
     convertAliasToStage: convertAliasToStage,
 
@@ -219,13 +253,11 @@ function configureDefaultStageHandling(context, forceConfiguration) {
     injectInCase: injectInCase,
     extractInCase: extractInCase,
 
-    defaultStage: undefined,
+    defaultStage: defaultStage
   };
-
-  return configureStageHandling(context, settings, forceConfiguration);
 }
 
-/**
+  /**
  * Returns the value of the named stage handling setting (if any) on the given context.
  * @param context - the context from which to fetch the named setting's value
  * @param settingName - the name of the stage handling setting
