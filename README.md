@@ -1,4 +1,4 @@
-# aws-core-utils v2.1.1
+# aws-core-utils v2.1.2
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Kinesis, Lambdas, AWS errors, stream events, etc.
 
@@ -221,6 +221,10 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 2.1.2
+- Updated `core-functions` dependency to version 2.0.3
+- Updated `logging-utils` dependency to version 1.0.6
 
 ### 2.1.1
 - Added `getDefaultStageHandlingSettings` function to get the default stage handling settings
