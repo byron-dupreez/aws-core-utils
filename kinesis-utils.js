@@ -44,7 +44,7 @@ module.exports = {
  * @param {Object|undefined} [kinesisOptions] - the optional Kinesis constructor options to use
  * @param {string|undefined} [kinesisOptions.region] - an optional region to use instead of the current region
  * @param {Object|undefined} [context] - the context, which is just used for logging
- * @returns {Object} an cached or new AWS Kinesis instance created and cached for the specified or current region
+ * @returns {Object} a cached or new AWS Kinesis instance created and cached for the specified or current region
  */
 function setKinesis(kinesisOptions, context) {
   // If no options were specified, then use an empty object

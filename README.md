@@ -1,4 +1,4 @@
-# aws-core-utils v2.1.2
+# aws-core-utils v2.1.3
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Kinesis, Lambdas, AWS errors, stream events, etc.
 
@@ -8,6 +8,8 @@ Currently includes:
     - Utilities for working with Amazon Resource Names (ARNs)
 - aws-errors.js
     - Utilities for working with AWS errors.
+- dynamodb-doc-clients.js
+    - Utilities for working with AWS.DynamoDB.DocumentClients and a module-scope cache of AWS.DynamoDB.DocumentClient instances by region for Lambda.
 - kinesis-utils.js
     - Utilities for working with AWS.Kinesis and a module-scope cache of AWS.Kinesis instances by region for Lambda.
 - lambdas.js 
@@ -61,6 +63,45 @@ const region = regions.getRegion();
 
 // To configure a context with the current AWS region
 regions.configureRegion(context, failFast)
+```
+
+* To use the DynamoDB.DocumentClient utilities to cache and configure an AWS DynamoDB.DocumentClient instance per region
+```js
+const dynamoDBDocClients = require('aws-core-utils/dynamodb-doc-clients');
+
+// Preamble to create a context and configure logging on the context
+const context = {};
+const logging = require('logging-utils');
+logging.configureDefaultLogging(context);
+
+// Define the DynamoDB.DocumentClient's constructor options that you want to use, e.g.
+const dynamoDBDocClientOptions = {
+  // See http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#constructor-property
+  // and http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB.html#constructor-property
+  maxRetries: 0
+  // ...
+};
+
+// To create and cache a new AWS DynamoDB.DocumentClient instance with the given DynamoDB.DocumentClient constructor 
+// options for either the current region or the region specified in the given options OR reuse a previously cached 
+// DynamoDB.DocumentClient instance (if any) that is compatible with the given options
+const dynamoDBDocClient = dynamoDBDocClients.setDynamoDBDocClient(dynamoDBDocClientOptions, context);
+
+// To configure a new AWS.DynamoDB.DocumentClient instance (or re-use a cached instance) on a context 
+dynamoDBDocClients.configureDynamoDBDocClient(context, dynamoDBDocClientOptions);
+console.log(context.dynamoDBDocClient);
+
+// To get a previously set or configured AWS DynamoDB.DocumentClient instance for the current AWS region
+const dynamoDBDocClient1 = dynamoDBDocClients.getDynamoDBDocClient();
+// ... or for a specified region
+const dynamoDBDocClient2 = dynamoDBDocClients.getDynamoDBDocClient('us-west-2');
+
+// To get the original options that were used to construct a cached AWS DynamoDB.DocumentClient instance for the current or specified AWS region
+const optionsUsed1 = dynamoDBDocClients.getDynamoDBDocClientOptionsUsed();
+const optionsUsed2 = dynamoDBDocClients.getDynamoDBDocClientOptionsUsed('us-west-1');
+
+// To delete and remove a cached DynamoDB.DocumentClient instance from the cache
+const deleted = dynamoDBDocClients.deleteDynamoDBDocClient('eu-west-1');
 ```
 
 * To use the Kinesis utilities to cache and configure an AWS Kinesis instance per region
@@ -221,6 +262,14 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 2.1.3
+- Added a new `dynamodb-doc-clients` module to enable creation and configuration of AWS DynamoDB.DocumentClient instances
+  and caching of a DynamoDB.DocumentClient instance per region. Note that this new module is an almost exact replica of 
+  the `kinesis-utils` module, but for getting, setting and caching DynamoDB.DocumentClient instances instead of Kinesis 
+  instances. 
+  - Added `setDynamoDBDocClient`, `getDynamoDBDocClient`, `getDynamoDBDocClientOptionsUsed`, `deleteDynamoDBDocClient` 
+    and `configureDynamoDBDocClient` functions and unit tests for same.
 
 ### 2.1.2
 - Updated `core-functions` dependency to version 2.0.3

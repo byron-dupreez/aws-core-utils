@@ -43,9 +43,9 @@ test('getRegion and setRegionIfNotSet', t => {
 
   try {
     // "Clear" AWS_REGION to empty string
-    console.log(`BEFORE reset process.env.AWS_REGION = (${process.env.AWS_REGION})`);
+    //console.log(`BEFORE reset process.env.AWS_REGION = (${process.env.AWS_REGION})`);
     process.env.AWS_REGION = unset;
-    console.log(`AFTER reset process.env.AWS_REGION = '${process.env.AWS_REGION}' (orig was ${origRegion})`);
+    //console.log(`AFTER reset process.env.AWS_REGION = '${process.env.AWS_REGION}' (orig was ${origRegion})`);
     t.equal(process.env.AWS_REGION, unset, `process.env.AWS_REGION must be '${unset}' after reset`);
 
     // check get when not set
@@ -62,9 +62,9 @@ test('getRegion and setRegionIfNotSet', t => {
 
   } finally {
     // "Restore" original aws region
-    console.log(`BEFORE restore process.env.AWS_REGION = '${process.env.AWS_REGION}' (orig was ${origRegion})`);
+    //console.log(`BEFORE restore process.env.AWS_REGION = '${process.env.AWS_REGION}' (orig was ${origRegion})`);
     process.env.AWS_REGION = isBlank(origRegion) ? unset : origRegion;
-    console.log(`AFTER restore process.env.AWS_REGION = '${process.env.AWS_REGION}' (orig was ${origRegion})`);
+    //console.log(`AFTER restore process.env.AWS_REGION = '${process.env.AWS_REGION}' (orig was ${origRegion})`);
     // Check "restore" worked
     if (isBlank(origRegion)) {
       t.equal(getRegion(), unset, `must be "restored" to '${unset}' (orig was ${origRegion})`);
