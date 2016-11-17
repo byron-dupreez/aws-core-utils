@@ -44,7 +44,7 @@ module.exports = {
  * @param {Object|undefined} [kinesisOptions] - the optional Kinesis constructor options to use
  * @param {string|undefined} [kinesisOptions.region] - an optional region to use instead of the current region
  * @param {Object|undefined} [context] - the context, which is just used for logging
- * @returns {Object} a cached or new AWS Kinesis instance created and cached for the specified or current region
+ * @returns {AWS.Kinesis} a cached or new AWS Kinesis instance created and cached for the specified or current region
  */
 function setKinesis(kinesisOptions, context) {
   // If no options were specified, then use an empty object
@@ -115,7 +115,8 @@ function deleteKinesis(region) {
  * Gets the Kinesis instance cached for the given region (if specified and if previously cached); otherwise for the
  * current region (if previously cached); otherwise returns undefined.
  * @param {string} [region] - the optional AWS region to use - defaults to current AWS region if not specified
- * @returns {Object|undefined} the Kinesis instance cached for the given or current region (if any); otherwise returns undefined
+ * @returns {AWS.Kinesis|undefined} the Kinesis instance cached for the given or current region (if any); otherwise
+ * returns undefined
  */
 function getKinesis(region) {
   const regionKey = getRegionKey(region ? region : regions.getRegion());
@@ -126,7 +127,7 @@ function getKinesis(region) {
  * Gets the kinesis options used to construct the Kinesis instance cached for the given region (if specified and if
  * previously cached); otherwise for the current region (if previously cached); otherwise returns undefined.
  * @param {string} [region] - the optional AWS region to use - defaults to current AWS region if not specified
- * @returns {Object|undefined} the kinesis options used to construct the Kinesis instance cached for the given or
+ * @returns {AWS.Kinesis|undefined} the kinesis options used to construct the Kinesis instance cached for the given or
  * current region (if any); otherwise returns undefined
  */
 function getKinesisOptionsUsed(region) {
@@ -164,7 +165,7 @@ function getRegionKey(region) {
  * Logging should be configured before calling this function (see {@linkcode logging-utils#configureLogging}
  *
  * @param {Object} context - the context to configure
- * @param {Object} [context.kinesis] - the current Kinesis instance cached on the context (if any)
+ * @param {AWS.Kinesis} [context.kinesis] - the current Kinesis instance cached on the context (if any)
  * @param {Object|undefined} [kinesisOptions] - the optional Kinesis constructor options to use if no cached Kinesis
  * instance exists
  * @param {string|undefined} [kinesisOptions.region] - an optional region to use instead of the current region

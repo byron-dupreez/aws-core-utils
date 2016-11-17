@@ -1,7 +1,6 @@
-# aws-core-utils v2.1.3
+# aws-core-utils v2.1.4
 
-Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Kinesis, Lambdas, AWS errors, stream events, etc.
-
+Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
 Currently includes:
 - arns.js 
@@ -262,6 +261,9 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 2.1.4
+- Updated JsDoc comments in `dynamodb-doc-clients` and `kinesis-utils` modules.
 
 ### 2.1.3
 - Added a new `dynamodb-doc-clients` module to enable creation and configuration of AWS DynamoDB.DocumentClient instances

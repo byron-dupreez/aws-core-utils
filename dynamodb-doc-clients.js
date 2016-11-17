@@ -46,8 +46,8 @@ module.exports = {
  * @param {Object|undefined} [dynamoDBDocClientOptions] - the optional DynamoDB.DocumentClient constructor options to use
  * @param {string|undefined} [dynamoDBDocClientOptions.region] - an optional region to use instead of the current region
  * @param {Object|undefined} [context] - the context, which is just used for logging
- * @returns {Object} a cached or new AWS DynamoDB.DocumentClient instance created and cached for the specified or
- * current region
+ * @returns {AWS.DynamoDB.DocumentClient} a cached or new AWS DynamoDB.DocumentClient instance created and cached for
+ * the specified or current region
  */
 function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
   // If no options were specified, then use an empty object
@@ -113,8 +113,8 @@ function deleteDynamoDBDocClient(region) {
  * Gets the DynamoDB.DocumentClient instance cached for the given region (if specified and if previously cached);
  * otherwise for the current region (if previously cached); otherwise returns undefined.
  * @param {string} [region] - the optional AWS region to use - defaults to current AWS region if not specified
- * @returns {Object|undefined} the DynamoDB.DocumentClient instance cached for the given or current region (if any);
- * otherwise returns undefined
+ * @returns {AWS.DynamoDB.DocumentClient|undefined} the DynamoDB.DocumentClient instance cached for the given or current
+ * region (if any); otherwise returns undefined
  */
 function getDynamoDBDocClient(region) {
   const regionKey = getRegionKey(region ? region : regions.getRegion());
@@ -126,8 +126,8 @@ function getDynamoDBDocClient(region) {
  * region (if specified and if previously cached); otherwise for the current region (if previously cached); otherwise
  * returns undefined.
  * @param {string} [region] - the optional AWS region to use - defaults to current AWS region if not specified
- * @returns {Object|undefined} the DynamoDB.DocumentClient options used to construct the DynamoDB.DocumentClient
- * instance cached for the given or current region (if any); otherwise returns undefined
+ * @returns {AWS.DynamoDB.DocumentClient|undefined} the DynamoDB.DocumentClient options used to construct the
+ * DynamoDB.DocumentClient instance cached for the given or current region (if any); otherwise returns undefined
  */
 function getDynamoDBDocClientOptionsUsed(region) {
   const regionKey = getRegionKey(region ? region : regions.getRegion());
@@ -166,7 +166,8 @@ function getRegionKey(region) {
  * Logging should be configured before calling this function (see {@linkcode logging-utils#configureLogging}
  *
  * @param {Object} context - the context to configure
- * @param {Object} [context.dynamoDBDocClient] - the current DynamoDB.DocumentClient instance cached on the context (if any)
+ * @param {AWS.DynamoDB.DocumentClient} [context.dynamoDBDocClient] - the current DynamoDB.DocumentClient instance
+ * cached on the context (if any)
  * @param {Object|undefined} [dynamoDBDocClientOptions] - the optional DynamoDB.DocumentClient constructor options to
  * use if no cached DynamoDB.DocumentClient instance exists
  * @param {string|undefined} [dynamoDBDocClientOptions.region] - an optional region to use instead of the current region
