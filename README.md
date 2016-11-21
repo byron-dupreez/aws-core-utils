@@ -1,4 +1,4 @@
-# aws-core-utils v3.0.1
+# aws-core-utils v3.0.2
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -167,13 +167,14 @@ const invokedFunctionArnFunctionName = lambdas.getInvokedFunctionArnFunctionName
 ```js
 // To configure stage-handling, which determines the behaviour of the functions numbered 1 to 6 below
 const stages = require('aws-core-utils/stages');
-const config = require('./config.json'); // ... or your own config file
+const settings = undefined; // ... or your own custom settings
+const options = require('./config.json'); // ... or your own custom options
 
 // ... EITHER using the default stage handling configuration partially customised via config.stageHandlingOptions
-stages.configureDefaultStageHandling(context, config.stageHandlingOptions, forceConfiguration); 
+stages.configureDefaultStageHandling(context, options.stageHandlingOptions, settings, options, forceConfiguration); 
 
 // ... OR using your own custom stage-handling configuration
-const stageHandlingSettings = stages.getDefaultStageHandlingSettings(config.stageHandlingOptions);
+const stageHandlingSettings = stages.getDefaultStageHandlingSettings(options.stageHandlingOptions);
 // Optionally override the default stage handling functions with your own custom functions
 // stageHandlingSettings.customToStage = undefined;
 // stageHandlingSettings.convertAliasToStage = stages.DEFAULTS.convertAliasToStage;
@@ -181,12 +182,12 @@ const stageHandlingSettings = stages.getDefaultStageHandlingSettings(config.stag
 // stageHandlingSettings.extractStageFromStreamName = stages.DEFAULTS.extractStageFromSuffixedStreamName;
 // stageHandlingSettings.injectStageIntoResourceName = stages.DEFAULTS.toStageSuffixedResourceName;
 // stageHandlingSettings.extractStageFromResourceName = stages.DEFAULTS.extractStageFromSuffixedResourceName;
-stages.configureStageHandling(context, stageHandlingSettings, forceConfiguration);
+stages.configureStageHandling(context, stageHandlingSettings, settings, options, forceConfiguration);
 
 // ... OR using completely customised stage handling settings
-const settings = {
+const stageHandlingSettings2 = {
     customToStage: myCustomToStageFunction, // or undefined if not needed
-    convertAliasToStage: myConvertAliasToStageFunction, // or undefined to knockout using aliases as stages
+    convertAliasToStage: myConvertAliasToStageFunction, // or undefined to knockout using AWS aliases as stages
 
     injectStageIntoStreamName: myInjectStageIntoStreamNameFunction, 
     extractStageFromStreamName: myExtractStageFromStreamNameFunction,
@@ -201,7 +202,7 @@ const settings = {
 
     defaultStage: myDefaultStage, // or undefined
 }
-stages.configureStageHandling(context, settings, forceConfiguration);
+stages.configureStageHandling(context, stageHandlingSettings2, settings, options, forceConfiguration);
 
 
 // To check if stage handling is configured
@@ -274,6 +275,15 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 3.0.2
+- Changes to `stages.js` module:
+  - Added `configureDependenciesIfNotConfigured` function to configure stage handling dependencies (i.e. only logging for now)
+  - Changed `configureStageHandlingIfNotConfigured` function to first invoke new `configureDependenciesIfNotConfigured` function
+  - Changed `configureStageHandling` function to accept `otherSettings` and `otherOptions` as 3rd & 4th arguments to 
+    enable configuration of dependencies and to first invoke invoke new `configureDependenciesIfNotConfigured` function
+  - Changed `configureDefaultStageHandling` function to accept `otherSettings` and `otherOptions` as 3rd & 4th arguments 
+    to enable configuration of dependencies and to always invoke `configureStageHandling`
 
 ### 3.0.1
 - Changes to `stages.js` module:

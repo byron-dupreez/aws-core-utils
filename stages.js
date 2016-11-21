@@ -159,11 +159,17 @@ function isStageHandlingConfigured(context) {
  * @param {Object} context the context onto which to configure stage handling settings
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
  * @param {StageHandlingSettings} settings - the new stage handling settings to use
+ * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured stage handling settings on the given context
  * @return {Object} the context object configured with stage handling settings
  */
-function configureStageHandling(context, settings, forceConfiguration) {
+function configureStageHandling(context, settings, otherSettings, otherOptions, forceConfiguration) {
+  // Configure all dependencies if not configured
+  configureDependenciesIfNotConfigured(context, otherSettings, otherOptions, configureStageHandling.name);
 
   // If forceConfiguration is false check if the given context already has stage handling configured on it
   // and, if so, do nothing more and simply return the context as is (to prevent overriding an earlier configuration)
@@ -198,19 +204,17 @@ function configureStageHandling(context, settings, forceConfiguration) {
  * @param {Object} context - the context onto which to configure the default stage handling settings
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
  * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override the default options
+ * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} forceConfiguration - whether or not to force configuration of the default settings, which
  * will override any previously configured stage handling settings on the given context
  * @return {Object} the context object configured with stage handling settings (either existing or defaults or overrides)
  */
-function configureDefaultStageHandling(context, options, forceConfiguration) {
-  // If forceConfiguration is false check if the given context already has stage handling configured on it
-  // and, if so, do nothing more and simply return the context as is (to prevent overriding an earlier configuration)
-  if (!forceConfiguration && isStageHandlingConfigured(context)) {
-    return context;
-  }
-
+function configureDefaultStageHandling(context, options, otherSettings, otherOptions, forceConfiguration) {
   const settings = getDefaultStageHandlingSettings(options);
-  return configureStageHandling(context, settings, forceConfiguration);
+  return configureStageHandling(context, settings, otherSettings, otherOptions, forceConfiguration);
 }
 
 function select(opts, propertyName, defaultValue) {
@@ -268,6 +272,24 @@ function loadDefaultStageHandlingOptions() {
 }
 
 /**
+ * Configures the given context with the stage handling dependencies (currently only logging) using the given other
+ * settings and given other options.
+ *
+ * @param {Object} context - the context onto which to configure the given stream processing dependencies
+ * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
+ * @param {string|undefined} [caller] - optional arbitrary text to identify the caller of this function
+ * @returns {Object} the context object configured with stream processing dependencies
+ */
+function configureDependenciesIfNotConfigured(context, otherSettings, otherOptions, caller) {
+  // Configure logging if not configured yet
+  logging.configureLoggingIfNotConfigured(context, otherSettings ? otherSettings.loggingSettings : undefined,
+    otherOptions ? otherOptions.loggingOptions : undefined, undefined, caller);
+}
+
+/**
  * Returns the value of the named stage handling setting (if any) on the given context.
  * @param context - the context from which to fetch the named setting's value
  * @param settingName - the name of the stage handling setting
@@ -316,18 +338,17 @@ function configureDefaultStageHandlingIfNotConfigured(context, caller) {
  * @returns {Object} the given context
  */
 function configureStageHandlingIfNotConfigured(context, settings, options, otherSettings, otherOptions, caller) {
-  // Also configure logging if not already configured, since it is a dependency
-  logging.configureLoggingIfNotConfigured(context, otherSettings ? otherSettings.loggingSettings : undefined,
-    otherOptions ? otherOptions.loggingOptions : undefined, undefined, caller);
+  // Configure all dependencies if not configured
+  configureDependenciesIfNotConfigured(context, otherSettings, otherOptions, configureStageHandlingIfNotConfigured.name);
 
   // Configure stage handling if not already configured
   if (!isStageHandlingConfigured(context)) {
     if (settings && typeof settings === 'object') {
       context.warn(`Stage handling was not configured${caller ? ` before calling ${caller}` : ''} - using stage handling settings (${stringify(settings)})`);
-      configureStageHandling(context, settings, true);
+      configureStageHandling(context, settings, otherSettings, otherOptions, true);
     } else {
       context.warn(`Stage handling was not configured${caller ? ` before calling ${caller}` : ''} - using default stage handling configuration with options (${stringify(options)})`);
-      configureDefaultStageHandling(context, options, true);
+      configureDefaultStageHandling(context, options, otherSettings, otherOptions, true);
     }
   }
   return context;

@@ -18,11 +18,11 @@ const getStageHandlingSetting = stages.getStageHandlingSetting;
 // Stage resolution
 const resolveStage = stages.resolveStage;
 // Stream name qualification
-const toStageQualifiedStreamName = stages.toStageQualifiedStreamName;
-const extractStageFromQualifiedStreamName = stages.extractStageFromQualifiedStreamName;
+// const toStageQualifiedStreamName = stages.toStageQualifiedStreamName;
+// const extractStageFromQualifiedStreamName = stages.extractStageFromQualifiedStreamName;
 // Resource name qualification
-const toStageQualifiedResourceName = stages.toStageQualifiedResourceName;
-const extractStageFromQualifiedResourceName = stages.extractStageFromQualifiedResourceName;
+// const toStageQualifiedResourceName = stages.toStageQualifiedResourceName;
+// const extractStageFromQualifiedResourceName = stages.extractStageFromQualifiedResourceName;
 
 // DEFAULTS - default implementations
 // ==================================
@@ -35,8 +35,8 @@ const extractStageFromSuffixedStreamName = stages.DEFAULTS.extractStageFromSuffi
 const toStageSuffixedResourceName = stages.DEFAULTS.toStageSuffixedResourceName;
 const extractStageFromSuffixedResourceName = stages.DEFAULTS.extractStageFromSuffixedResourceName;
 // Generic utils
-const toStageSuffixedName = stages.DEFAULTS.toStageSuffixedName;
-const toCase = stages.DEFAULTS.toCase
+// const toStageSuffixedName = stages.DEFAULTS.toStageSuffixedName;
+const toCase = stages.DEFAULTS.toCase;
 
 const Strings = require('core-functions/strings');
 //const trim = Strings.trim;
@@ -47,10 +47,10 @@ const stringify = Strings.stringify;
 
 const samples = require('./samples');
 // Constants
-const latestFunctionVersion = samples.latestFunctionVersion;
+// const latestFunctionVersion = samples.latestFunctionVersion;
 
 // General
-const sampleNumberString = samples.sampleNumberString;
+// const sampleNumberString = samples.sampleNumberString;
 
 // For AWS contexts
 const sampleInvokedFunctionArn = samples.sampleInvokedFunctionArn;
@@ -135,7 +135,7 @@ function checkConfigureStageHandling(t, context, customToStage, convertAliasToSt
 
     defaultStage: defaultStage,
   };
-  configureStageHandling(context, settings, forceConfiguration);
+  configureStageHandling(context, settings, undefined, undefined, forceConfiguration);
 
   const after = context.stageHandling;
 
@@ -220,7 +220,7 @@ function checkConfigureDefaultStageHandling(t, context, forceConfiguration) {
   const mustChange = forceConfiguration || !before;
 
   // Configure it
-  configureDefaultStageHandling(context, forceConfiguration, t);
+  configureDefaultStageHandling(context, undefined, undefined, undefined, forceConfiguration);
 
   const after = context.stageHandling;
 
