@@ -39,7 +39,7 @@ module.exports = {
  * If the given options do not match existing options and are not empty and not only region, then logs a warning that
  * the previously cached Kinesis instance is being replaced and returns the new AWS Kinesis instance.
  *
- * Logging should be configured before calling this function (see {@linkcode logging-utils#configureLogging}
+ * Logging should be configured before calling this function (see {@linkcode logging-utils/logging#configureLogging})
  *
  * @param {Object|undefined} [kinesisOptions] - the optional Kinesis constructor options to use
  * @param {string|undefined} [kinesisOptions.region] - an optional region to use instead of the current region
@@ -153,7 +153,7 @@ function getRegionKey(region) {
  * logs a warning that the previously cached Kinesis instance is being replaced and returns the new AWS Kinesis
  * instance.
  *
- * Logging should be configured before calling this function (see {@linkcode logging-utils#configureLogging}
+ * Logging should be configured before calling this function (see {@linkcode logging-utils/logging#configureLogging})
  *
  * Configures the given context, if it does not already have a context.kinesis, with the cached kinesis instance for
  * either the region specified in the given default kinesis options (if any and region specified) or for the current
@@ -162,7 +162,7 @@ function getRegionKey(region) {
  *
  * Note that the given default Kinesis constructor options will ONLY be used if no cached Kinesis instance exists.
  *
- * Logging should be configured before calling this function (see {@linkcode logging-utils#configureLogging}
+ * Logging should be configured before calling this function (see {@linkcode logging-utils/logging#configureLogging})
  *
  * @param {Object} context - the context to configure
  * @param {AWS.Kinesis} [context.kinesis] - the current Kinesis instance cached on the context (if any)

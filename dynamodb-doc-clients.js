@@ -41,7 +41,7 @@ module.exports = {
  * empty and not only region, then logs a warning that the previously cached DynamoDB.DocumentClient instance is being
  * replaced and returns the new AWS DynamoDB.DocumentClient instance.
  *
- * Logging should be configured before calling this function (see {@linkcode logging-utils#configureLogging}
+ * Logging should be configured before calling this function (see {@linkcode logging-utils/logging#configureLogging}
  *
  * @param {Object|undefined} [dynamoDBDocClientOptions] - the optional DynamoDB.DocumentClient constructor options to use
  * @param {string|undefined} [dynamoDBDocClientOptions.region] - an optional region to use instead of the current region
@@ -152,7 +152,7 @@ function getRegionKey(region) {
  * are not empty and not only region, then logs a warning that the previously cached DynamoDB.DocumentClient instance is
  * being replaced and returns the new AWS DynamoDB.DocumentClient instance.
  *
- * Logging should be configured before calling this function (see {@linkcode logging-utils#configureLogging}
+ * Logging should be configured before calling this function (see {@linkcode logging-utils/logging#configureLogging})
  *
  * Configures the given context, if it does not already have a context.dynamoDBDocClient, with the cached
  * dynamoDBDocClient instance for either the region specified in the given default DynamoDB.DocumentClient options (if
@@ -163,7 +163,7 @@ function getRegionKey(region) {
  * Note that the given default DynamoDB.DocumentClient constructor options will ONLY be used if no cached
  * DynamoDB.DocumentClient instance exists.
  *
- * Logging should be configured before calling this function (see {@linkcode logging-utils#configureLogging}
+ * Logging should be configured before calling this function (see {@linkcode logging-utils/logging#configureLogging})
  *
  * @param {Object} context - the context to configure
  * @param {AWS.DynamoDB.DocumentClient} [context.dynamoDBDocClient] - the current DynamoDB.DocumentClient instance

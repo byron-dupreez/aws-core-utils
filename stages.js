@@ -15,8 +15,6 @@ const EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING = 'extractStageFromResourceName';
 const INJECT_IN_CASE_SETTING = 'injectInCase';
 const EXTRACT_IN_CASE_SETTING = 'extractInCase';
 
-//TODO perhaps consider adding a default region to stage mapping, e.g. us-west-2 = qa(?); eu-west-1 = prod(?); ... BUT this wouldn't be perfect either :(
-
 /**
  * Stage handling utilities (primarily for AWS Lambda usage), which include the following:
  * - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources.
@@ -78,7 +76,7 @@ const Lambdas = require('./lambdas');
 
 const Arrays = require('core-functions/arrays');
 
-const logging = require('logging-utils/logging-utils');
+const logging = require('logging-utils');
 
 /**
  * Returns true if stage handling is already configured on the given context; false otherwise.
@@ -86,12 +84,12 @@ const logging = require('logging-utils/logging-utils');
  * @returns {boolean} true if configured; false otherwise
  */
 function isStageHandlingConfigured(context) {
-  return context && typeof context.stageHandling === 'object';
+  return context && context.stageHandling && typeof context.stageHandling === 'object';
 }
 
 /**
- * Stage handling settings used for configuring and customising stage handling behaviour. The stage handling settings
- * determine how {@linkcode resolveStage}, {@linkcode toStageQualifiedStreamName},
+ * Stage handling settings are used for configuring and customising stage handling behaviour. The stage handling
+ * settings determine how {@linkcode resolveStage}, {@linkcode toStageQualifiedStreamName},
  * {@linkcode extractStageFromQualifiedStreamName}, {@linkcode toStageQualifiedResourceName},
  * {@linkcode extractStageFromQualifiedStreamName} and other internal functions will behave when invoked.
  *
@@ -135,6 +133,22 @@ function isStageHandlingConfigured(context) {
  */
 
 /**
+ * Stage handling options are a subset of the full (@linkcode StageHandlingSettings}, which are used to configure ONLY
+ * the property (i.e. non-function) stage handling settings.
+ * @typedef {Object} StageHandlingOptions
+ * @property {string|undefined} [streamNameStageSeparator] - an optional non-blank separator to use to extract a stage from
+ * a stage-qualified stream name or inject a stage into an unqualified stream name
+ * @property {string|undefined} [resourceNameStageSeparator] - an optional non-blank separator to use to extract a stage
+ * from a stage-qualified resource name or inject a stage into an unqualified resource name
+ * @property {string|undefined} [injectInCase] - optionally specifies whether to convert an injected stage to uppercase (if
+ * 'upper' or 'uppercase') or to lowercase (if 'lowercase' or 'lower') or keep it as given (if 'as_is' or anything else)
+ * @property {string|undefined} [extractInCase] - optionally specifies whether to convert an extracted stage to uppercase
+ * (if 'upper' or 'uppercase') or to lowercase (if 'lowercase' or 'lower') or keep it as extracted (if 'as_is' or
+ * anything else)
+ * @property {string|undefined} [defaultStage] - an optional default stage to use as a last resort if all other attempts fail
+ */
+
+/**
  * Configures the given context with the given stage handling settings, but only if stage handling is not already
  * configured on the given context OR if forceConfiguration is true. The stage handling settings determine how
  * {@linkcode resolveStage}, {@linkcode toStageQualifiedStreamName}, {@linkcode extractStageFromQualifiedStreamName},
@@ -161,12 +175,13 @@ function configureStageHandling(context, settings, forceConfiguration) {
 }
 
 /**
- * Configures the given context with the default stage handling settings, but only if stage handling is NOT already
- * configured on the given context OR if forceConfiguration is true.
+ * Configures the given context with the default stage handling settings partially overridden by the given stage
+ * handling options (if any), but only if stage handling is NOT already configured on the given context OR if
+ * forceConfiguration is true.
  *
- * The default stage handling makes the following assumptions:
+ * Default stage handling makes the following assumptions:
  * - Stages are all lowercase.
- * - Lambda aliases are stages.
+ * - AWS Lambda aliases are stages.
  * - The customToStage function is left undefined.
  * - A defaultStage is NOT defined (and it is probably not a good idea to set it in general).
  * - Stream names will be suffixed with an underscore and an uppercase stage.
@@ -181,62 +196,40 @@ function configureStageHandling(context, settings, forceConfiguration) {
  *
  * @param {Object} context - the context onto which to configure the default stage handling settings
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
- * @param {boolean|undefined} forceConfiguration - whether or not to force configuration of the given settings, which
+ * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override the default options
+ * @param {boolean|undefined} forceConfiguration - whether or not to force configuration of the default settings, which
  * will override any previously configured stage handling settings on the given context
- * @return {Object} the context object configured with stage handling settings (either existing or defaults)
+ * @return {Object} the context object configured with stage handling settings (either existing or defaults or overrides)
  */
-function configureDefaultStageHandling(context, forceConfiguration) {
+function configureDefaultStageHandling(context, options, forceConfiguration) {
   // If forceConfiguration is false check if the given context already has stage handling configured on it
   // and, if so, do nothing more and simply return the context as is (to prevent overriding an earlier configuration)
   if (!forceConfiguration && isStageHandlingConfigured(context)) {
     return context;
   }
 
-  // Load local defaults for stage handling settings
-  const config = require('./config.json');
+  const settings = getDefaultStageHandlingSettings(options);
+  return configureStageHandling(context, settings, forceConfiguration);
+}
 
-  const defaultSettings = getDefaultStageHandlingSettings(config.stageHandlingSettings);
-
-  return configureStageHandling(context, defaultSettings, forceConfiguration);
+function select(opts, propertyName, defaultValue) {
+  const value = opts ? opts[propertyName] : undefined;
+  return isNotBlank(value) ? trim(value) : defaultValue
 }
 
 /**
- * Simply returns the default stage handling settings, preferring settings in the given config object (if any) or in
- * config.stageHandlingSettings (if any) over the static default settings.
+ * Returns the default stage handling settings partially overridden by the given stage handling options (if any).
  *
  * This function is used internally by {@linkcode configureDefaultStageHandling}, but could also be used in custom
- * configurations to get the default settings as a base and override with your customisations before calling
+ * configurations to get the default settings as a base to be overridden with your custom settings before calling
  * {@linkcode configureStageHandling}.
  *
- * @param {Object} [config] - an optional config object containing either stage handling settings or a stageHandlingSettings object
- * @param {Object} [config.stageHandlingSettings] - an optional stageHandlingSettings object on the given config
- * object containing stage handling settings
+ * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override the default options
  * @returns {StageHandlingSettings} a stage handling settings object
  */
-function getDefaultStageHandlingSettings(config) {
-  if (config && config.stageHandlingSettings) {
-    return getDefaultStageHandlingSettings(config.stageHandlingSettings);
-  }
+function getDefaultStageHandlingSettings(options) {
 
-  function select(config, propertyName, defaultValue) {
-    const configuredValue = config ? config[propertyName] : undefined;
-    return isNotBlank(configuredValue) ? trim(configuredValue) : defaultValue
-  }
-
-  // Use the configured default stream name stage separator (if non-blank); otherwise use underscore
-  const streamNameStageSeparator = select(config, 'streamNameStageSeparator', '_');
-
-  // Use the configured default resource name stage separator (if non-blank); otherwise use underscore
-  const resourceNameStageSeparator = select(config, 'resourceNameStageSeparator', '_');
-
-  // Use the configured default extract in case (if non-blank); otherwise use 'lower'
-  const extractInCase = select(config, 'extractInCase', 'lower');
-
-  // Use the configured default inject in case (if non-blank); otherwise use 'upper'
-  const injectInCase = select(config, 'injectInCase', 'upper');
-
-  // Use the configured default default stage (if non-blank); otherwise use undefined
-  const defaultStage = select(config, 'defaultStage', undefined);
+  const defaults = loadDefaultStageHandlingOptions();
 
   return {
     customToStage: undefined,
@@ -244,20 +237,36 @@ function getDefaultStageHandlingSettings(config) {
 
     injectStageIntoStreamName: toStageSuffixedStreamName,
     extractStageFromStreamName: extractStageFromSuffixedStreamName,
-    streamNameStageSeparator: streamNameStageSeparator,
+    streamNameStageSeparator: select(options, 'streamNameStageSeparator', defaults.streamNameStageSeparator),
 
     injectStageIntoResourceName: toStageSuffixedResourceName,
     extractStageFromResourceName: extractStageFromSuffixedResourceName,
-    resourceNameStageSeparator: resourceNameStageSeparator,
+    resourceNameStageSeparator: select(options, 'resourceNameStageSeparator', defaults.resourceNameStageSeparator),
 
-    injectInCase: injectInCase,
-    extractInCase: extractInCase,
+    injectInCase: select(options, 'injectInCase', defaults.injectInCase),
+    extractInCase: select(options, 'extractInCase', defaults.extractInCase),
 
-    defaultStage: defaultStage
+    defaultStage: select(options, 'defaultStage', undefined)
   };
 }
 
-  /**
+/**
+ * Loads the default stage handling options from the local config.json file and fills in any missing options with the
+ * static default options.
+ * @returns {StageHandlingOptions} the default stage handling options
+ */
+function loadDefaultStageHandlingOptions() {
+  const config = require('./config.json');
+  const defaultOptions = config ? config.stageHandlingOptions : undefined;
+  return {
+    streamNameStageSeparator: select(defaultOptions, 'streamNameStageSeparator', '_'),
+    resourceNameStageSeparator: select(defaultOptions, 'resourceNameStageSeparator', '_'),
+    injectInCase: select(defaultOptions, 'injectInCase', 'upper'),
+    extractInCase: select(defaultOptions, 'extractInCase', 'lower')
+  };
+}
+
+/**
  * Returns the value of the named stage handling setting (if any) on the given context.
  * @param context - the context from which to fetch the named setting's value
  * @param settingName - the name of the stage handling setting
@@ -281,20 +290,20 @@ function getStageHandlingFunction(context, settingName) {
 }
 
 /**
- * If no stage handling settings have been configured yet, then configure the given context with the default settings.
+ * If no stage handling settings have been configured yet, then configures the given context with the default settings.
  * @param {Object} context - the context to configure with default logging and stage handling
- * @param {string} caller - a short description to identify the caller of this function
+ * @param {string} caller - a short description to identify the caller of this function for logging purposes
  */
 function configureDefaultStageHandlingIfNotConfigured(context, caller) {
   // Also configure logging if not already configured
   if (!logging.isLoggingConfigured(context)) {
-    logging.configureDefaultLogging(context);
+    logging.configureDefaultLogging(context, undefined, undefined, true);
     context.warn(`Logging was not configured before calling ${caller} - using default logging configuration`);
   }
   // Configure stage handling if not already configured
   if (!isStageHandlingConfigured(context)) {
     context.warn(`Stage handling was not configured before calling ${caller} - using default stage handling configuration`);
-    configureDefaultStageHandling(context, true);
+    configureDefaultStageHandling(context, undefined, true);
   }
 }
 

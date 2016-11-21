@@ -1,4 +1,4 @@
-# aws-core-utils v2.1.4
+# aws-core-utils v3.0.0
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -71,7 +71,7 @@ const dynamoDBDocClients = require('aws-core-utils/dynamodb-doc-clients');
 // Preamble to create a context and configure logging on the context
 const context = {};
 const logging = require('logging-utils');
-logging.configureDefaultLogging(context);
+logging.configureDefaultLogging(context); // or your own custom logging configuration (see logging-utils README.md)
 
 // Define the DynamoDB.DocumentClient's constructor options that you want to use, e.g.
 const dynamoDBDocClientOptions = {
@@ -110,7 +110,7 @@ const kinesisUtils = require('aws-core-utils/kinesis-utils');
 // Preamble to create a context and configure logging on the context
 const context = {};
 const logging = require('logging-utils');
-logging.configureDefaultLogging(context);
+logging.configureDefaultLogging(context); // or your own custom logging configuration (see logging-utils README.md)
 
 // Define the Kinesis constructor options that you want to use, e.g.
 const kinesisOptions = {
@@ -165,10 +165,51 @@ const invokedFunctionArnFunctionName = lambdas.getInvokedFunctionArnFunctionName
 
 * To use the stage utilities
 ```js
+// To configure stage-handling, which determines the behaviour of the functions numbered 1 to 6 below
 const stages = require('aws-core-utils/stages');
+const config = require('./config.json'); // ... or your own config file
 
-// To configure default stage handling, which sets the default behaviour of the next 6 functions
-stages.configureDefaultStageHandling(context, forceConfiguration);
+// ... EITHER using the default stage handling configuration partially customised via config.stageHandlingOptions
+stages.configureDefaultStageHandling(context, config.stageHandlingOptions, forceConfiguration); 
+
+// ... OR using your own custom stage-handling configuration
+const stageHandlingSettings = stages.getDefaultStageHandlingSettings(config.stageHandlingOptions);
+// Optionally override the default stage handling functions with your own custom functions
+// stageHandlingSettings.customToStage = undefined;
+// stageHandlingSettings.convertAliasToStage = stages.DEFAULTS.convertAliasToStage;
+// stageHandlingSettings.injectStageIntoStreamName = stages.DEFAULTS.toStageSuffixedStreamName;
+// stageHandlingSettings.extractStageFromStreamName = stages.DEFAULTS.extractStageFromSuffixedStreamName;
+// stageHandlingSettings.injectStageIntoResourceName = stages.DEFAULTS.toStageSuffixedResourceName;
+// stageHandlingSettings.extractStageFromResourceName = stages.DEFAULTS.extractStageFromSuffixedResourceName;
+stages.configureStageHandling(context, stageHandlingSettings, forceConfiguration);
+
+// ... OR using completely customised stage handling settings
+const settings = {
+    customToStage: myCustomToStageFunction, // or undefined if not needed
+    convertAliasToStage: myConvertAliasToStageFunction, // or undefined to knockout using aliases as stages
+
+    injectStageIntoStreamName: myInjectStageIntoStreamNameFunction, 
+    extractStageFromStreamName: myExtractStageFromStreamNameFunction,
+    streamNameStageSeparator: myStreamNameStageSeparator,
+
+    injectStageIntoResourceName: myInjectStageIntoResourceNameFunction,
+    extractStageFromResourceName: myExtractStageFromResourceNameFunction,
+    resourceNameStageSeparator: myResourceNameStageSeparator,
+
+    injectInCase: myInjectInCase,
+    extractInCase: myExtractInCase,
+
+    defaultStage: myDefaultStage, // or undefined
+}
+stages.configureStageHandling(context, settings, forceConfiguration);
+
+
+// To check if stage handling is configured
+const configured = stages.isStageHandlingConfigured(context);
+
+// To look up stage handling settings and functions
+const setting = stages.getStageHandlingSetting(context, settingName);
+const fn = stages.getStageHandlingFunction(context, functionSettingName);
 
 // 1. To resolve / derive a stage from an AWS event
 const context = {};
@@ -192,35 +233,7 @@ const stageQualifiedResourceName = stages.toStageQualifiedResourceName(unqualifi
 // 6. To extract a stage from a qualified resource name
 const qualifiedResourceName = 'TestResource_QA';
 const stage3 = stages.extractStageFromQualifiedResourceName(qualifiedResourceName, context);
-
-// To configure completely customised stage handling of the above 6 functions
-const settings = {
-    customToStage: customToStage,
-    convertAliasToStage: convertAliasToStage,
-
-    injectStageIntoStreamName: injectStageIntoStreamName,
-    extractStageFromStreamName: extractStageFromStreamName,
-    streamNameStageSeparator: streamNameStageSeparator,
-
-    injectStageIntoResourceName: injectStageIntoResourceName,
-    extractStageFromResourceName: extractStageFromResourceName,
-    resourceNameStageSeparator: resourceNameStageSeparator,
-
-    injectInCase: injectInCase,
-    extractInCase: extractInCase,
-
-    defaultStage: defaultStage,
-}
-stages.configureStageHandling(context, settings, forceConfiguration);
-         
-// To check if stage handling is configured
-stages.isStageHandlingConfigured(context);
-
-// To look up stage handling settings and functions
-const setting = stages.getStageHandlingSetting(context, settingName);
-const fn = stages.getStageHandlingFunction(context, settingName);
 ```
-
 
 * To use the stream event utilities
 ```js
@@ -231,7 +244,7 @@ const eventSourceARNs = streamEvents.getEventSourceARNs(event);
 const eventSourceStreamNames = streamEvents.getEventSourceStreamNames(event);
 const eventSourceStreamName = streamEvents.getEventSourceStreamName(record);
 
-// Simple checks to validate existance of some of parameters of Kinesis & DynamoDB stream event records
+// Simple checks to validate existance of some of the properties of Kinesis & DynamoDB stream event records
 try {
   streamEvents.validateStreamEventRecord(record);
   streamEvents.validateKinesisStreamEventRecord(record);
@@ -262,6 +275,17 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 
 ## Changes
 
+### 3.0.0
+- Changes to `stages.js` module:
+  - Added typedef for `StageHandlingOptions` to better define parameters and return types
+  - Changed `getDefaultStageHandlingSettings` function to accept an `options` argument of type `StageHandlingOptions` 
+    instead of an arbitrary `config` object and to also load default options from `config.json` 
+  - Changed `configureDefaultStageHandling` function to accept a new `options` argument of type `StageHandlingOptions` 
+    to enable optional, partial overriding of default stage handling settings
+  - Changed `stageHandlingSettings` to `stageHandlingOptions` in `config.json`
+  - Fixed require `logging-utils` link
+- Updated `logging-utils` dependency to version 2.0.1
+  
 ### 2.1.4
 - Updated JsDoc comments in `dynamodb-doc-clients` and `kinesis-utils` modules.
 
