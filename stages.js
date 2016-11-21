@@ -33,6 +33,7 @@ module.exports = {
   getDefaultStageHandlingSettings: getDefaultStageHandlingSettings,
   getStageHandlingSetting: getStageHandlingSetting,
   getStageHandlingFunction: getStageHandlingFunction,
+  configureStageHandlingIfNotConfigured: configureStageHandlingIfNotConfigured,
   // Stage resolution
   resolveStage: resolveStage,
   configureStage: configureStage,
@@ -292,19 +293,44 @@ function getStageHandlingFunction(context, settingName) {
 /**
  * If no stage handling settings have been configured yet, then configures the given context with the default settings.
  * @param {Object} context - the context to configure with default logging and stage handling
- * @param {string} caller - a short description to identify the caller of this function for logging purposes
+ * @param {string|undefined} [caller] - optional arbitrary text to identify the caller of this function
+ * @returns {Object} the given context
  */
 function configureDefaultStageHandlingIfNotConfigured(context, caller) {
-  // Also configure logging if not already configured
-  if (!logging.isLoggingConfigured(context)) {
-    logging.configureDefaultLogging(context, undefined, undefined, true);
-    context.warn(`Logging was not configured before calling ${caller} - using default logging configuration`);
-  }
+  return configureStageHandlingIfNotConfigured(context, undefined, undefined, undefined, undefined, caller);
+}
+
+/**
+ * If no stage handling settings have been configured yet, then configure the given context with the given stage
+ * handling settings (if any) otherwise with the default stage handling settings partially overridden by the given stage
+ * handling options (if any).
+ *
+ * @param {Object} context - the context to configure
+ * @param {StageHandlingSettings|undefined} [settings] - optional stage handling settings to use to configure stage handling
+ * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override default options
+ * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {Object|undefined} [otherOptions] - optional other configuration options to use if corresponding settings are not provided
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
+ * @param {string|undefined} [caller] - optional arbitrary text to identify the caller of this function
+ * @returns {Object} the given context
+ */
+function configureStageHandlingIfNotConfigured(context, settings, options, otherSettings, otherOptions, caller) {
+  // Also configure logging if not already configured, since it is a dependency
+  logging.configureLoggingIfNotConfigured(context, otherSettings ? otherSettings.loggingSettings : undefined,
+    otherOptions ? otherOptions.loggingOptions : undefined, undefined, caller);
+
   // Configure stage handling if not already configured
   if (!isStageHandlingConfigured(context)) {
-    context.warn(`Stage handling was not configured before calling ${caller} - using default stage handling configuration`);
-    configureDefaultStageHandling(context, undefined, true);
+    if (settings && typeof settings === 'object') {
+      context.warn(`Stage handling was not configured${caller ? ` before calling ${caller}` : ''} - using stage handling settings (${stringify(settings)})`);
+      configureStageHandling(context, settings, true);
+    } else {
+      context.warn(`Stage handling was not configured${caller ? ` before calling ${caller}` : ''} - using default stage handling configuration with options (${stringify(options)})`);
+      configureDefaultStageHandling(context, options, true);
+    }
   }
+  return context;
 }
 
 /**
