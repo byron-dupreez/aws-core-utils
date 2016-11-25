@@ -1,6 +1,8 @@
 'use strict';
 
 // Stage handling setting names
+const ENV_STAGE_NAME_SETTING = 'envStageName';
+
 const CUSTOM_TO_STAGE_SETTING = 'customToStage';
 const CONVERT_ALIAS_TO_STAGE_SETTING = 'convertAliasToStage';
 
@@ -33,6 +35,7 @@ module.exports = {
   getDefaultStageHandlingSettings: getDefaultStageHandlingSettings,
   getStageHandlingSetting: getStageHandlingSetting,
   getStageHandlingFunction: getStageHandlingFunction,
+  configureStageHandlingAndDependencies: configureStageHandlingAndDependencies,
   configureStageHandlingIfNotConfigured: configureStageHandlingIfNotConfigured,
   // Stage resolution
   resolveStage: resolveStage,
@@ -107,6 +110,8 @@ function isStageHandlingConfigured(context) {
  *   confusing.
  *
  * @typedef {Object} StageHandlingSettings
+ * @property {string|undefined} [envStageName] - the optional name of a process.env environment variable that holds the
+ * configured stage (if any) (using AWS Lambda's new environment support), defaults to 'STAGE' if not defined
  * @property {Function|undefined} [customToStage] - an optional custom function that accepts: an AWS event; an AWS context;
  * and a context, and somehow extracts a usable stage from the AWS event and/or AWS context.
  * @property {Function|undefined} [convertAliasToStage] - an optional function that accepts: an extracted alias (if any);
@@ -137,6 +142,8 @@ function isStageHandlingConfigured(context) {
  * Stage handling options are a subset of the full (@linkcode StageHandlingSettings}, which are used to configure ONLY
  * the property (i.e. non-function) stage handling settings.
  * @typedef {Object} StageHandlingOptions
+ * @property {string|undefined} [envStageName] - the optional name of a process.env environment variable that holds the
+ * configured stage (if any) (using AWS Lambda's new environment support), defaults to 'STAGE' if not defined
  * @property {string|undefined} [streamNameStageSeparator] - an optional non-blank separator to use to extract a stage from
  * a stage-qualified stream name or inject a stage into an unqualified stream name
  * @property {string|undefined} [resourceNameStageSeparator] - an optional non-blank separator to use to extract a stage
@@ -237,6 +244,8 @@ function getDefaultStageHandlingSettings(options) {
   const defaults = loadDefaultStageHandlingOptions();
 
   return {
+    envStageName: select(options, 'envStageName', defaults.envStageName),
+
     customToStage: undefined,
     convertAliasToStage: convertAliasToStage,
 
@@ -264,6 +273,7 @@ function loadDefaultStageHandlingOptions() {
   const config = require('./config.json');
   const defaultOptions = config ? config.stageHandlingOptions : undefined;
   return {
+    envStageName: select(defaultOptions, 'envStageName', 'STAGE'),
     streamNameStageSeparator: select(defaultOptions, 'streamNameStageSeparator', '_'),
     resourceNameStageSeparator: select(defaultOptions, 'resourceNameStageSeparator', '_'),
     injectInCase: select(defaultOptions, 'injectInCase', 'upper'),
@@ -275,13 +285,13 @@ function loadDefaultStageHandlingOptions() {
  * Configures the given context with the stage handling dependencies (currently only logging) using the given other
  * settings and given other options.
  *
- * @param {Object} context - the context onto which to configure the given stream processing dependencies
+ * @param {Object} context - the context onto which to configure the given stage handling dependencies
  * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
  * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
  * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {string|undefined} [caller] - optional arbitrary text to identify the caller of this function
- * @returns {Object} the context object configured with stream processing dependencies
+ * @returns {Object} the context object configured with stage handling dependencies
  */
 function configureDependenciesIfNotConfigured(context, otherSettings, otherOptions, caller) {
   // Configure logging if not configured yet
@@ -355,26 +365,85 @@ function configureStageHandlingIfNotConfigured(context, settings, options, other
 }
 
 /**
+ * Configures the given context with the given stage handling settings (if any) otherwise with the default stage
+ * handling settings partially overridden by the given stage handling options (if any), but only if stage handling is
+ * not already configured on the given context OR if forceConfiguration is true.
+ *
+ * @param {Object} context - the context to configure
+ * @param {StageHandlingSettings|undefined} [settings] - optional stage handling settings to use to configure stage handling
+ * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override default options
+ * @param {Object|undefined} [otherSettings] - optional other settings to use to configure dependencies
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {Object|undefined} [otherOptions] - optional other options to use to configure dependencies if corresponding settings are not provided
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
+ * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
+ * will override any previously configured stage handling settings on the given context
+ * @returns {Object} the given context
+ */
+function configureStageHandlingAndDependencies(context, settings, options, otherSettings, otherOptions, forceConfiguration) {
+  // First configure all stage handling dependencies
+  configureDependencies(context, otherSettings, otherOptions, forceConfiguration);
+
+  // Check if stage handling was already configured
+  const stageHandlingWasConfigured = isStageHandlingConfigured(context);
+
+  // Determine the stage handling settings to be used
+  const settingsAvailable = settings && typeof settings === 'object';
+  const stageHandlingSettings = settingsAvailable ? settings : getDefaultStageHandlingSettings(options);
+
+  // Configure stage handling with the given or derived stage handling settings
+  configureStageHandling(context, stageHandlingSettings, otherSettings, otherOptions, forceConfiguration);
+
+  // Log a warning if no settings and no options were provided and the default settings were applied
+  if (!settingsAvailable && (!options || typeof options !== 'object') && (forceConfiguration || !stageHandlingWasConfigured)) {
+    context.warn(`Stage handling was configured without settings or options - used default stage handling configuration (${stringify(stageHandlingSettings)})`);
+  }
+  return context;
+}
+
+/**
+ * Configures the given context with the stage handling dependencies (currently only logging) using the given other
+ * settings and given other options.
+ *
+ * @param {Object} context - the context onto which to configure the given stage handling dependencies
+ * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
+ * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
+ * will override any previously configured dependencies' settings on the given context
+ * @returns {Object} the context object configured with stage handling dependencies
+ */
+function configureDependencies(context, otherSettings, otherOptions, forceConfiguration) {
+  // Configure logging if not configured yet
+  logging.configureLoggingWithSettingsOrOptions(context, otherSettings ? otherSettings.loggingSettings : undefined,
+    otherOptions ? otherOptions.loggingOptions : undefined, undefined, forceConfiguration);
+}
+
+/**
  * Attempts to resolve the stage from the given AWS event, AWS context and context using the following process:
+ *
  * 1. Uses an explicit (or previously resolved) context.stage (if non-blank).
  *
- * 2. Uses the given context's stageHandling.customToStage function (if any) to attempt to somehow extract a stage from
+ * 2. Uses the stage in the process.env[context.envStageName] environment variable (if any), which must be configured
+ *    using AWS Lambda's new environment support. This is now the preferred way of configuring the current stage.
+ *
+ * 3. Uses the given context's stageHandling.customToStage function (if any) to attempt to somehow extract a stage from
  *    the AWS event and/or AWS context. This function has no default implementation and is merely provided as a hook for
  *    callers to add their own custom technique for resolving a stage, which will take precedence over all other steps
  *    other step 1, which uses an explicit context.stage.
  *
- * 3. Uses the AWS event's stage (if non-blank).
+ * 4. Uses the AWS event's stage (if non-blank).
  *    NB: event.stage is NOT a standard AWS event property, but it may be set by API Gateway or tools like serverless.
- *    TODO check whether API Gateway sets the stage on the event and if so confirm WHERE it sets it!
  *
- * 4. Extracts the alias from the AWS context's invokedFunctionArn (if any) and then uses the given context's
+ * 5. Extracts the alias from the AWS context's invokedFunctionArn (if any) and then uses the given context's
  *    stageHandling.convertAliasToStage function (if any) to convert the extracted alias (if any) into a stage.
  *
  *    NB: This step relies on a convention of using Lambda aliases as stages. If you are NOT using such a convention,
  *    then disable this step by simply NOT configuring a stageHandling.convertAliasToStage function on the context (see
  *    {@linkcode configureStageHandling}).
  *
- * 5. Extracts the stream names from the AWS event's records' eventSourceARNs (if any) and then uses the given context's
+ * 6. Extracts the stream names from the AWS event's records' eventSourceARNs (if any) and then uses the given context's
  *    configured stageHandling.extractStageFromStreamName function (if defined) to extract the stages from these stream
  *    names and returns the first non-blank stage (if any and if there are NOT multiple distinct results).
  *
@@ -383,11 +452,11 @@ function configureStageHandlingIfNotConfigured(context, settings, options, other
  *    on the context (see {@linkcode configureStageHandling}). Note that doing this will also disable the
  *    {@linkcode extractStageFromQualifiedStreamName} function.
  *
- * 6. Uses context.stageHandling.defaultStage (if non-blank).
+ * 7. Uses context.stageHandling.defaultStage (if non-blank).
  *
- * 7. Uses context.defaultStage (if non-blank).
+ * 8. Uses context.defaultStage (if non-blank).
  *
- * 8. Gives up and returns an empty string.
+ * 9. Gives up and returns an empty string.
  *
  * NB: If no stage handling settings have been configured by the time this function is first called, then the given
  * context will be configured with the default stage handling settings (see {@linkcode configureDefaultStageHandling}).
@@ -430,6 +499,19 @@ function resolveStage(event, awsContext, context) {
   }
 
   // Attempt 2
+  const envStageName = getStageHandlingSetting(context, ENV_STAGE_NAME_SETTING);
+
+  if (isNotBlank(envStageName)) {
+    // Look up the current stage from the named process.env environment variable
+    const stage = process.env[envStageName];
+
+    if (isNotBlank(stage)) {
+      context.debug(`Resolved stage (${stage}) from process.env.${envStageName}`);
+      return toCase(trim(stage), extractInCase);
+    }
+  }
+
+  // Attempt 3
   const customToStage = getStageHandlingFunction(context, CUSTOM_TO_STAGE_SETTING);
 
   if (customToStage) {
@@ -441,13 +523,13 @@ function resolveStage(event, awsContext, context) {
     }
   }
 
-  // Attempt 3
+  // Attempt 4
   if (event && isNotBlank(event.stage)) {
     context.debug(`Resolved stage (${event.stage}) from event.stage)`);
     return toCase(trim(event.stage), extractInCase);
   }
 
-  // Attempt 4
+  // Attempt 5
   // Check have all the pieces needed to extract an alias and apply the given convertAliasToStage function to it
   const convertAliasToStage = getStageHandlingFunction(context, CONVERT_ALIAS_TO_STAGE_SETTING);
 
@@ -464,7 +546,7 @@ function resolveStage(event, awsContext, context) {
     }
   }
 
-  // Attempt 5
+  // Attempt 6
   // Check have all the pieces needed to extract a stream name and apply the given extractStageFromStreamName function to it
   const extractStageFromStreamName = getStageHandlingFunction(context, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING);
 
@@ -488,7 +570,7 @@ function resolveStage(event, awsContext, context) {
     }
   }
 
-  // Attempt 6
+  // Attempt 7
   const stageHandlingDefaultStage = getStageHandlingSetting(context, 'defaultStage');
 
   if (isNotBlank(stageHandlingDefaultStage)) {
@@ -496,7 +578,7 @@ function resolveStage(event, awsContext, context) {
     return toCase(trim(stageHandlingDefaultStage), extractInCase);
   }
 
-  // Attempt 7
+  // Attempt 8
   const defaultStage = context && context.defaultStage ? context.defaultStage : undefined;
 
   if (isNotBlank(defaultStage)) {
@@ -504,7 +586,7 @@ function resolveStage(event, awsContext, context) {
     return toCase(trim(defaultStage), extractInCase);
   }
 
-  // Give up 8
+  // Give up 9
   return '';
 }
 

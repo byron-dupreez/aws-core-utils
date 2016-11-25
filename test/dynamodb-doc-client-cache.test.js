@@ -1,18 +1,18 @@
 'use strict';
 
 /**
- * Unit tests for aws-core-utils/dynamodb-doc-clients.js
+ * Unit tests for aws-core-utils/dynamodb-doc-client-cache.js
  * @author Byron du Preez
  */
 
 const test = require("tape");
 
 // The test subject
-const dynamoDBDocClients = require('../dynamodb-doc-clients');
-const setDynamoDBDocClient = dynamoDBDocClients.setDynamoDBDocClient;
-const getDynamoDBDocClient = dynamoDBDocClients.getDynamoDBDocClient;
-const deleteDynamoDBDocClient = dynamoDBDocClients.deleteDynamoDBDocClient;
-const configureDynamoDBDocClient = dynamoDBDocClients.configureDynamoDBDocClient;
+const dynamoDBDocClientCache = require('../dynamodb-doc-client-cache');
+const setDynamoDBDocClient = dynamoDBDocClientCache.setDynamoDBDocClient;
+const getDynamoDBDocClient = dynamoDBDocClientCache.getDynamoDBDocClient;
+const deleteDynamoDBDocClient = dynamoDBDocClientCache.deleteDynamoDBDocClient;
+const configureDynamoDBDocClient = dynamoDBDocClientCache.configureDynamoDBDocClient;
 
 const regions = require('../regions');
 const getRegion = regions.getRegion;

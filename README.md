@@ -1,4 +1,4 @@
-# aws-core-utils v3.0.2
+# aws-core-utils v4.0.0
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -7,10 +7,12 @@ Currently includes:
     - Utilities for working with Amazon Resource Names (ARNs)
 - aws-errors.js
     - Utilities for working with AWS errors.
-- dynamodb-doc-clients.js
-    - Utilities for working with AWS.DynamoDB.DocumentClients and a module-scope cache of AWS.DynamoDB.DocumentClient instances by region for Lambda.
-- kinesis-utils.js
-    - Utilities for working with AWS.Kinesis and a module-scope cache of AWS.Kinesis instances by region for Lambda.
+- dynamodb-doc-client-cache.js
+    - A module-scope cache of AWS.DynamoDB.DocumentClient instances by region for Lambda.
+- dynamodb-utils.js
+    - Utilities for working with AWS DynamoDB.
+- kinesis-cache.js
+    - A module-scope cache of AWS.Kinesis instances by region for Lambda.
 - lambdas.js 
     - Utilities for working with AWS Lambda, which enable extraction of function names, versions and, most importantly, 
     aliases from AWS contexts and their invoked function ARNs.
@@ -64,9 +66,9 @@ const region = regions.getRegion();
 regions.configureRegion(context, failFast)
 ```
 
-* To use the DynamoDB.DocumentClient utilities to cache and configure an AWS DynamoDB.DocumentClient instance per region
+* To use the DynamoDB.DocumentClient cache to configure and cache an AWS DynamoDB.DocumentClient instance per region
 ```js
-const dynamoDBDocClients = require('aws-core-utils/dynamodb-doc-clients');
+const dynamoDBDocClientCache = require('aws-core-utils/dynamodb-doc-client-cache');
 
 // Preamble to create a context and configure logging on the context
 const context = {};
@@ -84,28 +86,28 @@ const dynamoDBDocClientOptions = {
 // To create and cache a new AWS DynamoDB.DocumentClient instance with the given DynamoDB.DocumentClient constructor 
 // options for either the current region or the region specified in the given options OR reuse a previously cached 
 // DynamoDB.DocumentClient instance (if any) that is compatible with the given options
-const dynamoDBDocClient = dynamoDBDocClients.setDynamoDBDocClient(dynamoDBDocClientOptions, context);
+const dynamoDBDocClient = dynamoDBDocClientCache.setDynamoDBDocClient(dynamoDBDocClientOptions, context);
 
 // To configure a new AWS.DynamoDB.DocumentClient instance (or re-use a cached instance) on a context 
-dynamoDBDocClients.configureDynamoDBDocClient(context, dynamoDBDocClientOptions);
+dynamoDBDocClientCache.configureDynamoDBDocClient(context, dynamoDBDocClientOptions);
 console.log(context.dynamoDBDocClient);
 
 // To get a previously set or configured AWS DynamoDB.DocumentClient instance for the current AWS region
-const dynamoDBDocClient1 = dynamoDBDocClients.getDynamoDBDocClient();
+const dynamoDBDocClient1 = dynamoDBDocClientCache.getDynamoDBDocClient();
 // ... or for a specified region
-const dynamoDBDocClient2 = dynamoDBDocClients.getDynamoDBDocClient('us-west-2');
+const dynamoDBDocClient2 = dynamoDBDocClientCache.getDynamoDBDocClient('us-west-2');
 
 // To get the original options that were used to construct a cached AWS DynamoDB.DocumentClient instance for the current or specified AWS region
-const optionsUsed1 = dynamoDBDocClients.getDynamoDBDocClientOptionsUsed();
-const optionsUsed2 = dynamoDBDocClients.getDynamoDBDocClientOptionsUsed('us-west-1');
+const optionsUsed1 = dynamoDBDocClientCache.getDynamoDBDocClientOptionsUsed();
+const optionsUsed2 = dynamoDBDocClientCache.getDynamoDBDocClientOptionsUsed('us-west-1');
 
 // To delete and remove a cached DynamoDB.DocumentClient instance from the cache
-const deleted = dynamoDBDocClients.deleteDynamoDBDocClient('eu-west-1');
+const deleted = dynamoDBDocClientCache.deleteDynamoDBDocClient('eu-west-1');
 ```
 
-* To use the Kinesis utilities to cache and configure an AWS Kinesis instance per region
+* To use the Kinesis cache to configure and cache an AWS Kinesis instance per region
 ```js
-const kinesisUtils = require('aws-core-utils/kinesis-utils');
+const kinesisCache = require('aws-core-utils/kinesis-cache');
 
 // Preamble to create a context and configure logging on the context
 const context = {};
@@ -122,23 +124,23 @@ const kinesisOptions = {
 // To create and cache a new AWS Kinesis instance with the given Kinesis constructor options for either the current 
 // region or the region specified in the given options OR reuse a previously cached Kinesis instance (if any) that is 
 // compatible with the given options
-const kinesis = kinesisUtils.setKinesis(kinesisOptions, context);
+const kinesis = kinesisCache.setKinesis(kinesisOptions, context);
 
 // To configure a new AWS.Kinesis instance (or re-use a cached instance) on a context 
-kinesisUtils.configureKinesis(context, kinesisOptions);
+kinesisCache.configureKinesis(context, kinesisOptions);
 console.log(context.kinesis);
 
 // To get a previously set or configured AWS Kinesis instance for the current AWS region
-const kinesis1 = kinesisUtils.getKinesis();
+const kinesis1 = kinesisCache.getKinesis();
 // ... or for a specified region
-const kinesis2 = kinesisUtils.getKinesis('us-west-2');
+const kinesis2 = kinesisCache.getKinesis('us-west-2');
 
 // To get the original options that were used to construct a cached AWS Kinesis instance for the current or specified AWS region
-const optionsUsed1 = kinesisUtils.getKinesisOptionsUsed();
-const optionsUsed2 = kinesisUtils.getKinesisOptionsUsed('us-west-1');
+const optionsUsed1 = kinesisCache.getKinesisOptionsUsed();
+const optionsUsed2 = kinesisCache.getKinesisOptionsUsed('us-west-1');
 
 // To delete and remove a cached Kinesis instance from the cache
-const deleted = kinesisUtils.deleteKinesis('eu-west-1');
+const deleted = kinesisCache.deleteKinesis('eu-west-1');
 ```
 
 * To use the Lambda utilities
@@ -186,6 +188,7 @@ stages.configureStageHandling(context, stageHandlingSettings, settings, options,
 
 // ... OR using completely customised stage handling settings
 const stageHandlingSettings2 = {
+    envStageName: myEnvStageName,
     customToStage: myCustomToStageFunction, // or undefined if not needed
     convertAliasToStage: myConvertAliasToStageFunction, // or undefined to knockout using AWS aliases as stages
 
@@ -204,6 +207,8 @@ const stageHandlingSettings2 = {
 }
 stages.configureStageHandling(context, stageHandlingSettings2, settings, options, forceConfiguration);
 
+// ... OR using custom stage handling settings and/or options and configuring dependencies at the same time
+stages.configureStageHandlingAndDependencies(context, stageHandlingSettings, stageHandlingOptions, otherSettings, otherOptions, forceConfiguration);
 
 // To check if stage handling is configured
 const configured = stages.isStageHandlingConfigured(context);
@@ -275,6 +280,19 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 4.0.0
+- Renamed `kinesis-utils` module to `kinesis-cache` to better reflect its actual purpose
+- Renamed `dynamodb-doc-clients` module to `dynamodb-doc-client-cache` to better reflect its actual purpose
+- Added new `dynamodb-utils` module
+- Changes to `stages.js` module:
+  - Added new `configureStageHandlingAndDependencies` function to enable configuration of stage handling settings and 
+    all stage handling dependencies (currently just logging) at the same time
+  - Added new `configureDependencies` function, which is used by the new `configureStageHandlingAndDependencies` function
+  - Added new `envStageName` setting to enable configuration of the name of the `process.env` environment variable to be 
+    checked for a stage value during execution of the `resolveStage` or `configureStage` functions
+  - Changed `resolveStage` function to first attempt to resolve a stage from a named `process.env` environment variable 
+    (if available), which must be configured using AWS Lambda's new environment support
 
 ### 3.0.2
 - Changes to `stages.js` module:

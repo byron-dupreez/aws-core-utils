@@ -1,18 +1,18 @@
 'use strict';
 
 /**
- * Unit tests for aws-core-utils/kinesis-utils.js
+ * Unit tests for aws-core-utils/kinesis-cache.js
  * @author Byron du Preez
  */
 
 const test = require("tape");
 
 // The test subject
-const kinesisUtils = require('../kinesis-utils');
-const setKinesis = kinesisUtils.setKinesis;
-const getKinesis = kinesisUtils.getKinesis;
-const deleteKinesis = kinesisUtils.deleteKinesis;
-const configureKinesis = kinesisUtils.configureKinesis;
+const kinesisCache = require('../kinesis-cache');
+const setKinesis = kinesisCache.setKinesis;
+const getKinesis = kinesisCache.getKinesis;
+const deleteKinesis = kinesisCache.deleteKinesis;
+const configureKinesis = kinesisCache.configureKinesis;
 
 const regions = require('../regions');
 const getRegion = regions.getRegion;

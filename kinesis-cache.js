@@ -19,8 +19,8 @@ const deepEqual = require('deep-equal');
 const strict = {strict:true};
 
 /**
- * Utilities for working with AWS.Kinesis and a module-scope cache of AWS.Kinesis instances by region for Lambda.
- * @module aws-core-utils/kinesis-utils
+ * A module-scope cache of AWS.Kinesis instances by region for Lambda.
+ * @module aws-core-utils/kinesis-cache
  * @author Byron du Preez
  */
 module.exports = {

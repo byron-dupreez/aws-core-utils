@@ -16,12 +16,12 @@ const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
 
 const deepEqual = require('deep-equal');
-const strict = {strict:true};
+const strict = {strict: true};
 
 /**
  * Utilities for working with AWS.DynamoDB.DocumentClients and a module-scope cache of AWS.DynamoDB.DocumentClient
  * instances by region for Lambda.
- * @module aws-core-utils/dynamodb-doc-client-utils
+ * @module aws-core-utils/dynamodb-doc-client-cache
  * @author Byron du Preez
  */
 module.exports = {
