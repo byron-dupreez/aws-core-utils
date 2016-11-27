@@ -23,6 +23,7 @@ module.exports = {
 const Strings = require('core-functions/strings');
 const trim = Strings.trim;
 const trimOrEmpty = Strings.trimOrEmpty;
+const isBlank = Strings.isBlank;
 const isNotBlank = Strings.isNotBlank;
 
 // ARN indexes
@@ -30,7 +31,6 @@ const PARTITION_INDEX = 1;
 const SERVICE_INDEX = 2;
 const REGION_INDEX = 3;
 const ACCOUNT_ID_INDEX = 4;
-const RESOURCE_OR_TYPE_INDEX = 5; // index of a resource (without a resource type) or a resource type
 
 /**
  * Extracts the component at the given index of the given ARN.
@@ -80,56 +80,140 @@ function getArnAccountId(arn) {
 }
 
 /**
+ * ARN resource-related components
+ * @typedef {Object} ArnResources
+ * @property {string} resourceType - a resource type (for DynamoDB stream eventSourceARN's this contains "table")
+ * @property {string} resource - a resource name (for DynamoDB stream eventSourceARN's this is the table name)
+ * @property {string} subResourceType - a sub-resource type (for DynamoDB stream eventSourceARN's this contains "stream")
+ * @property {string} subResource - a sub-resource name (for DynamoDB stream eventSourceARN's this is the stream timestamp)
+ * @property {string} aliasOrVersion - a Lambda alias or version number
+ * @property {string[]} others - any other components after a Lambda alias or version number
+ */
+
+/**
  * Attempts to extract any and all resource-related components from the given ARN (if defined) and returns them as
  * an object containing resourceType, resource, aliasOrVersion and others (just in case there were even more components
  * after aliasOrVersion).
  *
  * Currently handles the following cases:
- * - arn:partition:service:region:account-id:resource
- * - arn:partition:service:region:account-id:resourcetype/resource
- * - arn:partition:service:region:account-id:resourcetype:resource
- * - arn:partition:service:region:account-id:resourcetype:resource:alias_or_version (e.g. Lambda invokedFunctionArns)
- * - arn:partition:service:region:account-id:resourcetype:resource:alias_or_version[:other]* (just in case more)
+ * - CASE 1: arn:partition:service:region:account-id:resource
+ * - CASE 2: arn:partition:service:region:account-id:resourcetype/resource
+ * - CASE 3: arn:partition:service:region:account-id:resourcetype/resource/subResourceType/subResource
+ * - CASE 4: arn:partition:service:region:account-id:resourcetype:resource
+ * - CASE 5: arn:partition:service:region:account-id:resourcetype:resource:alias_or_version (e.g. Lambda invokedFunctionArns)
+ * - CASE 6: arn:partition:service:region:account-id:resourcetype:resource:alias_or_version[:other]* (just in case more)
+ *
+ * e.g. of CASE 3: arn:aws:dynamodb:us-east-1:111111111111:table/test/stream/2020-10-10T08:18:22.385
  *
  * @param {string} arn the ARN from which to extract the resource-related components
- * @returns {{resourceType: string, resource: string, aliasOrVersion: string, others: string[]}} an object containing
- * resourceType, resource, aliasOrVersion and others properties.
+ * @returns {ArnResources} an object containing the resource-related components
  */
 function getArnResources(arn) {
-  //return {resourceType: '', resource: '', aliasOrVersion: '', others: ['','']};
-  const components = isNotBlank(arn) ? trim(arn).split(':') : [];
+  if (isBlank(arn)) {
+    return {resourceType: '', resource: '', subResourceType: '', subResource: '', aliasOrVersion: '', others: []};
+  }
+  const arn1 = trim(arn);
 
-  // Identify which case we are dealing with
-  if (components.length === RESOURCE_OR_TYPE_INDEX + 1) {
-    // Must be either only 'resource' or 'resourcetype/resource' case
-    const resourceOrType = trimOrEmpty(components[RESOURCE_OR_TYPE_INDEX]);
-
-    const lastSlashPos = resourceOrType ? resourceOrType.lastIndexOf('/') : -1;
-    if (lastSlashPos != -1) {
-      // CASE: arn:partition:service:region:account-id:resourcetype/resource
-      const resourceType = trimOrEmpty(resourceOrType.substring(0, lastSlashPos));
-      const resource = trimOrEmpty(resourceOrType.substring(lastSlashPos + 1));
-      return {resourceType: resourceType, resource: resource, aliasOrVersion: '', others: []};
-    } else {
-      // CASE: arn:partition:service:region:account-id:resource
-      const resource = resourceOrType ? resourceOrType : '';
-      return {resourceType: '', resource: resource, aliasOrVersion: '', others: []}
-    }
-  } else if (components.length === RESOURCE_OR_TYPE_INDEX + 2) {
-    // CASE: arn:partition:service:region:account-id:resourcetype:resource
-    const resourceType = trimOrEmpty(components[RESOURCE_OR_TYPE_INDEX]);
-    const resource = trimOrEmpty(components[RESOURCE_OR_TYPE_INDEX + 1]);
-    return {resourceType: resourceType, resource: resource, aliasOrVersion: '', others: []};
-
-  } else if (components.length > RESOURCE_OR_TYPE_INDEX + 2) {
-    // CASE: arn:partition:service:region:account-id:resourcetype:resource[:aliasOrVersion] (e.g. Lambda invokedFunctionArns)
-    const resourceType = trimOrEmpty(components[RESOURCE_OR_TYPE_INDEX]);
-    const resource = trimOrEmpty(components[RESOURCE_OR_TYPE_INDEX + 1]);
-    const aliasOrVersion = trimOrEmpty(components[RESOURCE_OR_TYPE_INDEX + 2]);
-    const others = components.slice(RESOURCE_OR_TYPE_INDEX + 3).map(trim);
-    return {resourceType: resourceType, resource: resource, aliasOrVersion: aliasOrVersion, others: others};
+  const resourceIndex = Strings.nthIndexOf(arn1, ':', 5);
+  if (resourceIndex === -1) {
+    return {resourceType: '', resource: '', subResourceType: '', subResource: '', aliasOrVersion: '', others: []};
   }
 
-  // No resource-related components available from which to extract anything
-  return {resourceType: '', resource: '', aliasOrVersion: '', others: []};
+  const resourceSection = arn1.substring(resourceIndex + 1);
+
+  const firstSlashIndex = resourceSection.indexOf('/');
+  const firstColonIndex = resourceSection.indexOf(':');
+
+  // Identify which case we are dealing with
+  if (firstSlashIndex === -1 && firstColonIndex === -1) {
+    // CASE 1: arn:partition:service:region:account-id:resource
+    return {
+      resourceType: '',
+      resource: resourceSection,
+      subResourceType: '',
+      subResource: '',
+      aliasOrVersion: '',
+      others: []
+    };
+  } else if (firstSlashIndex !== -1 && (firstColonIndex === -1 || firstSlashIndex < firstColonIndex)) {
+    // Slash cases
+    const resourceType = trimOrEmpty(resourceSection.substring(0, firstSlashIndex));
+
+    const secondSlashIndex = Strings.nthIndexOf(resourceSection, '/', 2);
+    const thirdSlashIndex = Strings.nthIndexOf(resourceSection, '/', 3);
+
+    if (secondSlashIndex !== -1 && thirdSlashIndex !== -1) {
+      // CASE 3: arn:partition:service:region:account-id:resourcetype/resource/subResourceType/subResource
+      //    e.g. arn:partition:service:region:account-id:table/{table_name}/stream/{2020-10-10T08:18:22.385}
+      const resource = trimOrEmpty(resourceSection.substring(firstSlashIndex + 1, secondSlashIndex));
+      const subResourceType = trimOrEmpty(resourceSection.substring(secondSlashIndex + 1, thirdSlashIndex));
+      const subResource = trimOrEmpty(resourceSection.substring(thirdSlashIndex + 1));
+      return {
+        resourceType: resourceType,
+        resource: resource,
+        subResourceType: subResourceType,
+        subResource: subResource,
+        aliasOrVersion: '',
+        others: []
+      };
+    } else {
+      // CASE 2: arn:partition:service:region:account-id:resourcetype/resource
+      const resource = trimOrEmpty(resourceSection.substring(firstSlashIndex + 1));
+      return {
+        resourceType: resourceType,
+        resource: resource,
+        subResourceType: '',
+        subResource: '',
+        aliasOrVersion: '',
+        others: []
+      };
+    }
+  } else {
+    // Colon cases
+    const resourceType = trimOrEmpty(resourceSection.substring(0, firstColonIndex));
+
+    const secondColonIndex = Strings.nthIndexOf(resourceSection, ':', 2);
+
+    if (secondColonIndex === -1) {
+      // CASE 4: arn:partition:service:region:account-id:resourcetype:resource
+      const resource = trimOrEmpty(resourceSection.substring(firstColonIndex + 1));
+      return {
+        resourceType: resourceType,
+        resource: resource,
+        subResourceType: '',
+        subResource: '',
+        aliasOrVersion: '',
+        others: []
+      };
+    } else {
+      const resource = trimOrEmpty(resourceSection.substring(firstColonIndex + 1, secondColonIndex));
+
+      const thirdColonIndex = Strings.nthIndexOf(resourceSection, ':', 3);
+
+      if (thirdColonIndex === -1) {
+        // CASE 5: arn:partition:service:region:account-id:resourcetype:resource:alias_or_version (e.g. Lambda invokedFunctionArns)
+        const aliasOrVersion = trimOrEmpty(resourceSection.substring(secondColonIndex + 1));
+        return {
+          resourceType: resourceType,
+          resource: resource,
+          subResourceType: '',
+          subResource: '',
+          aliasOrVersion: aliasOrVersion,
+          others: []
+        };
+      } else {
+        // CASE 6: arn:partition:service:region:account-id:resourcetype:resource:alias_or_version[:other]* (just in case more)
+        const aliasOrVersion = trimOrEmpty(resourceSection.substring(secondColonIndex + 1, thirdColonIndex));
+        const others = trimOrEmpty(resourceSection.substring(thirdColonIndex + 1)).split(':');
+        return {
+          resourceType: resourceType,
+          resource: resource,
+          subResourceType: '',
+          subResource: '',
+          aliasOrVersion: aliasOrVersion,
+          others: others
+        };
+      }
+    }
+  }
 }

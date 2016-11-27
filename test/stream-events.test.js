@@ -10,8 +10,12 @@ const test = require("tape");
 // The test subject
 const streamEvents = require('../stream-events');
 const getEventSourceARNs = streamEvents.getEventSourceARNs;
-const getEventSourceStreamNames = streamEvents.getEventSourceStreamNames;
-const getEventSourceStreamName = streamEvents.getEventSourceStreamName;
+
+const getKinesisEventSourceStreamNames = streamEvents.getKinesisEventSourceStreamNames;
+const getKinesisEventSourceStreamName = streamEvents.getKinesisEventSourceStreamName;
+
+//const getDynamoDBEventSourceTableName = streamEvents.getDynamoDBEventSourceTableName;
+//const getDynamoDBEventSourceTableNameAndStreamTimestamp = streamEvents.getDynamoDBEventSourceTableNameAndStreamTimestamp;
 
 const validateStreamEventRecord = streamEvents.validateStreamEventRecord;
 const validateKinesisStreamEventRecord = streamEvents.validateKinesisStreamEventRecord;
@@ -32,7 +36,7 @@ const samples = require('./samples');
 test('getEventSourceARNs', t => {
   function check(streamNames) {
     const eventSourceArns = streamNames.map(streamName =>
-      isNotBlank(streamName) ? samples.sampleEventSourceArn('eventSourceArnRegion', trim(streamName)) : trim(streamName));
+      isNotBlank(streamName) ? samples.sampleKinesisEventSourceArn('eventSourceArnRegion', trim(streamName)) : trim(streamName));
     const records = eventSourceArns.map(eventSourceArn =>
       samples.sampleKinesisRecord(undefined, undefined, eventSourceArn, 'eventAwsRegion'));
     const event = samples.sampleKinesisEventWithRecords(records);
@@ -67,19 +71,19 @@ test('getEventSourceARNs', t => {
 });
 
 // =====================================================================================================================
-// getEventSourceStreamNames
+// getKinesisEventSourceStreamNames
 // =====================================================================================================================
 
-test('getEventSourceStreamNames', t => {
+test('getKinesisEventSourceStreamNames', t => {
   function check(streamNames) {
     const eventSourceArns = streamNames.map(streamName =>
-      isNotBlank(streamName) ? samples.sampleEventSourceArn('eventSourceArnRegion', trim(streamName)) : trim(streamName));
+      isNotBlank(streamName) ? samples.sampleKinesisEventSourceArn('eventSourceArnRegion', trim(streamName)) : trim(streamName));
     const records = eventSourceArns.map(eventSourceArn =>
       samples.sampleKinesisRecord(undefined, undefined, eventSourceArn, 'eventAwsRegion'));
     const event = samples.sampleKinesisEventWithRecords(records);
 
     // get the event source ARNs
-    const actual = getEventSourceStreamNames(event);
+    const actual = getKinesisEventSourceStreamNames(event);
 
     const expected = streamNames.map(trimOrEmpty);
 
@@ -110,17 +114,17 @@ test('getEventSourceStreamNames', t => {
 });
 
 // =====================================================================================================================
-// getEventSourceStreamName
+// getKinesisEventSourceStreamName
 // =====================================================================================================================
 
-test('getEventSourceStreamName', t => {
+test('getKinesisEventSourceStreamName', t => {
   function check(streamName) {
     const eventSourceArn = isNotBlank(streamName) ?
-      samples.sampleEventSourceArn('eventSourceArnRegion', trim(streamName)) : trim(streamName);
+      samples.sampleKinesisEventSourceArn('eventSourceArnRegion', trim(streamName)) : trim(streamName);
     const record = samples.sampleKinesisRecord(undefined, undefined, eventSourceArn, 'eventAwsRegion');
 
     // get the event source ARNs
-    const actual = getEventSourceStreamName(record);
+    const actual = getKinesisEventSourceStreamName(record);
 
     const expected = trimOrEmpty(streamName);
 
@@ -186,7 +190,7 @@ test('validateStreamEventRecord', t => {
   check({eventSource: 'aws:kinesis', kinesis: {data: "dummy_data"}}, true);
 
   // valid Kinesis records
-  const sampleRecord = samples.sampleKinesisRecord(undefined, undefined, samples.sampleEventSourceArn('eventSourceArnRegion', trim("streamName")), 'eventAwsRegion');
+  const sampleRecord = samples.sampleKinesisRecord(undefined, undefined, samples.sampleKinesisEventSourceArn('eventSourceArnRegion', trim("streamName")), 'eventAwsRegion');
   check(sampleRecord, true);
 
   const awsKinesisStreamsSampleEvent = samples.awsKinesisStreamsSampleEvent("identityArn", "eventSourceArn");
@@ -262,7 +266,7 @@ test('validateKinesisStreamEventRecord', t => {
   check({eventSource: 'aws:kinesis', kinesis: {data: "dummy_data"}}, true);
 
   // valid Kinesis records
-  const sampleRecord = samples.sampleKinesisRecord(undefined, undefined, samples.sampleEventSourceArn('eventSourceArnRegion', trim("streamName")), 'eventAwsRegion');
+  const sampleRecord = samples.sampleKinesisRecord(undefined, undefined, samples.sampleKinesisEventSourceArn('eventSourceArnRegion', trim("streamName")), 'eventAwsRegion');
   check(sampleRecord, true);
 
   const awsKinesisStreamsSampleEvent = samples.awsKinesisStreamsSampleEvent("identityArn", "eventSourceArn");
@@ -345,7 +349,7 @@ test('validateDynamoDBStreamEventRecord', t => {
   check({eventSource: 'aws:kinesis', kinesis: {data: "dummy_data"}}, false);
 
   // invalid  - since Kinesis records
-  const sampleRecord = samples.sampleKinesisRecord(undefined, undefined, samples.sampleEventSourceArn('eventSourceArnRegion', trim("streamName")), 'eventAwsRegion');
+  const sampleRecord = samples.sampleKinesisRecord(undefined, undefined, samples.sampleKinesisEventSourceArn('eventSourceArnRegion', trim("streamName")), 'eventAwsRegion');
   check(sampleRecord, false);
 
   const awsKinesisStreamsSampleEvent = samples.awsKinesisStreamsSampleEvent("identityArn", "eventSourceArn");

@@ -31,12 +31,11 @@ module.exports = {
   // Configuration
   isStageHandlingConfigured: isStageHandlingConfigured,
   configureStageHandling: configureStageHandling,
+  configureStageHandlingWithSettings: configureStageHandlingWithSettings,
   configureDefaultStageHandling: configureDefaultStageHandling,
   getDefaultStageHandlingSettings: getDefaultStageHandlingSettings,
   getStageHandlingSetting: getStageHandlingSetting,
   getStageHandlingFunction: getStageHandlingFunction,
-  configureStageHandlingAndDependencies: configureStageHandlingAndDependencies,
-  configureStageHandlingIfNotConfigured: configureStageHandlingIfNotConfigured,
   // Stage resolution
   resolveStage: resolveStage,
   configureStage: configureStage,
@@ -73,6 +72,8 @@ const trimOrEmpty = Strings.trimOrEmpty;
 const isBlank = Strings.isBlank;
 const isNotBlank = Strings.isNotBlank;
 const stringify = Strings.stringify;
+
+const Objects = require('core-functions/objects');
 
 const streamEvents = require('./stream-events');
 
@@ -174,9 +175,9 @@ function isStageHandlingConfigured(context) {
  * will override any previously configured stage handling settings on the given context
  * @return {Object} the context object configured with stage handling settings
  */
-function configureStageHandling(context, settings, otherSettings, otherOptions, forceConfiguration) {
+function configureStageHandlingWithSettings(context, settings, otherSettings, otherOptions, forceConfiguration) {
   // Configure all dependencies if not configured
-  configureDependenciesIfNotConfigured(context, otherSettings, otherOptions, configureStageHandling.name);
+  configureDependencies(context, otherSettings, otherOptions, false);
 
   // If forceConfiguration is false check if the given context already has stage handling configured on it
   // and, if so, do nothing more and simply return the context as is (to prevent overriding an earlier configuration)
@@ -215,13 +216,13 @@ function configureStageHandling(context, settings, otherSettings, otherOptions, 
  * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
  * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
- * @param {boolean|undefined} forceConfiguration - whether or not to force configuration of the default settings, which
+ * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the default settings, which
  * will override any previously configured stage handling settings on the given context
  * @return {Object} the context object configured with stage handling settings (either existing or defaults or overrides)
  */
 function configureDefaultStageHandling(context, options, otherSettings, otherOptions, forceConfiguration) {
   const settings = getDefaultStageHandlingSettings(options);
-  return configureStageHandling(context, settings, otherSettings, otherOptions, forceConfiguration);
+  return configureStageHandlingWithSettings(context, settings, otherSettings, otherOptions, forceConfiguration);
 }
 
 function select(opts, propertyName, defaultValue) {
@@ -265,13 +266,13 @@ function getDefaultStageHandlingSettings(options) {
 }
 
 /**
- * Loads the default stage handling options from the local config.json file and fills in any missing options with the
+ * Loads the default stage handling options from the local stages-options.json file and fills in any missing options with the
  * static default options.
  * @returns {StageHandlingOptions} the default stage handling options
  */
 function loadDefaultStageHandlingOptions() {
-  const config = require('./config.json');
-  const defaultOptions = config ? config.stageHandlingOptions : undefined;
+  const options = require('./stages-options.json');
+  const defaultOptions = options ? options.stageHandlingOptions : undefined;
   return {
     envStageName: select(defaultOptions, 'envStageName', 'STAGE'),
     streamNameStageSeparator: select(defaultOptions, 'streamNameStageSeparator', '_'),
@@ -279,24 +280,6 @@ function loadDefaultStageHandlingOptions() {
     injectInCase: select(defaultOptions, 'injectInCase', 'upper'),
     extractInCase: select(defaultOptions, 'extractInCase', 'lower')
   };
-}
-
-/**
- * Configures the given context with the stage handling dependencies (currently only logging) using the given other
- * settings and given other options.
- *
- * @param {Object} context - the context onto which to configure the given stage handling dependencies
- * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
- * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
- * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
- * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
- * @param {string|undefined} [caller] - optional arbitrary text to identify the caller of this function
- * @returns {Object} the context object configured with stage handling dependencies
- */
-function configureDependenciesIfNotConfigured(context, otherSettings, otherOptions, caller) {
-  // Configure logging if not configured yet
-  logging.configureLoggingIfNotConfigured(context, otherSettings ? otherSettings.loggingSettings : undefined,
-    otherOptions ? otherOptions.loggingOptions : undefined, undefined, caller);
 }
 
 /**
@@ -323,48 +306,6 @@ function getStageHandlingFunction(context, settingName) {
 }
 
 /**
- * If no stage handling settings have been configured yet, then configures the given context with the default settings.
- * @param {Object} context - the context to configure with default logging and stage handling
- * @param {string|undefined} [caller] - optional arbitrary text to identify the caller of this function
- * @returns {Object} the given context
- */
-function configureDefaultStageHandlingIfNotConfigured(context, caller) {
-  return configureStageHandlingIfNotConfigured(context, undefined, undefined, undefined, undefined, caller);
-}
-
-/**
- * If no stage handling settings have been configured yet, then configure the given context with the given stage
- * handling settings (if any) otherwise with the default stage handling settings partially overridden by the given stage
- * handling options (if any).
- *
- * @param {Object} context - the context to configure
- * @param {StageHandlingSettings|undefined} [settings] - optional stage handling settings to use to configure stage handling
- * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override default options
- * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
- * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
- * @param {Object|undefined} [otherOptions] - optional other configuration options to use if corresponding settings are not provided
- * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
- * @param {string|undefined} [caller] - optional arbitrary text to identify the caller of this function
- * @returns {Object} the given context
- */
-function configureStageHandlingIfNotConfigured(context, settings, options, otherSettings, otherOptions, caller) {
-  // Configure all dependencies if not configured
-  configureDependenciesIfNotConfigured(context, otherSettings, otherOptions, configureStageHandlingIfNotConfigured.name);
-
-  // Configure stage handling if not already configured
-  if (!isStageHandlingConfigured(context)) {
-    if (settings && typeof settings === 'object') {
-      context.warn(`Stage handling was not configured${caller ? ` before calling ${caller}` : ''} - using stage handling settings (${stringify(settings)})`);
-      configureStageHandling(context, settings, otherSettings, otherOptions, true);
-    } else {
-      context.warn(`Stage handling was not configured${caller ? ` before calling ${caller}` : ''} - using default stage handling configuration with options (${stringify(options)})`);
-      configureDefaultStageHandling(context, options, otherSettings, otherOptions, true);
-    }
-  }
-  return context;
-}
-
-/**
  * Configures the given context with the given stage handling settings (if any) otherwise with the default stage
  * handling settings partially overridden by the given stage handling options (if any), but only if stage handling is
  * not already configured on the given context OR if forceConfiguration is true.
@@ -380,19 +321,23 @@ function configureStageHandlingIfNotConfigured(context, settings, options, other
  * will override any previously configured stage handling settings on the given context
  * @returns {Object} the given context
  */
-function configureStageHandlingAndDependencies(context, settings, options, otherSettings, otherOptions, forceConfiguration) {
-  // First configure all stage handling dependencies
-  configureDependencies(context, otherSettings, otherOptions, forceConfiguration);
+function configureStageHandling(context, settings, options, otherSettings, otherOptions, forceConfiguration) {
+  // // First configure all stage handling dependencies
+  // configureDependencies(context, otherSettings, otherOptions, false);
 
   // Check if stage handling was already configured
   const stageHandlingWasConfigured = isStageHandlingConfigured(context);
 
   // Determine the stage handling settings to be used
   const settingsAvailable = settings && typeof settings === 'object';
-  const stageHandlingSettings = settingsAvailable ? settings : getDefaultStageHandlingSettings(options);
+  const optionsAvailable = options && typeof options === 'object';
+
+  const stageHandlingSettings = settingsAvailable ?
+    optionsAvailable ? Objects.merge(options, settings, false, false) : settings :
+    getDefaultStageHandlingSettings(options);
 
   // Configure stage handling with the given or derived stage handling settings
-  configureStageHandling(context, stageHandlingSettings, otherSettings, otherOptions, forceConfiguration);
+  configureStageHandlingWithSettings(context, stageHandlingSettings, otherSettings, otherOptions, forceConfiguration);
 
   // Log a warning if no settings and no options were provided and the default settings were applied
   if (!settingsAvailable && (!options || typeof options !== 'object') && (forceConfiguration || !stageHandlingWasConfigured)) {
@@ -416,7 +361,7 @@ function configureStageHandlingAndDependencies(context, settings, options, other
  */
 function configureDependencies(context, otherSettings, otherOptions, forceConfiguration) {
   // Configure logging if not configured yet
-  logging.configureLoggingWithSettingsOrOptions(context, otherSettings ? otherSettings.loggingSettings : undefined,
+  logging.configureLogging(context, otherSettings ? otherSettings.loggingSettings : undefined,
     otherOptions ? otherOptions.loggingOptions : undefined, undefined, forceConfiguration);
 }
 
@@ -487,7 +432,7 @@ function configureDependencies(context, otherSettings, otherOptions, forceConfig
  */
 function resolveStage(event, awsContext, context) {
   // Ensure at least default configuration is in place at this point
-  configureDefaultStageHandlingIfNotConfigured(context, resolveStage.name);
+  configureDefaultStageHandling(context, undefined, undefined, require('./stages-options.json'), false);
 
   // Resolve extractInCase
   const extractInCase = getStageHandlingSetting(context, EXTRACT_IN_CASE_SETTING);
@@ -551,7 +496,7 @@ function resolveStage(event, awsContext, context) {
   const extractStageFromStreamName = getStageHandlingFunction(context, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING);
 
   if (extractStageFromStreamName && event && event.Records) {
-    const stages = streamEvents.getEventSourceStreamNames(event)
+    const stages = streamEvents.getKinesisEventSourceStreamNames(event)
       .map(streamName => isNotBlank(streamName) ? extractStageFromStreamName(trim(streamName), context) : '');
 
     let stage = stages.find(s => isNotBlank(s));
@@ -623,8 +568,7 @@ function convertAliasToStage(alias, event, awsContext, context) {
  * @returns {string} a stage-qualified stream name (or the given stream name)
  */
 function toStageQualifiedStreamName(unqualifiedStreamName, stage, context) {
-  return _toStageQualifiedName(unqualifiedStreamName, stage, INJECT_STAGE_INTO_STREAM_NAME_SETTING,
-    toStageQualifiedStreamName.name, context);
+  return _toStageQualifiedName(unqualifiedStreamName, stage, INJECT_STAGE_INTO_STREAM_NAME_SETTING, context);
 }
 
 /**
@@ -642,8 +586,7 @@ function toStageQualifiedStreamName(unqualifiedStreamName, stage, context) {
  * @returns {string} the stage extracted from the stage-qualified stream name or an empty string
  */
 function extractStageFromQualifiedStreamName(qualifiedStreamName, context) {
-  return _extractStageFromQualifiedName(qualifiedStreamName, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING,
-    extractStageFromQualifiedStreamName.name, context);
+  return _extractStageFromQualifiedName(qualifiedStreamName, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING, context);
 }
 
 // =====================================================================================================================
@@ -665,8 +608,7 @@ function extractStageFromQualifiedStreamName(qualifiedStreamName, context) {
  * @returns {string} the stage-suffixed stream name
  */
 function toStageSuffixedStreamName(unsuffixedStreamName, stage, context) {
-  return _toStageSuffixedName(unsuffixedStreamName, stage, STREAM_NAME_STAGE_SEPARATOR_SETTING,
-    toStageSuffixedStreamName.name, context);
+  return _toStageSuffixedName(unsuffixedStreamName, stage, STREAM_NAME_STAGE_SEPARATOR_SETTING, context);
 }
 
 /**
@@ -683,8 +625,7 @@ function toStageSuffixedStreamName(unsuffixedStreamName, stage, context) {
  * @returns {string} the stage (if extracted) or an empty string
  */
 function extractStageFromSuffixedStreamName(stageSuffixedStreamName, context) {
-  return _extractStageFromSuffixedName(stageSuffixedStreamName, STREAM_NAME_STAGE_SEPARATOR_SETTING,
-    extractStageFromSuffixedStreamName.name, context);
+  return _extractStageFromSuffixedName(stageSuffixedStreamName, STREAM_NAME_STAGE_SEPARATOR_SETTING, context);
 }
 
 // =====================================================================================================================
@@ -708,8 +649,7 @@ function extractStageFromSuffixedStreamName(stageSuffixedStreamName, context) {
  * @returns {string} a stage-qualified resource name
  */
 function toStageQualifiedResourceName(unqualifiedResourceName, stage, context) {
-  return _toStageQualifiedName(unqualifiedResourceName, stage, INJECT_STAGE_INTO_RESOURCE_NAME_SETTING,
-    toStageQualifiedResourceName.name, context);
+  return _toStageQualifiedName(unqualifiedResourceName, stage, INJECT_STAGE_INTO_RESOURCE_NAME_SETTING, context);
 }
 
 /**
@@ -727,8 +667,7 @@ function toStageQualifiedResourceName(unqualifiedResourceName, stage, context) {
  * @returns {string} the stage extracted from the stage-qualified resource name; or an empty string
  */
 function extractStageFromQualifiedResourceName(qualifiedResourceName, context) {
-  return _extractStageFromQualifiedName(qualifiedResourceName, EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING,
-    extractStageFromQualifiedResourceName.name, context);
+  return _extractStageFromQualifiedName(qualifiedResourceName, EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING, context);
 }
 
 // =====================================================================================================================
@@ -749,8 +688,7 @@ function extractStageFromQualifiedResourceName(qualifiedResourceName, context) {
  * @returns {string} the stage-suffixed resource name
  */
 function toStageSuffixedResourceName(unsuffixedResourceName, stage, context) {
-  return _toStageSuffixedName(unsuffixedResourceName, stage, RESOURCE_NAME_STAGE_SEPARATOR_SETTING,
-    toStageSuffixedResourceName.name, context);
+  return _toStageSuffixedName(unsuffixedResourceName, stage, RESOURCE_NAME_STAGE_SEPARATOR_SETTING, context);
 }
 
 /**
@@ -766,17 +704,16 @@ function toStageSuffixedResourceName(unsuffixedResourceName, stage, context) {
  * @returns {string} the stage (if extracted) or an empty string
  */
 function extractStageFromSuffixedResourceName(stageSuffixedResourceName, context) {
-  return _extractStageFromSuffixedName(stageSuffixedResourceName, RESOURCE_NAME_STAGE_SEPARATOR_SETTING,
-    extractStageFromSuffixedResourceName.name, context)
+  return _extractStageFromSuffixedName(stageSuffixedResourceName, RESOURCE_NAME_STAGE_SEPARATOR_SETTING, context)
 }
 
 // =====================================================================================================================
 // Generic name qualification
 // =====================================================================================================================
 
-function _toStageQualifiedName(unqualifiedName, stage, injectStageIntoNameSettingName, caller, context) {
+function _toStageQualifiedName(unqualifiedName, stage, injectStageIntoNameSettingName, context) {
   if (isNotBlank(unqualifiedName)) {
-    configureDefaultStageHandlingIfNotConfigured(context, caller);
+    configureDefaultStageHandling(context);
 
     // Resolve injectStageIntoName function to use
     const injectStageIntoName = getStageHandlingFunction(context, injectStageIntoNameSettingName);
@@ -786,9 +723,9 @@ function _toStageQualifiedName(unqualifiedName, stage, injectStageIntoNameSettin
   return unqualifiedName;
 }
 
-function _extractStageFromQualifiedName(qualifiedName, extractStageFromNameSettingName, caller, context) {
+function _extractStageFromQualifiedName(qualifiedName, extractStageFromNameSettingName, context) {
   if (isNotBlank(qualifiedName)) {
-    configureDefaultStageHandlingIfNotConfigured(context, caller);
+    configureDefaultStageHandling(context);
 
     // Resolve extractStageFromName function to use
     const extractStageFromName = getStageHandlingFunction(context, extractStageFromNameSettingName);
@@ -802,9 +739,9 @@ function _extractStageFromQualifiedName(qualifiedName, extractStageFromNameSetti
 // Generic name qualification (default)
 // =====================================================================================================================
 
-function _toStageSuffixedName(unsuffixedName, stage, separatorSettingName, caller, context) {
+function _toStageSuffixedName(unsuffixedName, stage, separatorSettingName, context) {
   if (isNotBlank(unsuffixedName)) {
-    configureDefaultStageHandlingIfNotConfigured(context, caller);
+    configureDefaultStageHandling(context);
 
     // Resolve separator
     const separator = getStageHandlingSetting(context, separatorSettingName);
@@ -817,9 +754,9 @@ function _toStageSuffixedName(unsuffixedName, stage, separatorSettingName, calle
   return '';
 }
 
-function _extractStageFromSuffixedName(stageSuffixedName, separatorSettingName, caller, context) {
+function _extractStageFromSuffixedName(stageSuffixedName, separatorSettingName, context) {
   if (isNotBlank(stageSuffixedName)) {
-    configureDefaultStageHandlingIfNotConfigured(context, caller);
+    configureDefaultStageHandling(context);
 
     // Resolve separator
     const separator = getStageHandlingSetting(context, separatorSettingName);

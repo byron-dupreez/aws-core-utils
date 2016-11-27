@@ -13,10 +13,16 @@ const stringify = Strings.stringify;
 module.exports = {
   /** Returns the event source ARNs of the given stream event's records */
   getEventSourceARNs: getEventSourceARNs,
-  /** Extracts and returns the stream names from the given stream event's records' eventSourceARNs */
-  getEventSourceStreamNames: getEventSourceStreamNames,
-  /** Extracts and returns the stream name from the given stream event record's eventSourceARN */
-  getEventSourceStreamName: getEventSourceStreamName,
+
+  /** Extracts and returns the stream names from the given Kinesis stream event's records' eventSourceARNs */
+  getKinesisEventSourceStreamNames: getKinesisEventSourceStreamNames,
+  /** Extracts and returns the stream name from the given Kinesis stream event record's eventSourceARN */
+  getKinesisEventSourceStreamName: getKinesisEventSourceStreamName,
+
+  /** Extracts and returns the table name from the given DynamoDB stream event record's eventSourceARN */
+  getDynamoDBEventSourceTableName: getDynamoDBEventSourceTableName,
+  /** Extracts and returns the table name from the given DynamoDB stream event record's eventSourceARN */
+  getDynamoDBEventSourceTableNameAndStreamTimestamp: getDynamoDBEventSourceTableNameAndStreamTimestamp,
 
   /** Validates the given stream event record and raises an error if the record is invalid or not a Kinesis or DynamoDB stream event record */
   validateStreamEventRecord: validateStreamEventRecord,
@@ -39,25 +45,54 @@ function getEventSourceARNs(event) {
 }
 
 /**
- * Extracts and returns the stream names from the given stream event's records' eventSourceARNs (if any); otherwise
+ * Extracts and returns the stream names from the given Kinesis stream event's records' eventSourceARNs (if any); otherwise
  * returns an empty array.
  * @param event - a Kinesis or DynamoDB stream event
  * @returns {string[]} an array of event source stream names (one for each stream event record)
  */
-function getEventSourceStreamNames(event) {
-  return event && event.Records ? event.Records.map(getEventSourceStreamName) : [];
+function getKinesisEventSourceStreamNames(event) {
+  return event && event.Records ? event.Records.map(getKinesisEventSourceStreamName) : [];
 }
 
 /**
- * Extracts and returns the stream name from the given stream event record's eventSourceARN (if any); otherwise returns
+ * Extracts and returns the stream name from the given Kinesis stream event record's eventSourceARN (if any); otherwise returns
  * an empty string.
- * @param record - a Kinesis or DynamoDB stream event record
+ * @param record - a Kinesis stream event record
  * @returns {string} the stream name (if any) or an empty string
  */
-function getEventSourceStreamName(record) {
+function getKinesisEventSourceStreamName(record) {
   return record && isNotBlank(record.eventSourceARN) ? arns.getArnResources(record.eventSourceARN).resource : '';
 }
 
+/**
+ * Extracts and returns an arrays containing the table name followed by the stream timestamp/suffix from the given
+ * DynamoDB stream event record's eventSourceARN (if any); otherwise returns an array of 2 empty strings.
+ *
+ * Example of a DynamoDB stream event source ARN:
+ * arn:aws:dynamodb:us-east-1:111111111111:table/test/stream/2020-10-10T08:18:22.385
+ * where 'test' is the name of the table and '2020-10-10T08:18:22.385' is the stream timestamp/suffix
+ *
+ * @param record - a DynamoDB stream event record
+ * @returns {[string, string]} an array containing the table name (if any or empty) followed by an empty string followed
+ * by the stream timestamp/suffix (if any or empty)
+ */
+function getDynamoDBEventSourceTableNameAndStreamTimestamp(record) {
+  if (record && isNotBlank(record.eventSourceARN)) {
+    const resources = arns.getArnResources(record.eventSourceARN);
+    return [resources.resource, resources.subResource];
+  }
+  return  ['', ''];
+}
+
+/**
+ * Extracts and returns the table name from the given DynamoDB stream event record's eventSourceARN (if any); otherwise
+ * returns an empty string.
+ * @param record - a DynamoDB stream event record
+ * @returns {string} the table name (if any) or an empty string (if none)
+ */
+function getDynamoDBEventSourceTableName(record) {
+  return record && isNotBlank(record.eventSourceARN) ? arns.getArnResources(record.eventSourceARN).resource : '';
+}
 /**
  * Validates the given stream event record and raises an error if the record fails to meet any of the following criteria:
  * 1. It must be defined;

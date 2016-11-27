@@ -1,4 +1,4 @@
-# aws-core-utils v4.0.0
+# aws-core-utils v5.0.0
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -170,10 +170,10 @@ const invokedFunctionArnFunctionName = lambdas.getInvokedFunctionArnFunctionName
 // To configure stage-handling, which determines the behaviour of the functions numbered 1 to 6 below
 const stages = require('aws-core-utils/stages');
 const settings = undefined; // ... or your own custom settings
-const options = require('./config.json'); // ... or your own custom options
+const options = require('./stages-options.json'); // ... or your own custom options
 
 // ... EITHER using the default stage handling configuration partially customised via config.stageHandlingOptions
-stages.configureDefaultStageHandling(context, options.stageHandlingOptions, settings, options, forceConfiguration); 
+stages.configureDefaultStageHandling(context, options.stageHandlingOptions, otherSettings, otherOptions, forceConfiguration); 
 
 // ... OR using your own custom stage-handling configuration
 const stageHandlingSettings = stages.getDefaultStageHandlingSettings(options.stageHandlingOptions);
@@ -184,7 +184,7 @@ const stageHandlingSettings = stages.getDefaultStageHandlingSettings(options.sta
 // stageHandlingSettings.extractStageFromStreamName = stages.DEFAULTS.extractStageFromSuffixedStreamName;
 // stageHandlingSettings.injectStageIntoResourceName = stages.DEFAULTS.toStageSuffixedResourceName;
 // stageHandlingSettings.extractStageFromResourceName = stages.DEFAULTS.extractStageFromSuffixedResourceName;
-stages.configureStageHandling(context, stageHandlingSettings, settings, options, forceConfiguration);
+stages.configureStageHandling(context, stageHandlingSettings, undefined, otherSettings, otherOptions, forceConfiguration);
 
 // ... OR using completely customised stage handling settings
 const stageHandlingSettings2 = {
@@ -205,10 +205,10 @@ const stageHandlingSettings2 = {
 
     defaultStage: myDefaultStage, // or undefined
 }
-stages.configureStageHandling(context, stageHandlingSettings2, settings, options, forceConfiguration);
+stages.configureStageHandling(context, stageHandlingSettings2, undefined, otherSettings, otherOptions, forceConfiguration);
 
 // ... OR using custom stage handling settings and/or options and configuring dependencies at the same time
-stages.configureStageHandlingAndDependencies(context, stageHandlingSettings, stageHandlingOptions, otherSettings, otherOptions, forceConfiguration);
+stages.configureStageHandling(context, stageHandlingSettings, stageHandlingOptions, otherSettings, otherOptions, forceConfiguration);
 
 // To check if stage handling is configured
 const configured = stages.isStageHandlingConfigured(context);
@@ -245,10 +245,20 @@ const stage3 = stages.extractStageFromQualifiedResourceName(qualifiedResourceNam
 ```js
 const streamEvents = require('aws-core-utils/stream-events');
 
-// To extract stream names form AWS event source ARNs 
+// To extract event soure ARNs from AWS events 
 const eventSourceARNs = streamEvents.getEventSourceARNs(event);
-const eventSourceStreamNames = streamEvents.getEventSourceStreamNames(event);
-const eventSourceStreamName = streamEvents.getEventSourceStreamName(record);
+
+// To extract Kinesis stream names from AWS events and event records
+const eventSourceStreamNames = streamEvents.getKinesisEventSourceStreamNames(event);
+const eventSourceStreamName = streamEvents.getKinesisEventSourceStreamName(record);
+
+// To extract DynamoDB table names from DynamoDB stream event records
+const dynamoDBEventSourceTableName = streamEvents.getDynamoDBEventSourceTableName(record);
+
+// To extract DynamoDB table names and stream timestamps/suffixes from DynamoDB stream event records
+const tableNameAndStreamTimestamp = streamEvents.getDynamoDBEventSourceTableNameAndStreamTimestamp(record);
+const dynamoDBEventSourceTableName1 = tableNameAndStreamTimestamp[0];
+const dynamoDBEventSourceStreamTimestamp = tableNameAndStreamTimestamp[1];
 
 // Simple checks to validate existance of some of the properties of Kinesis & DynamoDB stream event records
 try {
@@ -280,6 +290,24 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.0
+- Changes to `arns.js` module:
+  - Changed `getArnResources` function to support DynamoDB eventSourceARNs
+- Changes to `stream-events.js` module:
+  - Renamed `getEventSourceStreamNames` function to `getKinesisEventSourceStreamNames`
+  - Renamed `getEventSourceStreamName` function to `getKinesisEventSourceStreamName`
+  - Added new `getDynamoDBEventSourceTableName` function
+  - Added new `getDynamoDBEventSourceTableNameAndStreamTimestamp` function
+- Changes to `stages.js` module:
+  - Renamed `configureStageHandling` function to `configureStageHandlingWithSettings`
+  - Renamed `configureStageHandlingAndDependencies` function to `configureStageHandling`
+  - Removed `configureDependenciesIfNotConfigured` function
+  - Removed `configureDefaultStageHandlingIfNotConfigured` function
+  - Removed `configureStageHandlingIfNotConfigured` function
+- Renamed `config.json` to `stages-options.json`  
+- Updated `core-functions` dependency to version 2.0.5
+- Updated `logging-utils` dependency to version 3.0.0
 
 ### 4.0.0
 - Renamed `kinesis-utils` module to `kinesis-cache` to better reflect its actual purpose

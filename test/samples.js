@@ -6,12 +6,16 @@
  */
 
 const uuid = require('node-uuid');
+const base64 = require('core-functions/base64');
 
 const sampleAwsAccountId = "XXXXXXXXXXXX";
 const sampleIdentityArn = 'DUMMY_IDENTITY_ARN';
 
 const sampleFunctionName = "testFunc";
 const latestFunctionVersion = "$LATEST";
+
+
+let nextSequenceNumber = 1;
 
 const sampleMessage = {
   key1: 'value1',
@@ -35,8 +39,8 @@ module.exports = {
 
   // For Kinesis events
   sampleStreamName: sampleStreamName,
-  sampleEventSourceArn: sampleEventSourceArn,
-  sampleEventSourceArnFromPrefixSuffix: sampleEventSourceArnFromPrefixSuffix,
+  sampleKinesisEventSourceArn: sampleKinesisEventSourceArn,
+  sampleKinesisEventSourceArnFromPrefixSuffix: sampleKinesisEventSourceArnFromPrefixSuffix,
   sampleBase64Data: sampleBase64Data,
   sampleKinesisRecord: sampleKinesisRecord,
   sampleKinesisEventWithSampleRecord: sampleKinesisEventWithSampleRecord,
@@ -46,6 +50,10 @@ module.exports = {
   awsKinesisStreamsSampleEvent: awsKinesisStreamsSampleEvent,
 
   // For DynamoDB stream events
+  sampleTableName: sampleTableName,
+  sampleDynamoDBEventSourceArn: sampleDynamoDBEventSourceArn,
+  sampleDynamoDBEventSourceArnFromPrefixSuffix: sampleDynamoDBEventSourceArnFromPrefixSuffix,
+
   awsDynamoDBUpdateSampleEvent: awsDynamoDBUpdateSampleEvent
 };
 
@@ -68,6 +76,12 @@ function sampleStreamName(streamNamePrefix, streamNameSuffix) {
   return `${prefix}${suffix}`;
 }
 
+function sampleTableName(tableNamePrefix, tableNameSuffix) {
+  const prefix = isNotBlank(tableNamePrefix) ? tableNamePrefix : 'TestDynamoDBTable';
+  const suffix = isNotBlank(tableNameSuffix) ? tableNameSuffix : '';
+  return `${prefix}${suffix}`;
+}
+
 function sampleInvokedFunctionArn(invokedFunctionArnRegion, functionName, functionAlias) {
   const region = isNotBlank(invokedFunctionArnRegion) ? invokedFunctionArnRegion : 'IF_ARN_REGION';
   const funcName = isNotBlank(functionName) ? functionName : sampleFunctionName;
@@ -75,19 +89,35 @@ function sampleInvokedFunctionArn(invokedFunctionArnRegion, functionName, functi
   return `arn:aws:lambda:${region}:${sampleAwsAccountId}:function:${funcName}${aliasSuffix}`
 }
 
-function sampleEventSourceArn(eventSourceArnRegion, streamName) {
+function sampleKinesisEventSourceArn(eventSourceArnRegion, streamName) {
   const region = isNotBlank(eventSourceArnRegion) ? eventSourceArnRegion : 'EF_ARN_REGION';
   const streamName1 = isNotBlank(streamName) ? streamName : sampleStreamName();
   return `arn:aws:kinesis:${region}:${sampleAwsAccountId}:stream/${streamName1}`;
 }
 
-function sampleEventSourceArnFromPrefixSuffix(eventSourceArnRegion, streamNamePrefix, streamNameSuffix) {
-  const streamName = sampleStreamName(streamNamePrefix, streamNameSuffix);
-  return sampleEventSourceArn(eventSourceArnRegion, streamName);
+function sampleDynamoDBEventSourceArn(eventSourceArnRegion, tableName, timestamp) {
+  const region = isNotBlank(eventSourceArnRegion) ? eventSourceArnRegion : 'EF_ARN_REGION';
+  const tableName1 = isNotBlank(tableName) ? tableName : sampleTableName();
+  const timestamp0 = isNotBlank(timestamp) ? timestamp : new Date().toISOString();
+  const timestamp1 = timestamp0.endsWith('Z') ? timestamp0.substring(0, timestamp0.length - 1) : timestamp0;
+  //arn:aws:dynamodb:us-east-1:111111111111:table/test/stream/2020-10-10T08:18:22.385
+  return `arn:aws:dynamodb:${region}:${sampleAwsAccountId}:table/${tableName1}/stream/${timestamp1}`;
 }
 
-function sampleAwsContext(functionName, functionVersion, invokedFunctionArn) {
+function sampleKinesisEventSourceArnFromPrefixSuffix(eventSourceArnRegion, streamNamePrefix, streamNameSuffix) {
+  const streamName = sampleStreamName(streamNamePrefix, streamNameSuffix);
+  return sampleKinesisEventSourceArn(eventSourceArnRegion, streamName);
+}
+
+function sampleDynamoDBEventSourceArnFromPrefixSuffix(eventSourceArnRegion, tableNamePrefix, tableNameSuffix, timestamp) {
+  const tableName = sampleTableName(tableNamePrefix, tableNameSuffix);
+  return sampleDynamoDBEventSourceArn(eventSourceArnRegion, tableName, timestamp);
+}
+
+function sampleAwsContext(functionName, functionVersion, invokedFunctionArn, maxTimeInMillis) {
   const uuid1 = uuid.v4();
+  const startTime = Date.now();
+  const maximumTimeInMillis = maxTimeInMillis ? maxTimeInMillis : 1000;
   return {
     callbackWaitsForEmptyEventLoop: true,
     logGroupName: `/aws/lambda/${functionName}`,
@@ -97,7 +127,10 @@ function sampleAwsContext(functionName, functionVersion, invokedFunctionArn) {
     functionVersion: functionVersion,
     invokeid: uuid1,
     awsRequestId: uuid1,
-    invokedFunctionArn: invokedFunctionArn
+    invokedFunctionArn: invokedFunctionArn,
+    getRemainingTimeInMillis() {
+      return maximumTimeInMillis - (Date.now() - startTime);
+    }
   };
 }
 
@@ -111,8 +144,9 @@ function sampleKinesisRecord(partitionKey, data, eventSourceArn, eventAwsRegion)
   // var d = new Buffer('Hello, this is a test 123.', 'utf-8').toString('base64');
   const shardId = sampleNumberString(56);
   const kinesisPartitionKey = isNotBlank(partitionKey) ? partitionKey : uuid.v4();
-  const kinesisData = data !== undefined ? data : "SGVsbG8sIHRoaXMgaXMgYSB0ZXN0IDEyMy4=";
-  const sequenceNumber = sampleNumberString(56);
+  const kinesisData = data !== undefined ?
+    typeof data === 'object' ? base64.toBase64(data) : data : "SGVsbG8sIHRoaXMgaXMgYSB0ZXN0IDEyMy4=";
+  const sequenceNumber = nextSequenceNumber++; //sampleNumberString(56);
   const awsRegion = eventAwsRegion ? eventAwsRegion : 'EVENT_AWS_REGION';
   const event = {
     eventID: `shardId-000000000000:${shardId}`,
@@ -121,7 +155,7 @@ function sampleKinesisRecord(partitionKey, data, eventSourceArn, eventAwsRegion)
       partitionKey: kinesisPartitionKey,
       data: kinesisData,
       kinesisSchemaVersion: "1.0",
-      sequenceNumber: sequenceNumber
+      sequenceNumber: `${sequenceNumber}`
     },
     invokeIdentityArn: sampleIdentityArn,
     eventName: "aws:kinesis:record",

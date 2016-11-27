@@ -12,10 +12,10 @@ const stages = require('../stages');
 
 // Configuration
 const isStageHandlingConfigured = stages.isStageHandlingConfigured;
-const configureStageHandling = stages.configureStageHandling;
+const configureStageHandlingWithSettings = stages.configureStageHandlingWithSettings;
 const configureDefaultStageHandling = stages.configureDefaultStageHandling;
 const getDefaultStageHandlingSettings = stages.getDefaultStageHandlingSettings;
-const configureStageHandlingAndDependencies = stages.configureStageHandlingAndDependencies;
+const configureStageHandling = stages.configureStageHandling;
 const getStageHandlingSetting = stages.getStageHandlingSetting;
 // Stage resolution
 const resolveStage = stages.resolveStage;
@@ -60,7 +60,7 @@ const sampleAwsContext = samples.sampleAwsContext;
 
 // For Kinesis stream events
 //const sampleStreamName = samples.sampleStreamName;
-const sampleEventSourceArn = samples.sampleEventSourceArn;
+const sampleKinesisEventSourceArn = samples.sampleKinesisEventSourceArn;
 // const sampleEventSourceArnFromPrefixSuffix = samples.sampleEventSourceArnFromPrefixSuffix;
 // const sampleBase64Data = samples.sampleBase64Data;
 const sampleKinesisEventWithSampleRecord = samples.sampleKinesisEventWithSampleRecord;
@@ -82,7 +82,7 @@ function checkResolveStage(t, eventStage, functionVersion, functionAlias, stream
   const awsContext = sampleAwsContext('functionName', functionVersion, invokedFunctionArn);
 
   // Create a Kinesis event
-  const eventSourceArn = sampleEventSourceArn('eventSourceArnRegion', streamName);
+  const eventSourceArn = sampleKinesisEventSourceArn('eventSourceArnRegion', streamName);
   const event = sampleKinesisEventWithSampleRecord(undefined, undefined, eventSourceArn, 'eventAwsRegion');
   if (isNotBlank(eventStage)) {
     event.stage = eventStage;
@@ -94,7 +94,7 @@ function checkResolveStage(t, eventStage, functionVersion, functionAlias, stream
   t.equal(actual, expected, `resolve = stages.alias(${functionAlias}) stream(${streamName}) context(${context.stage}, ${context.defaultStage}) -> '${actual}' must be '${expected}'`);
 }
 
-function checkConfigureStageHandling(t, context, envStageName, customToStage,
+function checkConfigureStageHandlingWithSettings(t, context, envStageName, customToStage,
   convertAliasToStage, injectStageIntoStreamName, extractStageFromStreamName,
   streamNameStageSeparator, injectStageIntoResourceName, extractStageFromResourceName,
   resourceNameStageSeparator, injectInCase, extractInCase, defaultStage, forceConfiguration) {
@@ -140,7 +140,7 @@ function checkConfigureStageHandling(t, context, envStageName, customToStage,
 
     defaultStage: defaultStage,
   };
-  configureStageHandling(context, settings, undefined, undefined, forceConfiguration);
+  configureStageHandlingWithSettings(context, settings, undefined, undefined, forceConfiguration);
 
   const after = context.stageHandling;
 
@@ -314,7 +314,7 @@ function checkConfigureStageHandlingAndDependencies(t, context, settings, option
 
   const mustChange = forceConfiguration || !before;
 
-  configureStageHandlingAndDependencies(context, settings, options, otherSettings, otherOptions, forceConfiguration);
+  configureStageHandling(context, settings, options, otherSettings, otherOptions, forceConfiguration);
 
   const after = context.stageHandling;
 
@@ -383,21 +383,21 @@ function checkConfigureStageHandlingAndDependencies(t, context, settings, option
 }
 
 // =====================================================================================================================
-// Tests for configureStageHandling and isStageHandlingConfigured
+// Tests for configureStageHandlingWithSettings and isStageHandlingConfigured
 // =====================================================================================================================
 
-test('configureStageHandling with all undefined', t => {
+test('configureStageHandlingWithSettings with all undefined', t => {
   const context = {};
   t.notOk(isStageHandlingConfigured(context), `stage handling settings must not be configured yet`);
 
   // Configure it
-  checkConfigureStageHandling(t, context, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, false);
+  checkConfigureStageHandlingWithSettings(t, context, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, false);
 
   // Must NOT be able to reconfigure it with force false
-  checkConfigureStageHandling(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName', 'extractStageFromResourceName', 'resourceNameStageSeparator', 'injectInCase', 'extractInCase', 'defaultStage', false);
+  checkConfigureStageHandlingWithSettings(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName', 'extractStageFromResourceName', 'resourceNameStageSeparator', 'injectInCase', 'extractInCase', 'defaultStage', false);
 
   // Must be able to reconfigure it with force true
-  checkConfigureStageHandling(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator, injectInCase', 'extractInCase', 'defaultStage', true);
+  checkConfigureStageHandlingWithSettings(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator, injectInCase', 'extractInCase', 'defaultStage', true);
 
   t.end();
 });
@@ -414,7 +414,7 @@ test('configureDefaultStageHandling with all undefined', t => {
   checkConfigureDefaultStageHandling(t, context, false);
 
   // Overwrite it with arbitrary values to be able to check if defaults are NOT re-instated in next step
-  checkConfigureStageHandling(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator, injectInCase', 'extractInCase', 'defaultStage', true);
+  checkConfigureStageHandlingWithSettings(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator, injectInCase', 'extractInCase', 'defaultStage', true);
 
   // Must NOT be able to reconfigure it with force false
   checkConfigureDefaultStageHandling(t, context, false);
@@ -426,10 +426,10 @@ test('configureDefaultStageHandling with all undefined', t => {
 });
 
 // =====================================================================================================================
-// Tests for configureStageHandlingAndDependencies with settings
+// Tests for configureStageHandling with settings
 // =====================================================================================================================
 
-test('configureStageHandlingAndDependencies with settings', t => {
+test('configureStageHandling with settings', t => {
   const context = {};
   t.notOk(isStageHandlingConfigured(context), `stage handling settings must not be configured yet`);
 
@@ -467,10 +467,10 @@ test('configureStageHandlingAndDependencies with settings', t => {
 });
 
 // =====================================================================================================================
-// Tests for configureStageHandlingAndDependencies with options
+// Tests for configureStageHandling with options
 // =====================================================================================================================
 
-test('configureStageHandlingAndDependencies with settings', t => {
+test('configureStageHandling with settings', t => {
   const context = {};
   t.notOk(isStageHandlingConfigured(context), `stage handling settings must not be configured yet`);
 
@@ -500,10 +500,10 @@ test('configureStageHandlingAndDependencies with settings', t => {
 });
 
 // =====================================================================================================================
-// Tests for configureStageHandlingAndDependencies with settings AND options
+// Tests for configureStageHandling with settings AND options
 // =====================================================================================================================
 
-test('configureStageHandlingAndDependencies with settings AND options', t => {
+test('configureStageHandling with settings AND options', t => {
   const context = {};
   t.notOk(isStageHandlingConfigured(context), `stage handling settings must not be configured yet`);
 

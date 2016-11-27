@@ -36,7 +36,7 @@ const stringify = Strings.stringify;
 
 test('setDynamoDBDocClient and getDynamoDBDocClient', t => {
   const context = {};
-  logging.configureLogging(context, logging.TRACE);
+  logging.configureLoggingWithSettings(context, logging.TRACE);
 
   // Set current region
   process.env.AWS_REGION = 'us-west-1';
@@ -154,7 +154,7 @@ test('setDynamoDBDocClient and getDynamoDBDocClient', t => {
 
 test('configureDynamoDBDocClient', t => {
   const context = {};
-  logging.configureLogging(context, logging.DEBUG);
+  logging.configureLoggingWithSettings(context, logging.DEBUG);
 
   process.env.AWS_REGION = 'us-west-1';
   const region1 = getRegion();
