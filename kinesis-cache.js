@@ -12,6 +12,8 @@ const regionKeysByRegion = new Map();
 
 const regions = require('./regions');
 
+const Objects = require('core-functions/objects');
+
 const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
 
@@ -48,7 +50,7 @@ module.exports = {
  */
 function setKinesis(kinesisOptions, context) {
   // If no options were specified, then use an empty object
-  const options = kinesisOptions ? kinesisOptions : {};
+  const options = kinesisOptions ? Objects.copy(kinesisOptions, true) : {};
 
   // If no region was specified in the given kinesis options, then set it to the current region
   let region = options.region;
@@ -75,11 +77,6 @@ function setKinesis(kinesisOptions, context) {
     }
     // If the given options match the options used to construct the cached instance, then returns the cached instance
     const optionsUsed = kinesisOptionsByRegionKey.get(regionKey);
-    // context.debug(`options = ${JSON.stringify(options)}`);
-    // context.debug(`optionsUsed = ${JSON.stringify(optionsUsed)}`);
-    // context.debug(`optionsUsed == options = ${optionsUsed == options}`);
-    // context.debug(`optionsUsed === options = ${optionsUsed === options}`);
-    // context.debug(`deepEqual(optionsUsed, options) = ${deepEqual(optionsUsed, options)}`);
 
     if (deepEqual(optionsUsed, options, strict)) {
       // Use the cached instance if its config is identical to the modified options

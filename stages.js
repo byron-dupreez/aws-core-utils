@@ -32,8 +32,8 @@ module.exports = {
   isStageHandlingConfigured: isStageHandlingConfigured,
   configureStageHandling: configureStageHandling,
   configureStageHandlingWithSettings: configureStageHandlingWithSettings,
-  configureDefaultStageHandling: configureDefaultStageHandling,
   getDefaultStageHandlingSettings: getDefaultStageHandlingSettings,
+  configureDefaultStageHandling: configureDefaultStageHandling,
   getStageHandlingSetting: getStageHandlingSetting,
   getStageHandlingFunction: getStageHandlingFunction,
   // Stage resolution
@@ -225,11 +225,6 @@ function configureDefaultStageHandling(context, options, otherSettings, otherOpt
   return configureStageHandlingWithSettings(context, settings, otherSettings, otherOptions, forceConfiguration);
 }
 
-function select(opts, propertyName, defaultValue) {
-  const value = opts ? opts[propertyName] : undefined;
-  return isNotBlank(value) ? trim(value) : defaultValue
-}
-
 /**
  * Returns the default stage handling settings partially overridden by the given stage handling options (if any).
  *
@@ -241,28 +236,22 @@ function select(opts, propertyName, defaultValue) {
  * @returns {StageHandlingSettings} a stage handling settings object
  */
 function getDefaultStageHandlingSettings(options) {
+  const settings = options && typeof options === 'object' ? Objects.copy(options, true) : {};
 
-  const defaults = loadDefaultStageHandlingOptions();
+  const defaultOptions = loadDefaultStageHandlingOptions();
+  Objects.merge(defaultOptions, settings, false, false);
 
-  return {
-    envStageName: select(options, 'envStageName', defaults.envStageName),
-
+  const defaultSettings = {
     customToStage: undefined,
     convertAliasToStage: convertAliasToStage,
 
     injectStageIntoStreamName: toStageSuffixedStreamName,
     extractStageFromStreamName: extractStageFromSuffixedStreamName,
-    streamNameStageSeparator: select(options, 'streamNameStageSeparator', defaults.streamNameStageSeparator),
 
     injectStageIntoResourceName: toStageSuffixedResourceName,
     extractStageFromResourceName: extractStageFromSuffixedResourceName,
-    resourceNameStageSeparator: select(options, 'resourceNameStageSeparator', defaults.resourceNameStageSeparator),
-
-    injectInCase: select(options, 'injectInCase', defaults.injectInCase),
-    extractInCase: select(options, 'extractInCase', defaults.extractInCase),
-
-    defaultStage: select(options, 'defaultStage', undefined)
   };
+  return Objects.merge(defaultSettings, settings, false, false);
 }
 
 /**
@@ -272,14 +261,17 @@ function getDefaultStageHandlingSettings(options) {
  */
 function loadDefaultStageHandlingOptions() {
   const options = require('./stages-options.json');
-  const defaultOptions = options ? options.stageHandlingOptions : undefined;
-  return {
-    envStageName: select(defaultOptions, 'envStageName', 'STAGE'),
-    streamNameStageSeparator: select(defaultOptions, 'streamNameStageSeparator', '_'),
-    resourceNameStageSeparator: select(defaultOptions, 'resourceNameStageSeparator', '_'),
-    injectInCase: select(defaultOptions, 'injectInCase', 'upper'),
-    extractInCase: select(defaultOptions, 'extractInCase', 'lower')
+  const defaultOptions = options ? options.stageHandlingOptions : {};
+
+  const defaults = {
+    envStageName: 'STAGE',
+    streamNameStageSeparator: '_',
+    resourceNameStageSeparator: '_',
+    injectInCase: 'upper',
+    extractInCase: 'lower',
+    defaultStage: undefined
   };
+  return Objects.merge(defaults, defaultOptions, false, false);
 }
 
 /**
@@ -322,25 +314,26 @@ function getStageHandlingFunction(context, settingName) {
  * @returns {Object} the given context
  */
 function configureStageHandling(context, settings, options, otherSettings, otherOptions, forceConfiguration) {
+  // Determine the stage handling settings to be used
+  const settingsAvailable = settings && typeof settings === 'object';
+  const optionsAvailable = options && typeof options === 'object';
+
   // // First configure all stage handling dependencies
   // configureDependencies(context, otherSettings, otherOptions, false);
 
   // Check if stage handling was already configured
   const stageHandlingWasConfigured = isStageHandlingConfigured(context);
 
-  // Determine the stage handling settings to be used
-  const settingsAvailable = settings && typeof settings === 'object';
-  const optionsAvailable = options && typeof options === 'object';
+  const defaultSettings = getDefaultStageHandlingSettings(options);
 
   const stageHandlingSettings = settingsAvailable ?
-    optionsAvailable ? Objects.merge(options, settings, false, false) : settings :
-    getDefaultStageHandlingSettings(options);
+    Objects.merge(defaultSettings, settings, false, false) : defaultSettings;
 
   // Configure stage handling with the given or derived stage handling settings
   configureStageHandlingWithSettings(context, stageHandlingSettings, otherSettings, otherOptions, forceConfiguration);
 
   // Log a warning if no settings and no options were provided and the default settings were applied
-  if (!settingsAvailable && (!options || typeof options !== 'object') && (forceConfiguration || !stageHandlingWasConfigured)) {
+  if (!settingsAvailable && !optionsAvailable && (forceConfiguration || !stageHandlingWasConfigured)) {
     context.warn(`Stage handling was configured without settings or options - used default stage handling configuration (${stringify(stageHandlingSettings)})`);
   }
   return context;

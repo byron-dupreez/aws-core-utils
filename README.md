@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.0
+# aws-core-utils v5.0.1
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -290,6 +290,14 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.1
+- Changes to `kinesis-cache.js` module:
+  - Changed `setKinesis` to only modify a copy of the given kinesisOptions to avoid side-effects
+- Changes to `dynamodb-doc-client-cache.js` module:
+  - Changed `setDynamoDBDocClient` to only modify a copy of the given dynamoDBDocClientOptions to avoid side-effects
+- Updated `core-functions` dependency to version 2.0.7
+- Updated `tape` dependency to 4.6.3
 
 ### 5.0.0
 - Changes to `arns.js` module:

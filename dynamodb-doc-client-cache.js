@@ -12,6 +12,8 @@ const regionKeysByRegion = new Map();
 
 const regions = require('./regions');
 
+const Objects = require('core-functions/objects');
+
 const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
 
@@ -51,7 +53,7 @@ module.exports = {
  */
 function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
   // If no options were specified, then use an empty object
-  const options = dynamoDBDocClientOptions ? dynamoDBDocClientOptions : {};
+  const options = dynamoDBDocClientOptions ? Objects.copy(dynamoDBDocClientOptions, true) : {};
 
   // If no region was specified in the given dynamoDBDocClient options, then set it to the current region
   let region = options.region;

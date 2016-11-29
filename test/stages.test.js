@@ -452,6 +452,9 @@ test('configureStageHandling with settings', t => {
     extractInCase: 'extractInCase',
 
     defaultStage: 'defaultStage',
+
+    // A simulated custom property
+    myCustomProperty: 'myCustomProperty'
   };
 
   // Configure it
