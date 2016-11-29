@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.1
+# aws-core-utils v5.0.2
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -291,7 +291,18 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 
 ## Changes
 
+### 5.0.2
+- Changes to `stages.js` module:
+  - Moved export of `configureStageHandlingWithSettings` to `FOR_TESTING_ONLY`
+  - Added missing notes on changes for Release 5.0.1 to `README.md`
+  
 ### 5.0.1
+- Changes to `stages.js` module:
+  - Changed `configureStageHandling` function to use `core-functions/objects` module's `copy` and 
+    `merge` functions to ensure that any and all given custom settings and options are not lost
+  - Changed `getDefaultStageHandlingSettings` & `loadDefaultStageHandlingOptions` functions to use
+    `core-functions/objects` module's `copy` and `merge` functions to ensure that any and all given 
+    custom options are not lost
 - Changes to `kinesis-cache.js` module:
   - Changed `setKinesis` to only modify a copy of the given kinesisOptions to avoid side-effects
 - Changes to `dynamodb-doc-client-cache.js` module:

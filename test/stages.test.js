@@ -12,7 +12,7 @@ const stages = require('../stages');
 
 // Configuration
 const isStageHandlingConfigured = stages.isStageHandlingConfigured;
-const configureStageHandlingWithSettings = stages.configureStageHandlingWithSettings;
+const configureStageHandlingWithSettings = stages.FOR_TESTING_ONLY.configureStageHandlingWithSettings;
 const configureDefaultStageHandling = stages.configureDefaultStageHandling;
 const getDefaultStageHandlingSettings = stages.getDefaultStageHandlingSettings;
 const configureStageHandling = stages.configureStageHandling;

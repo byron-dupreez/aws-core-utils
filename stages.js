@@ -31,7 +31,6 @@ module.exports = {
   // Configuration
   isStageHandlingConfigured: isStageHandlingConfigured,
   configureStageHandling: configureStageHandling,
-  configureStageHandlingWithSettings: configureStageHandlingWithSettings,
   getDefaultStageHandlingSettings: getDefaultStageHandlingSettings,
   configureDefaultStageHandling: configureDefaultStageHandling,
   getStageHandlingSetting: getStageHandlingSetting,
@@ -63,6 +62,9 @@ module.exports = {
     // Generic utils
     toStageSuffixedName: toStageSuffixedName,
     toCase: toCase
+  },
+  FOR_TESTING_ONLY: {
+    configureStageHandlingWithSettings: configureStageHandlingWithSettings
   }
 };
 
