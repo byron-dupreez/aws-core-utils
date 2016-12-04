@@ -47,6 +47,8 @@ const trimOrEmpty = Strings.trimOrEmpty;
 const isNotBlank = Strings.isNotBlank;
 const stringify = Strings.stringify;
 
+const logging = require('logging-utils');
+
 const samples = require('./samples');
 // Constants
 // const latestFunctionVersion = samples.latestFunctionVersion;
@@ -76,7 +78,7 @@ function checkExtractStageFromSuffixedStreamName(t, streamName, context, expecte
   t.equal(extractStageFromSuffixedStreamName(streamName, context), expected, `'${streamName}' must be '${expected}'`);
 }
 
-function checkResolveStage(t, eventStage, functionVersion, functionAlias, streamName, context, expected) {
+function checkResolveStageFromKinesisEvent(t, eventStage, functionVersion, functionAlias, streamName, context, expected) {
   // Create an AWS context
   const invokedFunctionArn = sampleInvokedFunctionArn('invokedFunctionArnRegion', 'functionName', functionAlias);
   const awsContext = sampleAwsContext('functionName', functionVersion, invokedFunctionArn);
@@ -92,6 +94,27 @@ function checkResolveStage(t, eventStage, functionVersion, functionAlias, stream
   const actual = resolveStage(event, awsContext, context);
 
   t.equal(actual, expected, `resolve = stages.alias(${functionAlias}) stream(${streamName}) context(${context.stage}, ${context.defaultStage}) -> '${actual}' must be '${expected}'`);
+}
+
+function checkResolveStageFromDynamoDBEvent(t, eventStage, functionVersion, functionAlias, tableName, context, expected) {
+  logging.configureDefaultLogging(context, {logLevel: logging.TRACE}, undefined, true);
+
+  // Create an AWS context
+  const invokedFunctionArn = sampleInvokedFunctionArn('invokedFunctionArnRegion', 'functionName', functionAlias);
+  const awsContext = sampleAwsContext('functionName', functionVersion, invokedFunctionArn);
+
+  // Create a DynamoDB stream event
+  const eventSourceArn = samples.sampleDynamoDBEventSourceArn('eventSourceArnRegion', tableName);
+  const event = samples.awsDynamoDBUpdateSampleEvent(eventSourceArn);
+
+  if (isNotBlank(eventStage)) {
+    event.stage = eventStage;
+  }
+
+  // Resolve the stage
+  const actual = resolveStage(event, awsContext, context);
+
+  t.equal(actual, expected, `resolve = stages.alias(${functionAlias}) table(${tableName}) context(${context.stage}, ${context.defaultStage}) -> '${actual}' must be '${expected}'`);
 }
 
 function checkConfigureStageHandlingWithSettings(t, context, envStageName, customToStage,
@@ -202,7 +225,7 @@ function checkConfigureStageHandlingWithSettings(t, context, envStageName, custo
 
   // Check whether stage handling works with this configuration
   const expected = mustChange ? toCase(trimOrEmpty(defaultStageExpected), extractInCaseExpected) : toCase(trimOrEmpty(defaultStageBefore), extractInCaseBefore);
-  checkResolveStage(t, '', '', '', '', context, expected);
+  checkResolveStageFromKinesisEvent(t, '', '', '', '', context, expected);
 }
 
 function checkConfigureDefaultStageHandling(t, context, forceConfiguration) {
@@ -288,7 +311,7 @@ function checkConfigureDefaultStageHandling(t, context, forceConfiguration) {
 
   // Check whether stage handling works with this configuration
   const expected = toCase(trimOrEmpty(defaultStageExpected), extractInCaseExpected);
-  checkResolveStage(t, '', '', '', '', context, expected);
+  checkResolveStageFromKinesisEvent(t, '', '', '', '', context, expected);
 }
 
 function checkConfigureStageHandlingAndDependencies(t, context, settings, options, otherSettings, otherOptions, forceConfiguration) {
@@ -379,7 +402,7 @@ function checkConfigureStageHandlingAndDependencies(t, context, settings, option
 
   // Check whether stage handling works with this configuration
   const expected = mustChange ? toCase(trimOrEmpty(defaultStageExpected), extractInCaseExpected) : toCase(trimOrEmpty(defaultStageBefore), extractInCaseBefore);
-  checkResolveStage(t, '', '', '', '', context, expected);
+  checkResolveStageFromKinesisEvent(t, '', '', '', '', context, expected);
 }
 
 // =====================================================================================================================
@@ -698,158 +721,157 @@ test('convertStreamNameSuffixToStage with context.streamNameStageSeparator set t
 // Tests for resolveStage
 // =====================================================================================================================
 
-test('resolveStage with undefined/null/empty alias, stream name & context must return empty', t => {
+test('resolveStageFromKinesisEvent with undefined/null/empty alias, stream name & context must return empty', t => {
   const context = {};
 
-  checkResolveStage(t, undefined, undefined, undefined, undefined, context, '');
-  checkResolveStage(t, null, null, null, null, context, '');
-  checkResolveStage(t, '', '', '', '', context, '');
+  checkResolveStageFromKinesisEvent(t, undefined, undefined, undefined, undefined, context, '');
+  checkResolveStageFromKinesisEvent(t, null, null, null, null, context, '');
+  checkResolveStageFromKinesisEvent(t, '', '', '', '', context, '');
 
   t.end();
 });
 
-test('resolveStage with no defaultStage', t => {
+test('resolveStageFromKinesisEvent with no defaultStage', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.extractInCase = 'as_is';
 
   // No default stage and nothing else
-  checkResolveStage(t, '', '', '', '', context, '');
+  checkResolveStageFromKinesisEvent(t, '', '', '', '', context, '');
   // No default stage and stream without suffix must be empty
-  checkResolveStage(t, '', '', '', 'Stream', context, '');
+  checkResolveStageFromKinesisEvent(t, '', '', '', 'Stream', context, '');
   // No default stage and stream with suffix must use suffix
-  checkResolveStage(t, '', '', '', 'Stream_Ss', context, 'Ss');
+  checkResolveStageFromKinesisEvent(t, '', '', '', 'Stream_Ss', context, 'Ss');
   // No default stage and Lambda without alias must be empty
-  checkResolveStage(t, '', '1.0.1', '1.0.1', '', context, '');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.0.1', '', context, '');
   // No default stage and Lambda with alias must use alias stage
-  checkResolveStage(t, '', '1.0.1', 'As', '', context, 'As');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', '', context, 'As');
   // No default stage and event with stage must use event stage
-  checkResolveStage(t, 'Es', '', '', '', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', '', context, 'Es');
 
   t.end();
 });
 
 
-test('resolveStage with defaultStage', t => {
+test('resolveStageFromKinesisEvent with defaultStage', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.extractInCase = 'as_is';
   context.stageHandling.defaultStage = 'Ds';
 
   // Default stage and nothing else must be default stage
-  checkResolveStage(t, '', '', '', '', context, 'Ds');
+  checkResolveStageFromKinesisEvent(t, '', '', '', '', context, 'Ds');
   // Default stage must override stream without suffix
-  checkResolveStage(t, '', '', '', 'Stream', context, 'Ds');
+  checkResolveStageFromKinesisEvent(t, '', '', '', 'Stream', context, 'Ds');
   // Default stage must not override stream with suffix
-  checkResolveStage(t, '', '', '', 'Stream_Ss', context, 'Ss');
+  checkResolveStageFromKinesisEvent(t, '', '', '', 'Stream_Ss', context, 'Ss');
   // Default stage must override Lambda without alias
-  checkResolveStage(t, '', '1.0.1', '1.0.1', '', context, 'Ds');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.0.1', '', context, 'Ds');
   // Default stage must not override Lambda with alias
-  checkResolveStage(t, '', '1.0.1', 'As', '', context, 'As');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', '', context, 'As');
   // Default stage must not override event stage
-  checkResolveStage(t, 'Es', '', '', '', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', '', context, 'Es');
 
   t.end();
 });
 
-test('resolveStage with stream without suffix', t => {
+test('resolveStageFromKinesisEvent with stream without suffix', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.defaultStage = 'Ds';
   context.stageHandling.extractInCase = 'as_is';
 
   // Stream without suffix must not override default stage
-  checkResolveStage(t, '', '', '', 'Stream', context, 'Ds');
+  checkResolveStageFromKinesisEvent(t, '', '', '', 'Stream', context, 'Ds');
   // Stream without suffix must not override default stage when Lambda without alias
-  checkResolveStage(t, '', '1.0.1', '1.0.1', 'Stream', context, 'Ds');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.0.1', 'Stream', context, 'Ds');
   // Stream without suffix must not override Lambda with alias
-  checkResolveStage(t, '', '1.0.1', 'As', 'Stream', context, 'As');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', 'Stream', context, 'As');
   // Stream without suffix must not override event stage
-  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream', context, 'Es');
 
   t.end();
 });
 
-test('resolveStage with stream with suffix', t => {
+test('resolveStageFromKinesisEvent with stream with suffix', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.defaultStage = 'Ds';
   context.stageHandling.extractInCase = 'as_is';
 
   // Stream with suffix must override default stage
-  checkResolveStage(t, '', '', '', 'Stream_Ss', context, 'Ss');
+  checkResolveStageFromKinesisEvent(t, '', '', '', 'Stream_Ss', context, 'Ss');
   // Stream with suffix must override default stage when Lambda without alias
-  checkResolveStage(t, '', '1.0.1', '1.0.1', 'Stream_Ss', context, 'Ss');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.0.1', 'Stream_Ss', context, 'Ss');
   // Stream with suffix must not override Lambda with alias
-  checkResolveStage(t, '', '1.0.1', 'As', 'Stream_Ss', context, 'As');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', 'Stream_Ss', context, 'As');
   // Stream with suffix must not override event stage
-  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream_Ss', context, 'Es');
 
   t.end();
 });
 
-
-test('resolveStage with Lambda without alias', t => {
+test('resolveStageFromKinesisEvent with Lambda without alias', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.defaultStage = 'Ds';
   context.stageHandling.extractInCase = 'as_is';
 
   // Lambda without alias must not override default stage
-  checkResolveStage(t, '', '1.0.1', '1.0.1', '', context, 'Ds');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.0.1', '', context, 'Ds');
   // Lambda without alias must not override default stage when stream without suffix
-  checkResolveStage(t, '', '1.0.1', '1.0.1', 'Stream', context, 'Ds');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.0.1', 'Stream', context, 'Ds');
   // Lambda without alias must not override stream with suffix
-  checkResolveStage(t, '', '1.0.1', '1.0.1', 'Stream_Ss', context, 'Ss');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.0.1', 'Stream_Ss', context, 'Ss');
   // Lambda without alias must not override event stage
-  checkResolveStage(t, 'Es', '1.0.1', '1.0.1', 'Stream_Ss', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.0.1', 'Stream_Ss', context, 'Es');
 
   t.end();
 });
 
-test('resolveStage with Lambda with alias', t => {
+test('resolveStageFromKinesisEvent with Lambda with alias', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.defaultStage = 'Ds';
   context.stageHandling.extractInCase = 'as_is';
 
   // Lambda with alias must override default stage
-  checkResolveStage(t, '', '1.0.1', 'As', '', context, 'As');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', '', context, 'As');
   // Lambda with alias must override default stage when stream without suffix
-  checkResolveStage(t, '', '1.0.1', 'As', 'Stream', context, 'As');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', 'Stream', context, 'As');
   // Lambda with alias must override stream with suffix
-  checkResolveStage(t, '', '1.0.1', 'As', 'Stream_Ss', context, 'As');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', 'Stream_Ss', context, 'As');
   // Lambda with alias must not override event stage
-  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Es');
 
   t.end();
 });
 
-test('resolveStage with event stage', t => {
+test('resolveStageFromKinesisEvent with event stage', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.defaultStage = 'Ds';
   context.stageHandling.extractInCase = 'as_is';
 
   // Event stage must override default stage
-  checkResolveStage(t, 'Es', '', '', '', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', '', context, 'Es');
   // Event stage must override stream without suffix and default
-  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream', context, 'Es');
   // Event stage must override stream with suffix and default
-  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream_Ss', context, 'Es');
 
   // Event stage must override Lambda without alias and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', '', context, 'Es');
   // Event stage must override Lambda without alias and stream without suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Es');
   // Event stage must override Lambda without alias and stream with suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Es');
 
   // Event stage must override Lambda with alias and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', '', context, 'Es');
   // Event stage must override Lambda with alias and stream without suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Es');
   // Event stage must override Lambda with alias and stream with suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Es');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Es');
 
   t.end();
 });
 
 
-test('resolveStage with context stage and without event stage', t => {
+test('resolveStageFromKinesisEvent with context stage and without event stage', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.defaultStage = 'Ds';
   context.stageHandling.extractInCase = 'as_is';
@@ -857,31 +879,31 @@ test('resolveStage with context stage and without event stage', t => {
   context.stage = 'Cs';
 
   // Context stage must override default stage
-  checkResolveStage(t, '', '', '', '', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, '', '', '', '', context, 'Cs');
 
   // Context stage must override stream without suffix and default
-  checkResolveStage(t, '', '', '', 'Stream', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, '', '', '', 'Stream', context, 'Cs');
   // Context stage must override stream with suffix and default
-  checkResolveStage(t, '', '', '', 'Stream_Ss', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, '', '', '', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override Lambda without alias and default
-  checkResolveStage(t, '', '1.0.1', '1.01', '', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.01', '', context, 'Cs');
   // Context stage must override Lambda without alias and stream without suffix and default
-  checkResolveStage(t, '', '1.0.1', '1.01', 'Stream', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.01', 'Stream', context, 'Cs');
   // Context stage must override Lambda without alias and stream with suffix and default
-  checkResolveStage(t, '', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override Lambda with alias and default
-  checkResolveStage(t, '', '1.0.1', 'As', '', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', '', context, 'Cs');
   // Context stage must override Lambda with alias and stream without suffix and default
-  checkResolveStage(t, '', '1.0.1', 'As', 'Stream', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', 'Stream', context, 'Cs');
   // Context stage must override Lambda with alias and stream with suffix and default
-  checkResolveStage(t, '', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, '', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
 
   t.end();
 });
 
-test('resolveStage with context stage and with event stage', t => {
+test('resolveStageFromKinesisEvent with context stage and with event stage', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.defaultStage = 'Ds';
   context.stageHandling.extractInCase = 'as_is';
@@ -889,30 +911,30 @@ test('resolveStage with context stage and with event stage', t => {
   context.stage = 'Cs';
 
   // Context stage must override default stage
-  checkResolveStage(t, 'Es', '', '', '', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', '', context, 'Cs');
   // Context stage must override stream without suffix and default
-  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream', context, 'Cs');
   // Context stage must override stream with suffix and default
-  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override event stage and Lambda without alias and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', '', context, 'Cs');
   // Context stage must override event stage and Lambda without alias and stream without suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Cs');
   // Context stage must override event stage and Lambda without alias and stream with suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override event stage and Lambda with alias and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', '', context, 'Cs');
   // Context stage must override event stage and Lambda with alias and stream without suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Cs');
   // Context stage must override event stage and Lambda with alias and stream with suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
 
   t.end();
 });
 
-test('resolveStage with custom-to-stage, event stage, but no context stage', t => {
+test('resolveStageFromKinesisEvent with custom-to-stage, event stage, but no context stage', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.defaultStage = 'Ds';
   context.stageHandling.extractInCase = 'as_is';
@@ -921,30 +943,30 @@ test('resolveStage with custom-to-stage, event stage, but no context stage', t =
   };
 
   // Context stage must override default stage
-  checkResolveStage(t, 'Es', '', '', '', context, 'CustomStage');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', '', context, 'CustomStage');
   // Context stage must override stream without suffix and default
-  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'CustomStage');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream', context, 'CustomStage');
   // Context stage must override stream with suffix and default
-  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'CustomStage');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream_Ss', context, 'CustomStage');
 
   // Context stage must override event stage and Lambda without alias and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'CustomStage');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', '', context, 'CustomStage');
   // Context stage must override event stage and Lambda without alias and stream without suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'CustomStage');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'CustomStage');
   // Context stage must override event stage and Lambda without alias and stream with suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'CustomStage');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'CustomStage');
 
   // Context stage must override event stage and Lambda with alias and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'CustomStage');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', '', context, 'CustomStage');
   // Context stage must override event stage and Lambda with alias and stream without suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'CustomStage');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream', context, 'CustomStage');
   // Context stage must override event stage and Lambda with alias and stream with suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'CustomStage');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'CustomStage');
 
   t.end();
 });
 
-test('resolveStage with custom-to-stage and context stage and event stage', t => {
+test('resolveStageFromKinesisEvent with custom-to-stage and context stage and event stage', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.defaultStage = 'Ds';
   context.stageHandling.extractInCase = 'as_is';
@@ -955,31 +977,31 @@ test('resolveStage with custom-to-stage and context stage and event stage', t =>
   context.stage = 'Cs';
 
   // Context stage must override default stage
-  checkResolveStage(t, 'Es', '', '', '', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', '', context, 'Cs');
   // Context stage must override stream without suffix and default
-  checkResolveStage(t, 'Es', '', '', 'Stream', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream', context, 'Cs');
   // Context stage must override stream with suffix and default
-  checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override event stage and Lambda without alias and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', '', context, 'Cs');
   // Context stage must override event stage and Lambda without alias and stream without suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Cs');
   // Context stage must override event stage and Lambda without alias and stream with suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
 
   // Context stage must override event stage and Lambda with alias and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', '', context, 'Cs');
   // Context stage must override event stage and Lambda with alias and stream without suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Cs');
   // Context stage must override event stage and Lambda with alias and stream with suffix and default
-  checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
+  checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
 
   t.end();
 });
 
 
-test('resolveStage with env stage, custom-to-stage, event stage, but no context stage', t => {
+test('resolveStageFromKinesisEvent with env stage, custom-to-stage, event stage, but no context stage', t => {
   try {
     process.env.STAGE = 'EnvStage';
 
@@ -991,33 +1013,33 @@ test('resolveStage with env stage, custom-to-stage, event stage, but no context 
     };
 
     // Context stage must override default stage
-    checkResolveStage(t, 'Es', '', '', '', context, 'EnvStage');
+    checkResolveStageFromKinesisEvent(t, 'Es', '', '', '', context, 'EnvStage');
     // Context stage must override stream without suffix and default
-    checkResolveStage(t, 'Es', '', '', 'Stream', context, 'EnvStage');
+    checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream', context, 'EnvStage');
     // Context stage must override stream with suffix and default
-    checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'EnvStage');
+    checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream_Ss', context, 'EnvStage');
 
     // Context stage must override event stage and Lambda without alias and default
-    checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'EnvStage');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', '', context, 'EnvStage');
     // Context stage must override event stage and Lambda without alias and stream without suffix and default
-    checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'EnvStage');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'EnvStage');
     // Context stage must override event stage and Lambda without alias and stream with suffix and default
-    checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'EnvStage');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'EnvStage');
 
     // Context stage must override event stage and Lambda with alias and default
-    checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'EnvStage');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', '', context, 'EnvStage');
     // Context stage must override event stage and Lambda with alias and stream without suffix and default
-    checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'EnvStage');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream', context, 'EnvStage');
     // Context stage must override event stage and Lambda with alias and stream with suffix and default
-    checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'EnvStage');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'EnvStage');
 
     t.end();
   } finally {
-    process.env.STAGE = undefined;
+    process.env.STAGE = '';
   }
 });
 
-test('resolveStage with env stage, custom-to-stage and context stage and event stage', t => {
+test('resolveStageFromKinesisEvent with env stage, custom-to-stage and context stage and event stage', t => {
   try {
     process.env.STAGE = 'EnvStage';
 
@@ -1031,28 +1053,67 @@ test('resolveStage with env stage, custom-to-stage and context stage and event s
     context.stage = 'Cs';
 
     // Context stage must override default stage
-    checkResolveStage(t, 'Es', '', '', '', context, 'Cs');
+    checkResolveStageFromKinesisEvent(t, 'Es', '', '', '', context, 'Cs');
     // Context stage must override stream without suffix and default
-    checkResolveStage(t, 'Es', '', '', 'Stream', context, 'Cs');
+    checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream', context, 'Cs');
     // Context stage must override stream with suffix and default
-    checkResolveStage(t, 'Es', '', '', 'Stream_Ss', context, 'Cs');
+    checkResolveStageFromKinesisEvent(t, 'Es', '', '', 'Stream_Ss', context, 'Cs');
 
     // Context stage must override event stage and Lambda without alias and default
-    checkResolveStage(t, 'Es', '1.0.1', '1.01', '', context, 'Cs');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', '', context, 'Cs');
     // Context stage must override event stage and Lambda without alias and stream without suffix and default
-    checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Cs');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream', context, 'Cs');
     // Context stage must override event stage and Lambda without alias and stream with suffix and default
-    checkResolveStage(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', '1.01', 'Stream_Ss', context, 'Cs');
 
     // Context stage must override env stage, custom stage, event stage and Lambda with alias and default
-    checkResolveStage(t, 'Es', '1.0.1', 'As', '', context, 'Cs');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', '', context, 'Cs');
     // Context stage must override env stage, custom stage, event stage and Lambda with alias and stream without suffix and default
-    checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Cs');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream', context, 'Cs');
     // Context stage must override env stage, custom stage, event stage and Lambda with alias and stream with suffix and default
-    checkResolveStage(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
+    checkResolveStageFromKinesisEvent(t, 'Es', '1.0.1', 'As', 'Stream_Ss', context, 'Cs');
 
     t.end();
   } finally {
-    process.env.STAGE = undefined;
+    process.env.STAGE = '';
   }
+});
+
+
+test('resolveStageFromDynamoDBEvent with table without suffix', t => {
+  //process.env.STAGE = '';
+
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
+
+  // Table without suffix must not override default stage
+  checkResolveStageFromDynamoDBEvent(t, '', '', '', 'Table', context, 'Ds');
+  // Table without suffix must not override default stage when Lambda without alias
+  checkResolveStageFromDynamoDBEvent(t, '', '1.0.1', '1.0.1', 'Table', context, 'Ds');
+  // Table without suffix must not override Lambda with alias
+  checkResolveStageFromDynamoDBEvent(t, '', '1.0.1', 'As', 'Table', context, 'As');
+  // Table without suffix must not override event stage
+  checkResolveStageFromDynamoDBEvent(t, 'Es', '', '', 'Table', context, 'Es');
+
+  t.end();
+});
+
+test('resolveStageFromDynamoDBEvent with table with suffix', t => {
+  //process.env.STAGE = '';
+
+  const context = configureDefaultStageHandling({});
+  context.stageHandling.defaultStage = 'Ds';
+  context.stageHandling.extractInCase = 'as_is';
+
+  // Table with suffix must override default stage
+  checkResolveStageFromDynamoDBEvent(t, '', '', '', 'Table_Ts', context, 'Ts');
+  // Table with suffix must override default stage when Lambda without alias
+  checkResolveStageFromDynamoDBEvent(t, '', '1.0.1', '1.0.1', 'Table_Ts', context, 'Ts');
+  // Table with suffix must not override Lambda with alias
+  checkResolveStageFromDynamoDBEvent(t, '', '1.0.1', 'As', 'Table_Ts', context, 'As');
+  // Table with suffix must not override event stage
+  checkResolveStageFromDynamoDBEvent(t, 'Es', '', '', 'Table_Ts', context, 'Es');
+
+  t.end();
 });

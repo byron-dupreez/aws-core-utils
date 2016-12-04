@@ -383,14 +383,16 @@ function configureDependencies(context, otherSettings, otherOptions, forceConfig
  *    then disable this step by simply NOT configuring a stageHandling.convertAliasToStage function on the context (see
  *    {@linkcode configureStageHandling}).
  *
- * 6. Extracts the stream names from the AWS event's records' eventSourceARNs (if any) and then uses the given context's
- *    configured stageHandling.extractStageFromStreamName function (if defined) to extract the stages from these stream
- *    names and returns the first non-blank stage (if any and if there are NOT multiple distinct results).
+ * 6. Extracts the stream (or table) names from the AWS event's records' eventSourceARNs (if any) and then uses the
+ *    given context's configured stageHandling.extractStageFromStreamName (or stageHandling.extractStageFromResourceName)
+ *    function (if defined) to extract the stages from these stream (or table) names and returns the first non-blank
+ *    stage (if any and if there are NOT multiple distinct results).
  *
- *    NB: This step relies on a convention of qualifying stream names with a stage. If you are NOT using such a
- *    convention, then disable this step by simply NOT configuring a stageHandling.extractStageFromStreamName function
- *    on the context (see {@linkcode configureStageHandling}). Note that doing this will also disable the
- *    {@linkcode extractStageFromQualifiedStreamName} function.
+ *    NB: This step relies on a convention of qualifying stream and table names with a stage. If you are NOT using such
+ *    a convention, then disable this step by simply NOT configuring stageHandling.extractStageFromStreamName and
+ *    stageHandling.extractStageFromResourceName functions on the context (see {@linkcode configureStageHandling}).
+ *    Note that doing this will also disable the {@linkcode extractStageFromQualifiedStreamName} and
+ *    {@linkcode extractStageFromQualifiedResourceName} functions.
  *
  * 7. Uses context.stageHandling.defaultStage (if non-blank).
  *
@@ -416,6 +418,8 @@ function configureDependencies(context, otherSettings, otherOptions, forceConfig
  * alias into a stage
  * @param {Function|undefined} [context.stageHandling.extractStageFromStreamName] - an optional function on the given
  * context that accepts: a stage-qualified stream name; and a context, and extracts a stage from the stream name
+ * @param {Function|undefined} [context.stageHandling.extractStageFromResourceName] - an optional function on the given
+ * context that accepts: a stage-qualified resource (e.g. table) name; and a context, and extracts a stage from the resource name
  * @param {string|undefined} [context.stageHandling.defaultStage] - an optional default stage on the given context to
  * use as a second last resort if all other attempts fail (configure this via configureStageHandling)
  * @param {string|undefined} [context.defaultStage] - an optional default stage on the given context to use as the LAST
@@ -445,7 +449,7 @@ function resolveStage(event, awsContext, context) {
     // Look up the current stage from the named process.env environment variable
     const stage = process.env[envStageName];
 
-    if (isNotBlank(stage)) {
+    if (isNotBlank(stage) && stage !== 'undefined' && stage !== 'null') {
       context.debug(`Resolved stage (${stage}) from process.env.${envStageName}`);
       return toCase(trim(stage), extractInCase);
     }
@@ -487,26 +491,55 @@ function resolveStage(event, awsContext, context) {
   }
 
   // Attempt 6
-  // Check have all the pieces needed to extract a stream name and apply the given extractStageFromStreamName function to it
-  const extractStageFromStreamName = getStageHandlingFunction(context, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING);
+  const eventSources = Arrays.distinct(streamEvents.getEventSources(event).filter(isNotBlank));
 
-  if (extractStageFromStreamName && event && event.Records) {
-    const stages = streamEvents.getKinesisEventSourceStreamNames(event)
-      .map(streamName => isNotBlank(streamName) ? extractStageFromStreamName(trim(streamName), context) : '');
+  if (eventSources.length < 1) {
+    // No eventSources
+    context.warn(`Cannot resolve a stage from a stream or table name from an event WITHOUT an eventSource - event (${stringify(event)})!`);
+  } else if (eventSources.length > 1) {
+    // Multiple distinct eventSources
+    context.warn(`Cannot resolve a stage from a stream or table name from an event with MULTIPLE distinct event sources ${stringify(eventSources)} - event (${stringify(event)})!`);
+  } else {
+    // Only 1 distinct eventSource
+    const eventSource = eventSources[0];
+    const eventSourceIsKinesis = eventSource === 'aws:kinesis';
+    const eventSourceIsDynamoDB = eventSource === 'aws:dynamodb';
+    let stages = [];
 
-    let stage = stages.find(s => isNotBlank(s));
-
-    if (stages.length > 1) {
-      const distinctStages = Arrays.distinct(stages);
-      if (distinctStages > 1) {
-        context.warn(`WARNING - Ignoring arbitrary first stage (${stage}), since found MULTIPLE distinct stages ${stringify(distinctStages)} on event (${stringify(event)})!`);
-        stage = ''; // too many choices, so choose none
+    if (!eventSourceIsKinesis && !eventSourceIsDynamoDB) {
+      context.warn(`Cannot resolve a stage from a stream or table name from an event with an unexpected event source ${eventSource} - event (${stringify(event)})!`);
+    } else {
+      if (eventSourceIsKinesis) {
+        // Check have all the pieces needed to extract a stream name and apply the given extractStageFromStreamName function to it
+        const extractStageFromStreamName = getStageHandlingFunction(context, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING);
+        if (extractStageFromStreamName && event && event.Records) {
+          stages = streamEvents.getKinesisEventSourceStreamNames(event)
+            .map(streamName => isNotBlank(streamName) ? extractStageFromStreamName(trim(streamName), context) : '')
+            .filter(isNotBlank);
+        }
+      } else if (eventSourceIsDynamoDB) {
+        // Check have all the pieces needed to extract a table name and apply the given extractStageFromResourceName function to it
+        const extractStageFromTableName = getStageHandlingFunction(context, EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING);
+        if (extractStageFromTableName && event && event.Records) {
+          stages = streamEvents.getDynamoDBEventSourceTableNames(event)
+            .map(tableName => isNotBlank(tableName) ? extractStageFromTableName(trim(tableName), context) : '')
+            .filter(isNotBlank);
+        }
       }
-    }
+      let stage = stages.length > 0 ? stages[0] : undefined;
 
-    if (isNotBlank(stage)) {
-      context.debug(`Resolved stage (${stage}) from event source ARN stream name`);
-      return toCase(trim(stage), extractInCase);
+      if (stages.length > 1) {
+        const distinctStages = Arrays.distinct(stages);
+        if (distinctStages > 1) {
+          context.warn(`WARNING - Ignoring arbitrary first stage (${stage}), since found MULTIPLE distinct stages ${stringify(distinctStages)} on event (${stringify(event)})!`);
+          stage = ''; // too many choices, so choose none
+        }
+      }
+
+      if (isNotBlank(stage)) {
+        context.debug(`Resolved stage (${stage}) from event source ARN ${eventSourceIsKinesis ? 'stream' : 'table'} name`);
+        return toCase(trim(stage), extractInCase);
+      }
     }
   }
 
@@ -530,6 +563,7 @@ function resolveStage(event, awsContext, context) {
   return '';
 }
 
+//noinspection JSUnusedLocalSymbols
 /**
  * A default convertAliasToStage function that simply returns the given alias (if any) exactly as it is as the stage.
  *

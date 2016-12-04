@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.4
+# aws-core-utils v5.0.5
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -291,6 +291,17 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 
 ## Changes
 
+### 5.0.5
+- Changes to `stream-events` module:
+  - Added new `getEventSources` function
+  - Added new `getDynamoDBEventSourceTableNames` function
+- Changes to `stages` module:
+  - Changed `resolveStage` function to resolve the event's eventSource and when its DynamoDB to use the table names 
+    of the DynamoDB stream event as a stage source, instead of always assuming the event is a Kinesis stream event
+    and only using the stream names of the Kinesis stream event as a stage source
+- Updated `core-functions` dependency to version 2.0.10
+- Updated `logging-utils` dependency to version 3.0.5
+
 ### 5.0.4
 - Updated `core-functions` dependency to version 2.0.9
 - Updated `logging-utils` dependency to version 3.0.3
@@ -450,6 +461,3 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 
 ### 0.9.0
 - Initial commit
-
-
-    

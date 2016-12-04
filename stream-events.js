@@ -13,12 +13,16 @@ const stringify = Strings.stringify;
 module.exports = {
   /** Returns the event source ARNs of the given stream event's records */
   getEventSourceARNs: getEventSourceARNs,
+  /** Returns the event sources of the given stream event's records */
+  getEventSources: getEventSources,
 
   /** Extracts and returns the stream names from the given Kinesis stream event's records' eventSourceARNs */
   getKinesisEventSourceStreamNames: getKinesisEventSourceStreamNames,
   /** Extracts and returns the stream name from the given Kinesis stream event record's eventSourceARN */
   getKinesisEventSourceStreamName: getKinesisEventSourceStreamName,
 
+  /** Extracts and returns the table names from the given DynamoDB stream event records' eventSourceARNs */
+  getDynamoDBEventSourceTableNames: getDynamoDBEventSourceTableNames,
   /** Extracts and returns the table name from the given DynamoDB stream event record's eventSourceARN */
   getDynamoDBEventSourceTableName: getDynamoDBEventSourceTableName,
   /** Extracts and returns the table name from the given DynamoDB stream event record's eventSourceARN */
@@ -45,9 +49,18 @@ function getEventSourceARNs(event) {
 }
 
 /**
+ * Returns the event sources of the given stream event's records (if any); otherwise returns an empty array.
+ * @param event - a Kinesis or DynamoDB stream event
+ * @returns {string[]} an array of event sources (one for each stream event record)
+ */
+function getEventSources(event) {
+  return event && event.Records ? event.Records.map(r => r.eventSource) : [];
+}
+
+/**
  * Extracts and returns the stream names from the given Kinesis stream event's records' eventSourceARNs (if any); otherwise
  * returns an empty array.
- * @param event - a Kinesis or DynamoDB stream event
+ * @param event - a Kinesis stream event
  * @returns {string[]} an array of event source stream names (one for each stream event record)
  */
 function getKinesisEventSourceStreamNames(event) {
@@ -85,6 +98,16 @@ function getDynamoDBEventSourceTableNameAndStreamTimestamp(record) {
 }
 
 /**
+ * Extracts and returns the table names from the given DynamoDB stream event's records' eventSourceARNs (if any);
+ * otherwise returns an empty array.
+ * @param event - a DynamoDB stream event
+ * @returns {string[]} an array of event source table names (one for each stream event record)
+ */
+function getDynamoDBEventSourceTableNames(event) {
+  return event && event.Records ? event.Records.map(getDynamoDBEventSourceTableName) : [];
+}
+
+/**
  * Extracts and returns the table name from the given DynamoDB stream event record's eventSourceARN (if any); otherwise
  * returns an empty string.
  * @param record - a DynamoDB stream event record
@@ -93,6 +116,7 @@ function getDynamoDBEventSourceTableNameAndStreamTimestamp(record) {
 function getDynamoDBEventSourceTableName(record) {
   return record && isNotBlank(record.eventSourceARN) ? arns.getArnResources(record.eventSourceARN).resource : '';
 }
+
 /**
  * Validates the given stream event record and raises an error if the record fails to meet any of the following criteria:
  * 1. It must be defined;
