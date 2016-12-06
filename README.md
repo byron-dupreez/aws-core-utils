@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.5
+# aws-core-utils v5.0.6
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -290,6 +290,11 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.6
+- Updated `core-functions` dependency to version 2.0.11
+- Updated `logging-utils` dependency to version 3.0.6
+- Replaced `node-uuid` dependency with `uuid` dependency in `test\package.json`
 
 ### 5.0.5
 - Changes to `stream-events` module:
