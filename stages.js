@@ -95,78 +95,13 @@ function isStageHandlingConfigured(context) {
 }
 
 /**
- * Stage handling settings are used for configuring and customising stage handling behaviour. The stage handling
- * settings determine how {@linkcode resolveStage}, {@linkcode toStageQualifiedStreamName},
- * {@linkcode extractStageFromQualifiedStreamName}, {@linkcode toStageQualifiedResourceName},
- * {@linkcode extractStageFromQualifiedStreamName} and other internal functions will behave when invoked.
- *
- * NB: Add any, new custom settings that you need for any custom implementations of some or all of the stage handling
- * functions that you develop and configure via {@linkcode configureStageHandling}.
- *
- * Notes:
- * - If injectInCase is set to 'upper' then extractInCase should typically be set to 'lower'.
- * - If injectInCase is set to 'lower' then extractInCase should typically be set to 'upper'.
- * - If injectInCase is set to 'as_is' then extractInCase should typically be set to 'as_is'.
- *
- * - Recommendation: For clarity, use 'as_is' to keep extracted and resolved stages as is (i.e. to NOT convert them to
- *   either upper or lowercase). Technically any non-blank value will achieve the same result, but the 'as_is' is less
- *   confusing.
- *
- * @typedef {Object} StageHandlingSettings
- * @property {string|undefined} [envStageName] - the optional name of a process.env environment variable that holds the
- * configured stage (if any) (using AWS Lambda's new environment support), defaults to 'STAGE' if not defined
- * @property {Function|undefined} [customToStage] - an optional custom function that accepts: an AWS event; an AWS context;
- * and a context, and somehow extracts a usable stage from the AWS event and/or AWS context.
- * @property {Function|undefined} [convertAliasToStage] - an optional function that accepts: an extracted alias (if any);
- * an AWS event; an AWS context; and a context, and converts the alias into a stage
- * @property {Function|undefined} [injectStageIntoStreamName] - an optional function that accepts: an unqualified stream
- * name; a stage; and a context, and returns a stage-qualified stream name (effectively the reverse function of the
- * extractStageFromStreamName function)
- * @property {Function|undefined} [extractStageFromStreamName] - an optional function that accepts: a stage-qualified
- * stream name; and a context, and extracts a stage from the stream name
- * @property {string|undefined} [streamNameStageSeparator] - an optional non-blank separator to use to extract a stage from
- * a stage-qualified stream name or inject a stage into an unqualified stream name
- * @property {Function|undefined} [injectStageIntoResourceName] - an optional function that accepts: an unqualified
- * resource name; a stage; and a context, and returns a stage-qualified resource name (effectively the reverse function
- * of the extractStageFromResourceName function)
- * @property {Function|undefined} [extractStageFromResourceName] - an optional function that accepts: a stage-qualified
- * resource name; and a context, and extracts a stage from the resource name
- * @property {string|undefined} [resourceNameStageSeparator] - an optional non-blank separator to use to extract a stage
- * from a stage-qualified resource name or inject a stage into an unqualified resource name
- * @property {string|undefined} [injectInCase] - optionally specifies whether to convert an injected stage to uppercase (if
- * 'upper' or 'uppercase') or to lowercase (if 'lowercase' or 'lower') or keep it as given (if 'as_is' or anything else)
- * @property {string|undefined} [extractInCase] - optionally specifies whether to convert an extracted stage to uppercase
- * (if 'upper' or 'uppercase') or to lowercase (if 'lowercase' or 'lower') or keep it as extracted (if 'as_is' or
- * anything else)
- * @property {string|undefined} [defaultStage] - an optional default stage to use as a last resort if all other attempts fail
- */
-
-/**
- * Stage handling options are a subset of the full (@linkcode StageHandlingSettings}, which are used to configure ONLY
- * the property (i.e. non-function) stage handling settings.
- * @typedef {Object} StageHandlingOptions
- * @property {string|undefined} [envStageName] - the optional name of a process.env environment variable that holds the
- * configured stage (if any) (using AWS Lambda's new environment support), defaults to 'STAGE' if not defined
- * @property {string|undefined} [streamNameStageSeparator] - an optional non-blank separator to use to extract a stage from
- * a stage-qualified stream name or inject a stage into an unqualified stream name
- * @property {string|undefined} [resourceNameStageSeparator] - an optional non-blank separator to use to extract a stage
- * from a stage-qualified resource name or inject a stage into an unqualified resource name
- * @property {string|undefined} [injectInCase] - optionally specifies whether to convert an injected stage to uppercase (if
- * 'upper' or 'uppercase') or to lowercase (if 'lowercase' or 'lower') or keep it as given (if 'as_is' or anything else)
- * @property {string|undefined} [extractInCase] - optionally specifies whether to convert an extracted stage to uppercase
- * (if 'upper' or 'uppercase') or to lowercase (if 'lowercase' or 'lower') or keep it as extracted (if 'as_is' or
- * anything else)
- * @property {string|undefined} [defaultStage] - an optional default stage to use as a last resort if all other attempts fail
- */
-
-/**
  * Configures the given context with the given stage handling settings, but only if stage handling is not already
  * configured on the given context OR if forceConfiguration is true. The stage handling settings determine how
  * {@linkcode resolveStage}, {@linkcode toStageQualifiedStreamName}, {@linkcode extractStageFromQualifiedStreamName},
  * {@linkcode toStageQualifiedResourceName}, {@linkcode extractStageFromQualifiedStreamName} and other internal
  * functions will behave when invoked.
  *
- * @param {Object} context the context onto which to configure stage handling settings
+ * @param {Object} context - the context onto which to configure stage handling settings
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
  * @param {StageHandlingSettings} settings - the new stage handling settings to use
  * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
@@ -175,7 +110,7 @@ function isStageHandlingConfigured(context) {
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured stage handling settings on the given context
- * @return {Object} the context object configured with stage handling settings
+ * @return {StageHandling} the context object configured with stage handling settings and logging functionality
  */
 function configureStageHandlingWithSettings(context, settings, otherSettings, otherOptions, forceConfiguration) {
   // Configure all dependencies if not configured
@@ -220,7 +155,8 @@ function configureStageHandlingWithSettings(context, settings, otherSettings, ot
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the default settings, which
  * will override any previously configured stage handling settings on the given context
- * @return {Object} the context object configured with stage handling settings (either existing or defaults or overrides)
+ * @return {StageHandling} the context object configured with stage handling settings (either existing or defaults or
+ * overrides) and logging functionality
  */
 function configureDefaultStageHandling(context, options, otherSettings, otherOptions, forceConfiguration) {
   const settings = getDefaultStageHandlingSettings(options);
@@ -278,8 +214,8 @@ function loadDefaultStageHandlingOptions() {
 
 /**
  * Returns the value of the named stage handling setting (if any) on the given context.
- * @param context - the context from which to fetch the named setting's value
- * @param settingName - the name of the stage handling setting
+ * @param {StageHandling} context - the context from which to fetch the named setting's value
+ * @param {string} settingName - the name of the stage handling setting
  * @returns {*|undefined} the value of the named setting (if any); otherwise undefined
  */
 function getStageHandlingSetting(context, settingName) {
@@ -290,8 +226,8 @@ function getStageHandlingSetting(context, settingName) {
 /**
  * Returns the function configured at the named stage handling setting on the given context (if any and if it's a real
  * function); otherwise returns undefined.
- * @param context - the context from which to fetch the function
- * @param settingName - the name of the stage handling setting
+ * @param {StageHandling} context - the context from which to fetch the function
+ * @param {string} settingName - the name of the stage handling setting
  * @returns {*|undefined} the named function (if it's a function); otherwise undefined
  */
 function getStageHandlingFunction(context, settingName) {
@@ -313,7 +249,7 @@ function getStageHandlingFunction(context, settingName) {
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured stage handling settings on the given context
- * @returns {Object} the given context
+ * @return {StageHandling} the given context object configured with stage handling settings and logging functionality
  */
 function configureStageHandling(context, settings, options, otherSettings, otherOptions, forceConfiguration) {
   // Determine the stage handling settings to be used
@@ -352,7 +288,7 @@ function configureStageHandling(context, settings, options, otherSettings, other
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured dependencies' settings on the given context
- * @returns {Object} the context object configured with stage handling dependencies
+ * @returns {Logging} the context object configured with stage handling dependencies (i.e. logging functionality)
  */
 function configureDependencies(context, otherSettings, otherOptions, forceConfiguration) {
   // Configure logging if not configured yet
@@ -405,28 +341,8 @@ function configureDependencies(context, otherSettings, otherOptions, forceConfig
  *
  * @param {Object} event - the AWS event
  * @param {Object} awsContext - the AWS context, which was passed to your lambda
- * @param {Object} context - the context to use, which will contain any and all of the pre-configured settings
- * @param {string|undefined} [context.stage] - an optional stage on the given context, which will short-circuit
- * resolution to this stage (if non-blank)
- * @param {StageHandlingSettings|undefined} [context.stageHandling] - the configured stage handling settings (if any) on
- * the given context, which can be used to pass additional configuration through to any custom functions that you configured
- * @param {Function|undefined} [context.stageHandling.customToStage] - an optional custom function that accepts: an
- * AWS event; an AWS context; and a context, and somehow extracts and returns a usable stage from the AWS event and/or
- * AWS context
- * @param {Function|undefined} [context.stageHandling.convertAliasToStage] - an optional function on the given
- * context that accepts: an extracted alias (if any); an AWS event; an AWS context; and a context, and converts the
- * alias into a stage
- * @param {Function|undefined} [context.stageHandling.extractStageFromStreamName] - an optional function on the given
- * context that accepts: a stage-qualified stream name; and a context, and extracts a stage from the stream name
- * @param {Function|undefined} [context.stageHandling.extractStageFromResourceName] - an optional function on the given
- * context that accepts: a stage-qualified resource (e.g. table) name; and a context, and extracts a stage from the resource name
- * @param {string|undefined} [context.stageHandling.defaultStage] - an optional default stage on the given context to
- * use as a second last resort if all other attempts fail (configure this via configureStageHandling)
- * @param {string|undefined} [context.defaultStage] - an optional default stage on the given context to use as the LAST
- * resort if all other attempts fail
- * @param {string|undefined} [context.stageHandling.extractInCase] - specifies whether to convert the resolved stage to
- * uppercase (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as resolved (if 'as_is'
- * or anything else)
+ * @param {StageHandling|StageAware|Object} context - the context to use, which should ideally contain any and all of
+ * the pre-configured stage handling settings
  * @returns {string} the resolved stage (if non-blank); otherwise an empty string
  */
 function resolveStage(event, awsContext, context) {
@@ -570,7 +486,7 @@ function resolveStage(event, awsContext, context) {
  * @param {string} [alias] the alias (if any) previously extracted from the AWS context's invokedFunctionArn
  * @param {Object} event - the AWS event
  * @param {Object} awsContext - the AWS context
- * @param {Object} context - the context
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
  * @returns {string} the resolved stage (if non-blank); otherwise an empty string
  */
 function convertAliasToStage(alias, event, awsContext, context) {
@@ -590,10 +506,7 @@ function convertAliasToStage(alias, event, awsContext, context) {
  *
  * @param {string} unqualifiedStreamName - the unqualified name of the stream
  * @param {string} stage - the stage to inject
- * @param {Object} context - the context, which can also be used to pass additional configuration through to a custom
- * injectStageIntoStreamName function that you configured
- * @param {Function|undefined} [context.stageHandling.injectStageIntoStreamName] - an optional function that accepts:
- * an unqualified stream name; a stage; and a context, and returns a stage-qualified stream name
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
  * @returns {string} a stage-qualified stream name (or the given stream name)
  */
 function toStageQualifiedStreamName(unqualifiedStreamName, stage, context) {
@@ -608,10 +521,7 @@ function toStageQualifiedStreamName(unqualifiedStreamName, stage, context) {
  * actual behaviour.
  *
  * @param {string} qualifiedStreamName - the stage-qualified stream name
- * @param {Object} context - the context, which can also be used to pass additional configuration through to a custom
- * extractStageFromStreamName function that you configured
- * @param {Function|undefined} [context.stageHandling.extractStageFromStreamName] - an optional function that accepts:
- * a stage-qualified stream name; and a context, and extracts a stage from the stream name
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
  * @returns {string} the stage extracted from the stage-qualified stream name or an empty string
  */
 function extractStageFromQualifiedStreamName(qualifiedStreamName, context) {
@@ -629,11 +539,7 @@ function extractStageFromQualifiedStreamName(qualifiedStreamName, context) {
  *
  * @param {string} unsuffixedStreamName - the unsuffixed name of the stream
  * @param {string} stage - the stage to append
- * @param {Object} context - the context
- * @param {string|undefined} [context.stageHandling.streamNameStageSeparator] - an optional non-blank separator to use
- * to append a stage suffix to an unsuffixed stream name
- * @param {string|undefined} [context.stageHandling.injectInCase] - specifies whether to convert the stage to uppercase
- * (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as is (if 'as_is' or anything else)
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
  * @returns {string} the stage-suffixed stream name
  */
 function toStageSuffixedStreamName(unsuffixedStreamName, stage, context) {
@@ -647,10 +553,7 @@ function toStageSuffixedStreamName(unsuffixedStreamName, stage, context) {
  * streamNameStageSeparator (if any).
  *
  * @param {string} stageSuffixedStreamName - the stage-suffixed name of the stream
- * @param {Object} context - the context
- * @param {string|undefined} [context.stageHandling.streamNameStageSeparator] - an optional non-blank separator to use
- * @param {string|undefined} [context.stageHandling.extractInCase] - specifies whether to convert the stage to uppercase
- * (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as is (if anything else);
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
  * @returns {string} the stage (if extracted) or an empty string
  */
 function extractStageFromSuffixedStreamName(stageSuffixedStreamName, context) {
@@ -671,10 +574,7 @@ function extractStageFromSuffixedStreamName(stageSuffixedStreamName, context) {
  *
  * @param {string} unqualifiedResourceName - the unqualified name of the resource
  * @param {string} stage - the stage to inject
- * @param {Object} context - the context, which can also be used to pass additional configuration through to a custom
- * injectStageIntoResourceName function that you configured
- * @param {Function|undefined} context.stageHandling.injectStageIntoResourceName - an optional function that accepts:
- * an unqualified resource name; a stage; and a context, and returns a stage-qualified resource name
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
  * @returns {string} a stage-qualified resource name
  */
 function toStageQualifiedResourceName(unqualifiedResourceName, stage, context) {
@@ -689,10 +589,7 @@ function toStageQualifiedResourceName(unqualifiedResourceName, stage, context) {
  * its actual behaviour.
  *
  * @param {string} qualifiedResourceName - the stage-qualified resource name
- * @param {Object} context - the context, which can also be used to pass additional configuration through to a custom
- * extractStageFromResourceName function that you configured
- * @param {Function|undefined} [context.stageHandling.extractStageFromResourceName] - an optional function that accepts:
- * a stage-qualified resource name; and a context, and extracts a stage from the resource name
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
  * @returns {string} the stage extracted from the stage-qualified resource name; or an empty string
  */
 function extractStageFromQualifiedResourceName(qualifiedResourceName, context) {
@@ -709,11 +606,7 @@ function extractStageFromQualifiedResourceName(qualifiedResourceName, context) {
  * lowercase or kept as is according to the configured injectInCase.
  * @param {string} unsuffixedResourceName - the unsuffixed name of the resource (e.g. an unsuffixed DynamoDB table name)
  * @param {string} stage - the stage to append
- * @param {Object} context - the context
- * @param {string|undefined} [context.stageHandling.resourceNameStageSeparator] - an optional non-blank separator to use
- * to append a stage suffix to an unsuffixed stream name
- * @param {string|undefined} [context.stageHandling.injectInCase] - specifies whether to convert the stage to uppercase
- * (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as is (if 'as_is' or anything else)
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
  * @returns {string} the stage-suffixed resource name
  */
 function toStageSuffixedResourceName(unsuffixedResourceName, stage, context) {
@@ -726,10 +619,7 @@ function toStageSuffixedResourceName(unsuffixedResourceName, stage, context) {
  * resourceNameStageSeparator (if any).
  *
  * @param {string} stageSuffixedResourceName the stage-suffixed name of the resource
- * @param {Object} context the context
- * @param {string|undefined} [context.stageHandling.resourceNameStageSeparator] - an optional non-blank separator to use
- * @param {string|undefined} [context.stageHandling.extractInCase] - specifies whether to convert the stage to uppercase
- * (if 'upper' or 'uppercase') or to lowercase (if 'lower' or 'lowercase') or keep it as is (if 'as-is' or anything else)
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
  * @returns {string} the stage (if extracted) or an empty string
  */
 function extractStageFromSuffixedResourceName(stageSuffixedResourceName, context) {
@@ -840,14 +730,14 @@ function toCase(value, asCase) {
  * Returns context.stage from the given context if it is already defined; otherwise attempts to resolve the stage and
  * then, if non-blank, configure the stage on the given context (as context.stage); otherwise either raises an error
  * (if failFast is explicitly true) or logs a warning.
- * @param {Object} context - a context on which to set the stage
- * @param {Object} [context.stage] - a context on which to set the stage
+ * @param {StageHandling|StageAware|Object} context - a context with stage handling settings and logging functionality
+ * on which to set the stage
  * @param {Object} event - the AWS event
  * @param {Object} awsContext - the AWS context, which was passed to your lambda
  * @param {boolean|undefined} [failFast] - an optional failFast flag, which is only used when a needed resolved stage is
  * blank and which determines whether the error will be raised (if failFast is explicitly true) or logged as a warning
  * @throws {Error} if failFast is explicitly true and a needed resolved stage is blank
- * @returns {Object} the context with its existing stage or the resolved stage or an empty string stage.
+ * @returns {StageAware} the given context with its existing stage or the resolved stage or an empty string stage.
  */
 function configureStage(context, event, awsContext, failFast) {
   if (!context.stage) {

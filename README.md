@@ -291,6 +291,15 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 
 ## Changes
 
+### 5.0.7
+- Added `stage-handling-type-defs.js` module to hold all of the stage handling related typedefs
+  - Added `StageHandlingOptions` and `StageHandlingSettings` typedefs from `stages.js`
+  - Added new `StageHandling` and `StageAware` typedefs 
+- Changes to `stages.js` module:
+  - Removed `StageHandlingOptions` and `StageHandlingSettings` typedefs
+  - Changed the argument and return types on many of the functions to use the existing and new typedefs
+- Updated `logging-utils` dependency to version 3.0.7
+
 ### 5.0.6
 - Updated `core-functions` dependency to version 2.0.11
 - Updated `logging-utils` dependency to version 3.0.6
