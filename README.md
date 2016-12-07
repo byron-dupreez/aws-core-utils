@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.8
+# aws-core-utils v5.0.9
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -291,8 +291,12 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 
 ## Changes
 
+### 5.0.9
+- Updated `logging-utils` dependency to version 3.0.8
+- Renamed `stages-defs.js` module to `type-defs.js` to synchronize with other modules
+
 ### 5.0.8
- - Renamed `stage-handling-type-defs.js` module to `stages-type-defs.js`
+- Renamed `stage-handling-type-defs.js` module to `stages-type-defs.js`
 
 ### 5.0.7
 - Added `stage-handling-type-defs.js` module to hold all of the stage handling related typedefs
