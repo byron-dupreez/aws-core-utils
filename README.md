@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.9
+# aws-core-utils v5.0.10
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -290,6 +290,17 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.10
+- Fixed broken unit tests by changing incorrect imports of `node-uuid` to `uuid`
+- Added new `RegionAware`, `KinesisAware` and `DynamoDBDocClientAware` typedefs to `type-defs.js` module
+- Changes to `regions.js` module:
+  - Changed the `context` argument and return type of `configureRegion` function to use new `RegionAware` typedef
+- Changes to `kinesis-cache.js` module:
+  - Changed the `context` argument and return types of `configureKinesis` function to use new `KinesisAware` typedef
+- Changes to `dynamodb-doc-client-cache.js` module:
+  - Changed the `context` argument and return type of `configureDynamoDBDocClient` function to use new 
+    `DynamoDBDocClientAware` typedef
 
 ### 5.0.9
 - Updated `logging-utils` dependency to version 3.0.8

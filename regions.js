@@ -216,11 +216,11 @@ function getDefaultRegionRaw() {
  * Returns the context.region if it is already configured on the given context, otherwise gets the current AWS_REGION
  * and then, if its not blank, sets it on the context as context.region; otherwise either raises an error if failFast is
  * explicitly true or logs a warning.
- * @param {Object} context - a context on which to set the region
+ * @param {Object|RegionAware} context - a context on which to set the region
  * @param {boolean|undefined} [failFast] - an optional flag that is only used when AWS_REGION is needed and blank and
  * that determines whether the error will be raised (if failFast is explicitly true) or simply logged as a warning
  * @throws {Error} if failFast is explicitly true and an AWS_REGION env variable is needed and not available
- * @returns {Object} the context with its existing region or the current AWS_REGION env variable value.
+ * @returns {RegionAware} the context with its existing region or the current AWS_REGION env variable value.
  */
 function configureRegion(context, failFast) {
   // Resolve the AWS region, if it is not already defined on the context

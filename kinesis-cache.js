@@ -161,12 +161,11 @@ function getRegionKey(region) {
  *
  * Logging should be configured before calling this function (see {@linkcode logging-utils/logging#configureLogging})
  *
- * @param {Object} context - the context to configure
- * @param {AWS.Kinesis} [context.kinesis] - the current Kinesis instance cached on the context (if any)
+ * @param {Object|KinesisAware} context - the context to configure
  * @param {Object|undefined} [kinesisOptions] - the optional Kinesis constructor options to use if no cached Kinesis
  * instance exists
  * @param {string|undefined} [kinesisOptions.region] - an optional region to use instead of the current region
- * @returns {Object} the given context
+ * @returns {KinesisAware} the given context configured with an AWS.Kinesis instance
  */
 function configureKinesis(context, kinesisOptions) {
   if (!context.kinesis) {

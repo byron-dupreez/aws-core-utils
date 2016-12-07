@@ -1,10 +1,26 @@
 'use strict';
 
 /**
+ * @typedef {Object} RegionAware - an object configured with the name of an AWS region to use, which is typically the
+ * current AWS region sourced from a Lambda's AWS_REGION environment variable
+ * @property {string} region - the name of the AWS region to use
+ */
+
+/**
  * @typedef {StageHandling} StageAware - an object configured with a stage, stage handling settings and logging functionality
  * @property {string} stage - the configured stage to use
  * @property {string|undefined} [defaultStage] - an optional default stage to use during stage resolution as the LAST
  * resort if all other attempts fail
+ */
+
+/**
+ * @typedef {Object} KinesisAware - an object configured with an AWS.Kinesis instance
+ * @property {AWS.Kinesis} kinesis - an AWS.Kinesis instance to use
+ */
+
+/**
+ * @typedef {Object} DynamoDBDocClientAware - an object configured with an AWS.DynamoDB.DocumentClient instance
+ * @property {AWS.DynamoDB.DocumentClient} dynamoDBDocClient - an optional AWS.DynamoDB.DocumentClient instance to use
  */
 
 /**

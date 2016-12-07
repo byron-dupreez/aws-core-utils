@@ -7,7 +7,7 @@
 
 const test = require("tape");
 
-const uuid = require("node-uuid");
+const uuid = require("uuid");
 
 // The test subject
 const regions = require('../regions');

@@ -167,13 +167,11 @@ function getRegionKey(region) {
  *
  * Logging should be configured before calling this function (see {@linkcode logging-utils/logging#configureLogging})
  *
- * @param {Object} context - the context to configure
- * @param {AWS.DynamoDB.DocumentClient} [context.dynamoDBDocClient] - the current DynamoDB.DocumentClient instance
- * cached on the context (if any)
+ * @param {Object|DynamoDBDocClientAware} context - the context to configure
  * @param {Object|undefined} [dynamoDBDocClientOptions] - the optional DynamoDB.DocumentClient constructor options to
  * use if no cached DynamoDB.DocumentClient instance exists
  * @param {string|undefined} [dynamoDBDocClientOptions.region] - an optional region to use instead of the current region
- * @returns {Object} the given context
+ * @returns {DynamoDBDocClientAware} the given context configured with an AWS.DynamoDB.DocumentClient instance to use
  */
 function configureDynamoDBDocClient(context, dynamoDBDocClientOptions) {
   if (!context.dynamoDBDocClient) {
