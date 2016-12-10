@@ -1,9 +1,65 @@
 'use strict';
 
 /**
+ * @typedef {StageHandling} StandardContext - an object configured as a standard context with stage handling, logging,
+ * custom settings, an optional Kinesis instance and an optional DynamoDB DocumentClient instance and OPTIONALLY also
+ * with the current region, the resolved stage and the AWS context
+ * @property {CustomSettings|undefined} custom - an object configured with optional custom settings to use
+ * @property {AWS.Kinesis|undefined} [kinesis] - an optional AWS.Kinesis instance to use
+ * @property {AWS.DynamoDB.DocumentClient|undefined} [dynamoDBDocClient] - an optional AWS.DynamoDB.DocumentClient instance to use
+ * @property {string|undefined} [region] - the name of the AWS region to use
+ * @property {string|undefined} [stage] - the configured stage to use
+ * @property {Object|undefined} [awsContext] - the AWS context passed to your Lambda function on invocation
+ */
+
+/**
+ * @typedef {Object} StandardSettings - settings to be used to configure a standard context (see StandardContext)
+ * @property {LoggingSettings|undefined} [loggingSettings] - optional logging settings to use to configure logging
+ * @property {StageHandlingSettings|undefined} [stageHandlingSettings] - optional stage handling settings to use to configure stage handling
+ * @property {CustomSettings|undefined} [customSettings] - custom settings to be merged into an existing or new context.custom object
+ * @property {Object|undefined} [kinesisOptions] - optional Kinesis constructor options to use to configure an AWS.Kinesis instance
+ * @property {Object|undefined} [dynamoDBDocClientOptions] - optional DynamoDB.DocumentClient constructor options to use to configure an AWS.DynamoDB.DocumentClient instance
+ */
+
+/**
+ * @typedef {Object} StandardOptions - options to be used to configure a standard context (see StandardContext)
+ * @property {LoggingOptions|undefined} [loggingOptions] - optional logging options to use to configure logging
+ * @property {StageHandlingOptions|undefined} [stageHandlingOptions] - optional stage handling options to use to configure stage handling
+ * @property {CustomOptions|undefined} [customOptions] - custom options to be merged into an existing or new context.custom object
+ * @property {Object|undefined} [kinesisOptions] - optional Kinesis constructor options to use to configure an AWS.Kinesis instance
+ * @property {Object|undefined} [dynamoDBDocClientOptions] - optional DynamoDB.DocumentClient constructor options to use to configure an AWS.DynamoDB.DocumentClient instance
+ */
+
+/**
+ * @typedef {Object} CustomAware - a context object configured with custom settings
+ * @property {CustomSettings|undefined} custom - an object configured with optional custom settings to use
+ * Any existing context.custom settings take precedence over and will replace any same named CustomSettings settings and
+ * CustomOptions options when merged together to create the final context.custom object during configuration via
+ * {@linkcode contexts#configureCustomSettings}
+ */
+
+/**
+ * @typedef {Object} CustomSettings - optional custom settings to be merged into an existing or new context.custom object
+ * Any CustomSettings settings take precedence over and will replace any same named CustomOptions options when merged
+ * together to create the final context.custom object during configuration via {@linkcode contexts#configureCustomSettings}
+ */
+
+/**
+ * @typedef {Object} CustomOptions - optional custom options to be merged with any CustomSettings settings and then
+ * merged into an existing or new context.custom object during configuration via {@linkcode contexts#configureCustomSettings}
+ */
+
+/**
  * @typedef {Object} RegionAware - an object configured with the name of an AWS region to use, which is typically the
  * current AWS region sourced from a Lambda's AWS_REGION environment variable
  * @property {string} region - the name of the AWS region to use
+ */
+
+/**
+ * @typedef {StageAware} RegionStageAWSContextAware - an object configured with the name of the current AWS region,
+ * the AWS context and the resolved stage, which implies pre-configured stage handling settings and logging functionality
+ * @property {string} region - the name of the AWS region to use
+ * @property {Object} awsContext - the AWS context passed to your Lambda function on invocation
  */
 
 /**
@@ -20,12 +76,12 @@
 
 /**
  * @typedef {Object} DynamoDBDocClientAware - an object configured with an AWS.DynamoDB.DocumentClient instance
- * @property {AWS.DynamoDB.DocumentClient} dynamoDBDocClient - an optional AWS.DynamoDB.DocumentClient instance to use
+ * @property {AWS.DynamoDB.DocumentClient} dynamoDBDocClient - an AWS.DynamoDB.DocumentClient instance to use
  */
 
 /**
- * @typedef {Logging} StageHandling - an object configured with stage handling settings and logging functionality
- * @property {StageHandlingSettings} stageHandling - the configured stage handling settings to use
+ * @typedef {Logging} StageHandling - an object configured with stage handling and logging functionality
+ * @property {StageHandlingSettings} stageHandling - an object configured with stage handling settings and functionality to use
  */
 
 /**

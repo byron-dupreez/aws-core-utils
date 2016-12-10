@@ -16,6 +16,7 @@ const configureStageHandlingWithSettings = stages.FOR_TESTING_ONLY.configureStag
 const configureDefaultStageHandling = stages.configureDefaultStageHandling;
 const getDefaultStageHandlingSettings = stages.getDefaultStageHandlingSettings;
 const configureStageHandling = stages.configureStageHandling;
+const configureRegionStageAndAwsContext = stages.configureRegionStageAndAwsContext;
 const getStageHandlingSetting = stages.getStageHandlingSetting;
 // Stage resolution
 const resolveStage = stages.resolveStage;
@@ -1115,5 +1116,31 @@ test('resolveStageFromDynamoDBEvent with table with suffix', t => {
   // Table with suffix must not override event stage
   checkResolveStageFromDynamoDBEvent(t, 'Es', '', '', 'Table_Ts', context, 'Es');
 
+  t.end();
+});
+
+test('configureRegionStageAndAwsContext', t => {
+  try {
+    process.env.AWS_REGION = 'us-west-2';
+
+    const context = {};
+    configureDefaultStageHandling(context, undefined, undefined, undefined, false);
+
+    // Create an AWS context
+    const invokedFunctionArn = sampleInvokedFunctionArn('invokedFunctionArnRegion', 'functionName', '1.0.1');
+    const awsContext = sampleAwsContext('functionName', '1.0.1', invokedFunctionArn);
+
+    // Create a Kinesis event
+    const eventSourceArn = sampleKinesisEventSourceArn('eventSourceArnRegion', 'TestStream_QA');
+    const event = sampleKinesisEventWithSampleRecord(undefined, undefined, eventSourceArn, 'eventAwsRegion');
+
+    configureRegionStageAndAwsContext(context, event, awsContext);
+
+    t.equal(context.region, 'us-west-2', 'context.region must be us-west-2');
+    t.equal(context.stage, 'qa', 'context.stage must be qa');
+    t.deepEqual(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+  } finally {
+    process.env.AWS_REGION = undefined;
+  }
   t.end();
 });

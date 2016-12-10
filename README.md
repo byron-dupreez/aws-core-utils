@@ -1,12 +1,18 @@
-# aws-core-utils v5.0.10
+# aws-core-utils v5.0.11
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
 Currently includes:
+- api-lambdas.js
+  - Utilities for working with Lambdas exposed to AWS API Gateway, including functions to:
+    - Configure a standard context for AWS Gateway exposed Lambdas (re-exported from contexts.js module)
+    - Fail Lambda callbacks with standard AppError errors to facilitate mapping of errors to HTTP status codes on API Gateway.
 - arns.js 
     - Utilities for working with Amazon Resource Names (ARNs)
 - aws-errors.js
-    - Utilities for working with AWS errors.
+    - Utilities for working with AWS errors
+- contexts.js
+    - Utilities for configuring contexts for AWS Gateway exposed and other types of Lambdas
 - dynamodb-doc-client-cache.js
     - A module-scope cache of AWS.DynamoDB.DocumentClient instances by region for Lambda.
 - dynamodb-utils.js
@@ -15,12 +21,13 @@ Currently includes:
     - A module-scope cache of AWS.Kinesis instances by region for Lambda.
 - lambdas.js 
     - Utilities for working with AWS Lambda, which enable extraction of function names, versions and, most importantly, 
-    aliases from AWS contexts and their invoked function ARNs.
+      aliases from AWS contexts and their invoked function ARNs.
+    - Utility for failing non-API Gateway Lambda's callbacks with standard AppError errors if mapping of errors to HTTP status codes is needed
 - regions.js 
     - Utilities for resolving the AWS region from various sources (primarily for AWS Lambda usage).
 - stages.js
-    - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources (primarily for 
-    AWS Lambda usage).
+    - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources 
+      (primarily for AWS Lambda usage).
     - Utilities for configuration of stage handling.
     - Configurable and default functions for generating stage-qualified stream and resource names.
     - Configurable and default functions for extracting stages from stage-qualified stream and resource names.
@@ -38,6 +45,35 @@ $ npm i --save aws-core-utils
 ```
 
 In Node.js:
+
+* To use the `api-lambdas` module within your API Gateway exposed Lambda:
+```js
+const apiLambdas = require('aws-core-utils/api-lambdas');
+
+// Example Lambda handler function
+module.exports.handler = (event, awsContext, callback) => {
+  // Configure a standard context
+  const context = {};
+  try {
+    const standardOptions = require('my-options.json'); // or whatever options you want to use to configure stage handling, logging, custom settings, ...
+    const standardSettings = {}; // or whatever settings you want to use to configure stage handling, logging, custom settings, ...
+    apiLambdas.configureStandardContext(context, standardSettings, standardOptions, event, awsContext);
+    
+    // ... execute Lambda specific code passing the context to your functions as needed
+    // executeMyLambdaFunction(arg1, arg2, ..., context);
+  
+  } catch (err) {
+    // Fail your Lambda callback and map the error to one of the default set of HTTP status codes:
+    // i.e. [400, 401, 403, 404, 408, 429, 500, 502, 503, 504]
+    apiLambdas.failCallback(callback, err, awsContext);
+  }
+}
+
+// ALTERNATIVELY: 
+// Fail your Lambda callback and map the error to one of a specified set of HTTP status codes
+apiLambdas.failCallback(callback, err, awsContext, 'My error msg', 'MyErrorCode', [400, 404, 418, 500, 508]);
+```
+
 * To use the AWS ARN utilities
 ```js
 const arns = require('aws-core-utils/arns');
@@ -55,15 +91,23 @@ const arnResources = arns.getArnResources(arn);
 const awsErrors = require('aws-core-utils/aws-errors');
 ```
 
-* To get the current AWS region & configure it on a context
+* To use the `contexts.js` module:
 ```js
-const regions = require('aws-core-utils/regions');
+// To use the configureStandardContext function, please refer to the 'To use the `api-lambdas` module' example above
+// (since the `api-lambdas.js` module simply re-exports the `contexts.js` module's configureStandardContext)
 
-// To get the current AWS region
-const region = regions.getRegion();
+// ALTERNATIVELY if you need the logic of the configureStandardContext function for custom purposes
+const contexts = require('aws-core-utils/contexts');
+const context = {};
+const standardOptions = require('my-std-options.json'); // or whatever options you want to use to configure stage handling, logging, custom settings, ...
+const standardSettings = {}; // or whatever settings you want to use to configure stage handling, logging, custom settings, ...
+contexts.configureStandardContext(context, standardSettings, standardOptions, awsEvent, awsContext);
 
-// To configure a context with the current AWS region
-regions.configureRegion(context, failFast)
+// If you need the logic of the configureCustomSettings function, which is used by configureStandardContext, for other purposes
+const myCustomSettings = {myCustomSetting1: 1, myCustomSetting2: 2, myCustomFunction: () => {}}; // 
+const myCustomOptions = require('my-custom-options.json');
+contexts.configureCustomSettings(context, myCustomSettings, myCustomOptions);
+console.log(`context.custom = ${JSON.stringify(context.custom)}`);
 ```
 
 * To use the DynamoDB.DocumentClient cache to configure and cache an AWS DynamoDB.DocumentClient instance per region
@@ -147,13 +191,6 @@ const deleted = kinesisCache.deleteKinesis('eu-west-1');
 ```js
 const lambdas = require('aws-core-utils/lambdas');
 
-// Fail a Lambda's callback with a standard error and preserve HTTP status codes (for non-API Gateway Lambdas) 
-// See core-functions/app-errors.js for standard errors to use
-lambdas.failCallback(lambdaCallback, error, awsContext, message, code);
-
-// Fail an API Gateway-exposed Lambda's callback with a standard error and preserve HTTP status codes
-lambdas.failCallbackForApiGateway(lambdaCallback, error, awsContext, message, code, allowedHttpStatusCodes);
-
 // To resolve the Lambda alias from an AWS Lambda context
 const alias = lambdas.getAlias(awsContext);
 
@@ -163,6 +200,24 @@ const functionVersion = lambdas.getFunctionVersion(awsContext);
 const functionNameVersionAndAlias = lambdas.getFunctionNameVersionAndAlias(awsContext);
 const invokedFunctionArn = lambdas.getInvokedFunctionArn(awsContext);
 const invokedFunctionArnFunctionName = lambdas.getInvokedFunctionArnFunctionName(awsContext);
+
+// Fail a Lambda's callback with a standard error and preserve HTTP status codes (for non-API Gateway Lambdas) 
+// See core-functions/app-errors.js for standard errors to use
+lambdas.failCallback(lambdaCallback, error, awsContext, message, code);
+```
+
+* To get the current AWS region & configure it on a context
+```js
+const regions = require('aws-core-utils/regions');
+
+// To get the current AWS region of your Lambda
+const region = regions.getRegion();
+
+// To configure a context with the current AWS region
+const context = {};
+const failFast = true;
+regions.configureRegion(context, failFast);
+assert(context.region && typeof context.region === 'string');
 ```
 
 * To use the stage utilities
@@ -170,10 +225,16 @@ const invokedFunctionArnFunctionName = lambdas.getInvokedFunctionArnFunctionName
 // To configure stage-handling, which determines the behaviour of the functions numbered 1 to 6 below
 const stages = require('aws-core-utils/stages');
 const settings = undefined; // ... or your own custom settings
-const options = require('./stages-options.json'); // ... or your own custom options
+const options = require('aws-core-utils/stages-options.json'); // ... or your own custom options
 
-// ... EITHER using the default stage handling configuration partially customised via config.stageHandlingOptions
-stages.configureDefaultStageHandling(context, options.stageHandlingOptions, otherSettings, otherOptions, forceConfiguration); 
+// ... EITHER using the default stage handling configuration and default logging configuration 
+stages.configureDefaultStageHandling(context); 
+// ... OR using the default stage handling configuration and default logging configuration partially customised via stageHandlingOptions, otherSettings & otherOptions
+const stageHandlingOptions = require('aws-core-utils/stages-options.json').stageHandlingOptions; // example ONLY - use your own custom stage handling options if needed
+const otherSettings = undefined; // or to configure your own underlying logger use: const otherSettings = {loggingSettings: {underlyingLogger: myCustomLogger}};
+const otherOptions = require('aws-core-utils/test/std-options.json'); // example ONLY - use your own custom standard options file
+const forceConfiguration = false;
+stages.configureDefaultStageHandling(context, stageHandlingOptions, otherSettings, otherOptions, forceConfiguration); 
 
 // ... OR using your own custom stage-handling configuration
 const stageHandlingSettings = stages.getDefaultStageHandlingSettings(options.stageHandlingOptions);
@@ -184,7 +245,7 @@ const stageHandlingSettings = stages.getDefaultStageHandlingSettings(options.sta
 // stageHandlingSettings.extractStageFromStreamName = stages.DEFAULTS.extractStageFromSuffixedStreamName;
 // stageHandlingSettings.injectStageIntoResourceName = stages.DEFAULTS.toStageSuffixedResourceName;
 // stageHandlingSettings.extractStageFromResourceName = stages.DEFAULTS.extractStageFromSuffixedResourceName;
-stages.configureStageHandling(context, stageHandlingSettings, undefined, otherSettings, otherOptions, forceConfiguration);
+stages.configureStageHandling(context, stageHandlingSettings, stageHandlingOptions, otherSettings, otherOptions, forceConfiguration);
 
 // ... OR using completely customised stage handling settings
 const stageHandlingSettings2 = {
@@ -214,31 +275,40 @@ stages.configureStageHandling(context, stageHandlingSettings, stageHandlingOptio
 const configured = stages.isStageHandlingConfigured(context);
 
 // To look up stage handling settings and functions
+const settingName = 'injectInCase'; // example stage handling setting name
 const setting = stages.getStageHandlingSetting(context, settingName);
+
+const functionSettingName = 'convertAliasToStage'; // example stage handling function name
 const fn = stages.getStageHandlingFunction(context, functionSettingName);
 
 // 1. To resolve / derive a stage from an AWS event
 const context = {};
-const stage = stages.resolveStage(event, awsContext, context);
+const stage = stages.resolveStage(awsEvent, awsContext, context);
 
-// 2. To configure a context with a resolved stage 
-stages.configureStage(context, event, awsContext, failFast)
+// 2. To configure a context with a resolved stage (uses resolveStage)
+const failFast = true;
+stages.configureStage(context, awsEvent, awsContext, failFast);
+assert(context.stage && typeof context.stage === 'string');
 
-// 3. To qualify an unqualified stream name with a stage
-const unqualifiedStreamName = 'TestStream';
-const stageQualifiedStreamName = stages.toStageQualifiedStreamName(unqualifiedStreamName, stage, context);
-
-// 4. To extract a stage from a qualified stream name
+// 3. To extract a stage from a qualified stream name
 const qualifiedStreamName = 'TestStream_PROD';
 const stage2 = stages.extractStageFromQualifiedStreamName(qualifiedStreamName, context);
+assert(stage2 === 'prod'); // assuming default stage handling configuration
 
-// 5. To qualify an unqualified resource name with a stage
-const unqualifiedResourceName = 'TestResource';
-const stageQualifiedResourceName = stages.toStageQualifiedResourceName(unqualifiedResourceName, stage, context);
+// 4. To qualify an unqualified stream name with a stage
+const unqualifiedStreamName = 'TestStream';
+const stageQualifiedStreamName = stages.toStageQualifiedStreamName(unqualifiedStreamName, stage2, context);
+assert(stageQualifiedStreamName === 'TestStream_PROD'); // assuming default stage handling configuration
 
-// 6. To extract a stage from a qualified resource name
-const qualifiedResourceName = 'TestResource_QA';
-const stage3 = stages.extractStageFromQualifiedResourceName(qualifiedResourceName, context);
+// 5. To extract a stage from a qualified resource name
+const qualifiedTableName = 'TestTable_QA';
+const stage3 = stages.extractStageFromQualifiedResourceName(qualifiedTableName, context);
+assert(stage3 === 'qa'); // assuming default stage handling configuration
+
+// 6. To qualify an unqualified resource name with a stage
+const unqualifiedTableName = 'TestTable';
+const stageQualifiedResourceName = stages.toStageQualifiedResourceName(unqualifiedTableName, stage3, context);
+assert(stageQualifiedResourceName === 'TestTable_QA'); // assuming default stage handling configuration
 ```
 
 * To use the stream event utilities
@@ -290,6 +360,21 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.11
+- Changes to `type-defs.js` module:
+  - Added `StandardContext`, `StandardSettings`, `StandardOptions`, `CustomAware`, `CustomSettings`, `CustomOptions`
+    and `RegionStageAWSContextAware`
+- Added new `contexts.js` module with `configureStandardContext` and `configureCustomSettings` functions
+- Added new `api-lambdas.js` module with `failCallback` (and synonym `failCallbackForApiGateway`) functions and 
+  re-exported `configureStandardContext` function from `contexts.js` to simplify imports for API Gateway exposed Lambdas
+- Changes to `lambdas.js` module:
+  - Moved `failCallbackForApiGateway` function to new `api-lambdas.js` module
+- Changes to `stages.js` module:
+  - Added new `configureRegionStageAndAwsContext` convenience function to configure current region, resolved stage and
+    AWS context on the given context
+  - Improved JsDoc type definitions on all of the configuration functions
+- Added and improved existing examples in README.md
 
 ### 5.0.10
 - Fixed broken unit tests by changing incorrect imports of `node-uuid` to `uuid`

@@ -28,19 +28,27 @@ const EXTRACT_IN_CASE_SETTING = 'extractInCase';
  * @author Byron du Preez
  */
 module.exports = {
-  // Configuration
+  // Stage handling configuration
   isStageHandlingConfigured: isStageHandlingConfigured,
   configureStageHandling: configureStageHandling,
-  getDefaultStageHandlingSettings: getDefaultStageHandlingSettings,
   configureDefaultStageHandling: configureDefaultStageHandling,
+  getDefaultStageHandlingSettings: getDefaultStageHandlingSettings,
+
+  // Functions providing access to configured stage handling settings & functions by name
   getStageHandlingSetting: getStageHandlingSetting,
   getStageHandlingFunction: getStageHandlingFunction,
+
   // Stage resolution
   resolveStage: resolveStage,
+
+  // Stage resolution and configuration
   configureStage: configureStage,
+  configureRegionStageAndAwsContext: configureRegionStageAndAwsContext,
+
   // Stream name qualification
   toStageQualifiedStreamName: toStageQualifiedStreamName,
   extractStageFromQualifiedStreamName: extractStageFromQualifiedStreamName,
+
   // Resource name qualification
   toStageQualifiedResourceName: toStageQualifiedResourceName,
   extractStageFromQualifiedResourceName: extractStageFromQualifiedResourceName,
@@ -79,7 +87,8 @@ const Objects = require('core-functions/objects');
 
 const streamEvents = require('./stream-events');
 
-const Lambdas = require('./lambdas');
+const regions = require('./regions');
+const lambdas = require('./lambdas');
 
 const Arrays = require('core-functions/arrays');
 
@@ -101,16 +110,16 @@ function isStageHandlingConfigured(context) {
  * {@linkcode toStageQualifiedResourceName}, {@linkcode extractStageFromQualifiedStreamName} and other internal
  * functions will behave when invoked.
  *
- * @param {Object} context - the context onto which to configure stage handling settings
+ * @param {Object|StandardContext|StageHandling|Logging} context - the context onto which to configure stage handling settings
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
  * @param {StageHandlingSettings} settings - the new stage handling settings to use
- * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
+ * @param {Object|StandardSettings|undefined} [otherSettings] - optional other configuration settings to use
  * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
- * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
+ * @param {Object|StandardOptions|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured stage handling settings on the given context
- * @return {StageHandling} the context object configured with stage handling settings and logging functionality
+ * @return {StageHandling|StandardContext} the context object configured with stage handling settings and logging functionality
  */
 function configureStageHandlingWithSettings(context, settings, otherSettings, otherOptions, forceConfiguration) {
   // Configure all dependencies if not configured
@@ -146,16 +155,16 @@ function configureStageHandlingWithSettings(context, settings, otherSettings, ot
  *
  * @see {@linkcode configureStageHandling} for more information.
  *
- * @param {Object} context - the context onto which to configure the default stage handling settings
+ * @param {Object|StandardContext|StageHandling|Logging} context - the context onto which to configure the default stage handling settings
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
  * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override the default options
- * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
+ * @param {Object|StandardSettings|undefined} [otherSettings] - optional other configuration settings to use
  * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
- * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
+ * @param {Object|StandardOptions|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the default settings, which
  * will override any previously configured stage handling settings on the given context
- * @return {StageHandling} the context object configured with stage handling settings (either existing or defaults or
+ * @return {StageHandling|StandardContext} the context object configured with stage handling settings (either existing or defaults or
  * overrides) and logging functionality
  */
 function configureDefaultStageHandling(context, options, otherSettings, otherOptions, forceConfiguration) {
@@ -228,7 +237,7 @@ function getStageHandlingSetting(context, settingName) {
  * function); otherwise returns undefined.
  * @param {StageHandling} context - the context from which to fetch the function
  * @param {string} settingName - the name of the stage handling setting
- * @returns {*|undefined} the named function (if it's a function); otherwise undefined
+ * @returns {Function|undefined} the named function (if it's a function); otherwise undefined
  */
 function getStageHandlingFunction(context, settingName) {
   const fn = getStageHandlingSetting(context, settingName);
@@ -240,24 +249,25 @@ function getStageHandlingFunction(context, settingName) {
  * handling settings partially overridden by the given stage handling options (if any), but only if stage handling is
  * not already configured on the given context OR if forceConfiguration is true.
  *
- * @param {Object} context - the context to configure
+ * The distinction between options and settings is that options are meant to contain only non-function properties
+ * typically loaded from a JSON file, whereas settings are meant to be constructed in code and hence can contain both
+ * non-function properties and functions if needed.
+ *
+ * @param {Object|StandardContext|StageHandling|Logging} context - the context to configure
  * @param {StageHandlingSettings|undefined} [settings] - optional stage handling settings to use to configure stage handling
  * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override default options
- * @param {Object|undefined} [otherSettings] - optional other settings to use to configure dependencies
+ * @param {Object|StandardSettings|undefined} [otherSettings] - optional other settings to use to configure dependencies
  * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
- * @param {Object|undefined} [otherOptions] - optional other options to use to configure dependencies if corresponding settings are not provided
+ * @param {Object|StandardOptions|undefined} [otherOptions] - optional other options to use to configure dependencies if corresponding settings are not provided
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured stage handling settings on the given context
- * @return {StageHandling} the given context object configured with stage handling settings and logging functionality
+ * @return {StageHandling|StandardContext} the given context object configured with stage handling settings and logging functionality
  */
 function configureStageHandling(context, settings, options, otherSettings, otherOptions, forceConfiguration) {
   // Determine the stage handling settings to be used
   const settingsAvailable = settings && typeof settings === 'object';
   const optionsAvailable = options && typeof options === 'object';
-
-  // // First configure all stage handling dependencies
-  // configureDependencies(context, otherSettings, otherOptions, false);
 
   // Check if stage handling was already configured
   const stageHandlingWasConfigured = isStageHandlingConfigured(context);
@@ -281,14 +291,14 @@ function configureStageHandling(context, settings, options, otherSettings, other
  * Configures the given context with the stage handling dependencies (currently only logging) using the given other
  * settings and given other options.
  *
- * @param {Object} context - the context onto which to configure the given stage handling dependencies
- * @param {Object|undefined} [otherSettings] - optional other configuration settings to use
+ * @param {Object|StandardContext|Logging} context - the context onto which to configure the given stage handling dependencies
+ * @param {Object|StandardSettings|undefined} [otherSettings] - optional other configuration settings to use
  * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
- * @param {Object|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
+ * @param {Object|StandardOptions|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured dependencies' settings on the given context
- * @returns {Logging} the context object configured with stage handling dependencies (i.e. logging functionality)
+ * @returns {Logging|StandardContext} the context object configured with stage handling dependencies (i.e. logging functionality)
  */
 function configureDependencies(context, otherSettings, otherOptions, forceConfiguration) {
   // Configure logging if not configured yet
@@ -395,7 +405,7 @@ function resolveStage(event, awsContext, context) {
 
   if (convertAliasToStage && awsContext && isNotBlank(awsContext.functionVersion) && isNotBlank(awsContext.invokedFunctionArn)) {
     // Extract the alias
-    const alias = Lambdas.getAlias(awsContext);
+    const alias = lambdas.getAlias(awsContext);
 
     // If the alias is not blank, apply the convertAliasToStage function to it to derive a stage
     const stage = isNotBlank(alias) ? convertAliasToStage(trim(alias), event, awsContext, context) : '';
@@ -736,8 +746,8 @@ function toCase(value, asCase) {
  * @param {Object} awsContext - the AWS context, which was passed to your lambda
  * @param {boolean|undefined} [failFast] - an optional failFast flag, which is only used when a needed resolved stage is
  * blank and which determines whether the error will be raised (if failFast is explicitly true) or logged as a warning
- * @throws {Error} if failFast is explicitly true and a needed resolved stage is blank
  * @returns {StageAware} the given context with its existing stage or the resolved stage or an empty string stage.
+ * @throws {Error} if failFast is explicitly true and a needed resolved stage is blank
  */
 function configureStage(context, event, awsContext, failFast) {
   if (!context.stage) {
@@ -757,5 +767,31 @@ function configureStage(context, event, awsContext, failFast) {
       context.stage = stage;
     }
   }
+  return context;
+}
+
+/**
+ * Configures the given context with the current region, the resolved stage and the given AWS context. In order to
+ * resolve the stage, stage handling settings and logging must already be configured on the given context (see
+ * {@linkcode stages#configureStageHandling} for details).
+ * @param {StageHandling|RegionStageAWSContextAware} context - the context to configure
+ * @param {Object} event - the AWS event, which was passed to your lambda
+ * @param {Object} awsContext - the AWS context, which was passed to your lambda
+ * @return {RegionStageAWSContextAware} the given context configured with a region, stage and the given AWS context
+ * @throws {Error} if no region is available in the AWS_REGION environment variable or if the resolved stage is blank
+ */
+function configureRegionStageAndAwsContext(context, event, awsContext) {
+  // Configure context.awsContext with the given AWS context, if not already configured
+  if (!context.awsContext) {
+    context.awsContext = awsContext;
+  }
+  // Configure context.region to the AWS region, if it is not already configured
+  regions.configureRegion(context, true);
+
+  // Resolve the current stage (e.g. dev, qa, prod, ...) if possible and configure context.stage with it, if it is not
+  // already configured
+  configureStage(context, event, awsContext, true);
+
+  context.info(`Using region (${context.region}) and stage (${context.stage})`);
   return context;
 }
