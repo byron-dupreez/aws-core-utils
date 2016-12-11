@@ -6,6 +6,7 @@
   },
 
   "stageHandlingOptions": {
+    "envStageName": "STAGE",
     "streamNameStageSeparator": "_",
     "resourceNameStageSeparator": "_",
     "extractInCase": "lower",

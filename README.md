@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.11
+# aws-core-utils v5.0.12
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -99,7 +99,7 @@ const awsErrors = require('aws-core-utils/aws-errors');
 // ALTERNATIVELY if you need the logic of the configureStandardContext function for custom purposes
 const contexts = require('aws-core-utils/contexts');
 const context = {};
-const standardOptions = require('my-std-options.json'); // or whatever options you want to use to configure stage handling, logging, custom settings, ...
+const standardOptions = require('my-standard-options.json'); // or whatever options you want to use to configure stage handling, logging, custom settings, ...
 const standardSettings = {}; // or whatever settings you want to use to configure stage handling, logging, custom settings, ...
 contexts.configureStandardContext(context, standardSettings, standardOptions, awsEvent, awsContext);
 
@@ -232,7 +232,7 @@ stages.configureDefaultStageHandling(context);
 // ... OR using the default stage handling configuration and default logging configuration partially customised via stageHandlingOptions, otherSettings & otherOptions
 const stageHandlingOptions = require('aws-core-utils/stages-options.json').stageHandlingOptions; // example ONLY - use your own custom stage handling options if needed
 const otherSettings = undefined; // or to configure your own underlying logger use: const otherSettings = {loggingSettings: {underlyingLogger: myCustomLogger}};
-const otherOptions = require('aws-core-utils/test/std-options.json'); // example ONLY - use your own custom standard options file
+const otherOptions = require('aws-core-utils/test/sample-standard-options.json'); // example ONLY - use your own custom standard options file
 const forceConfiguration = false;
 stages.configureDefaultStageHandling(context, stageHandlingOptions, otherSettings, otherOptions, forceConfiguration); 
 
@@ -360,6 +360,9 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.12
+- Updated `logging-utils` dependency to version 3.0.9
 
 ### 5.0.11
 - Changes to `type-defs.js` module:

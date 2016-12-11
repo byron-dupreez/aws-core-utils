@@ -4,11 +4,15 @@ const test = require('tape');
 
 // Test subject
 const contexts = require('../contexts');
-const configureStandardContext = contexts.configureStandardContext;
-const configureCustomSettings = contexts.configureCustomSettings;
 
 const strings = require('core-functions/strings');
 const stringify = strings.stringify;
+
+const regions = require("../regions");
+const kinesisCache = require("../kinesis-cache");
+const dynamoDBDocClientCache = require("../dynamodb-doc-client-cache");
+
+const samples = require('./samples');
 
 function funcFactory(t, src) {
   function func(x) {
@@ -19,7 +23,7 @@ function funcFactory(t, src) {
   return func;
 }
 
-const standardOptions = require('./std-options.json');
+const standardOptions = require('./sample-standard-options.json');
 
 const standardSettings = {
   loggingSettings: {
@@ -45,13 +49,41 @@ const standardSettings = {
   }
 };
 
+function sampleAwsEvent(streamName, partitionKey, data, omitEventSourceARN) {
+  const region = process.env.AWS_REGION;
+  const eventSourceArn = omitEventSourceARN ? undefined : samples.sampleKinesisEventSourceArn(region, streamName);
+  return samples.sampleKinesisEventWithSampleRecord(partitionKey, data, eventSourceArn, region);
+}
+
+function sampleAwsContext(functionVersion, functionAlias) {
+  const region = process.env.AWS_REGION;
+  const functionName = 'sampleFunctionName';
+  const invokedFunctionArn = samples.sampleInvokedFunctionArn(region, functionName, functionAlias);
+  return samples.sampleAwsContext(functionName, functionVersion, invokedFunctionArn);
+}
+
+function setRegionStageAndDeleteCachedInstances(region, stage) {
+  // Set up region
+  process.env.AWS_REGION = region;
+  // Set up stage
+  process.env.STAGE = stage;
+  // Remove any cached entries before configuring
+  deleteCachedInstances();
+}
+
+function deleteCachedInstances() {
+  const region = regions.getRegion();
+  kinesisCache.deleteKinesis(region);
+  dynamoDBDocClientCache.deleteDynamoDBDocClient(region);
+}
+
 // -------------------------------------------------------------------------------------------------------------------
 // configureCustomSettings without settings or options
 // -------------------------------------------------------------------------------------------------------------------
 test('configureCustomSettings without settings or options', t => {
   let context = {};
 
-  configureCustomSettings(context, undefined, undefined);
+  contexts.configureCustomSettings(context, undefined, undefined);
 
   t.ok(context.custom, 'context.custom must be defined');
   t.deepEqual(context.custom, {}, 'context.custom must be empty object');
@@ -71,7 +103,7 @@ test('configureCustomSettings with only options', t => {
     optionOnly: 'option only'
   };
 
-  configureCustomSettings(context, undefined, options);
+  contexts.configureCustomSettings(context, undefined, options);
 
   t.ok(context.custom, 'context.custom must be defined');
   t.deepEqual(context.custom, options, 'context.custom must be deep equal to only options');
@@ -95,7 +127,7 @@ test('configureCustomSettings with only settings', t => {
     settingOnly: 'setting only',
   };
 
-  configureCustomSettings(context, settings, undefined);
+  contexts.configureCustomSettings(context, settings, undefined);
 
   t.ok(context.custom, 'context.custom must be defined');
   t.deepEqual(context.custom, settings, 'context.custom must be deep equal to only settings');
@@ -136,7 +168,7 @@ test('configureCustomSettings with both settings and options', t => {
     optionOnly: 'option only'
   };
 
-  configureCustomSettings(context, settings, options);
+  contexts.configureCustomSettings(context, settings, options);
 
   t.ok(context.custom, 'context.custom must be defined');
   t.deepEqual(context.custom, x, `context.custom must be deep equal to ${stringify(x)}`);
@@ -189,7 +221,7 @@ test('configureCustomSettings when existing context.custom settings', t => {
     optionOnly: 'option only'
   };
 
-  configureCustomSettings(context, settings, options);
+  contexts.configureCustomSettings(context, settings, options);
 
   t.ok(context.custom, 'context.custom must be defined');
   t.deepEqual(context.custom, x, `context.custom ${stringify(context.custom)} must be deep equal to ${stringify(x)}`);
@@ -208,7 +240,7 @@ test('configureCustomSettings when existing context.custom settings', t => {
 test('configureStandardContext without settings, options, event or awsContext', t => {
   let context = {};
 
-  configureStandardContext(context, undefined, undefined, undefined, undefined, false);
+  contexts.configureStandardContext(context, undefined, undefined, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
   t.equal(context.logLevel, 'info', 'context.logLevel must be "info"');
@@ -234,7 +266,7 @@ test('configureStandardContext without settings, options, event or awsContext', 
 test('configureStandardContext with options only', t => {
   let context = {};
 
-  configureStandardContext(context, undefined, standardOptions, undefined, undefined, false);
+  contexts.configureStandardContext(context, undefined, standardOptions, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
   t.equal(context.logLevel, 'trace', 'context.logLevel must be "trace"');
@@ -263,7 +295,7 @@ test('configureStandardContext with options only', t => {
 test('configureStandardContext with settings only', t => {
   let context = {};
 
-  configureStandardContext(context, standardSettings, undefined, undefined, undefined, false);
+  contexts.configureStandardContext(context, standardSettings, undefined, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
   t.equal(context.stageHandling.streamNameStageSeparator, '-', 'context.stageHandling must be "-"');
@@ -295,7 +327,7 @@ test('configureStandardContext with settings only', t => {
 test('configureStandardContext with settings and options only', t => {
   let context = {};
 
-  configureStandardContext(context, standardSettings, standardOptions, undefined, undefined, false);
+  contexts.configureStandardContext(context, standardSettings, standardOptions, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
   t.equal(context.stageHandling.streamNameStageSeparator, '-', 'context.stageHandling must be "-"');
@@ -317,6 +349,56 @@ test('configureStandardContext with settings and options only', t => {
   t.notOk(context.region, 'context.region must not be defined');
   t.notOk(context.stage, 'context.stage must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
+
+  t.end();
+});
+
+// -------------------------------------------------------------------------------------------------------------------
+// configureStandardContext with settings, options, event & awsContext
+// -------------------------------------------------------------------------------------------------------------------
+test('configureStandardContext with settings, options, event & awsContext', t => {
+  try {
+    setRegionStageAndDeleteCachedInstances('us-west-1', "dev99");
+    const expectedStage = 'DEV99';
+
+    let context = {};
+
+    // Generate a sample AWS event
+    const event = sampleAwsEvent('TestStream_DEV2', 'partitionKey', '', false);
+
+    // Generate a sample AWS context
+    const awsContext = sampleAwsContext('1.0.1', 'dev1');
+
+    contexts.configureStandardContext(context, standardSettings, standardOptions, event, awsContext, false);
+
+    t.ok(context.stageHandling, 'context.stageHandling must be defined');
+    t.equal(context.stageHandling.streamNameStageSeparator, '-', 'context.stageHandling must be "-"');
+    t.equal(context.logLevel, 'error', 'context.logLevel must be "error"');
+    t.ok(typeof context.error === 'function', 'context.error must be defined');
+    t.ok(typeof context.warn === 'function', 'context.warn must be defined');
+    t.ok(typeof context.info === 'function', 'context.info must be defined');
+    t.ok(typeof context.debug === 'function', 'context.debug must be defined');
+    t.ok(typeof context.trace === 'function', 'context.trace must be defined');
+    t.ok(context.custom, 'context.custom must be defined');
+    t.ok(context.custom.myCustomSetting1, 'context.custom.myCustomSetting1 must be defined');
+    t.equal(context.custom.myCustomSetting1, 'myCustomSetting1', 'context.custom.myCustomSetting1 must be myCustomSetting1');
+    t.ok(context.custom.myCustomSetting2, 'context.custom.myCustomSetting2 must be defined');
+    t.equal(context.custom.myCustomSetting2, 'myCustomOption2', 'context.custom.myCustomSetting2 must be myCustomOption2');
+    t.ok(context.custom.myCustomSetting3, 'context.custom.myCustomSetting3 must be defined');
+    t.equal(context.custom.myCustomSetting3, 'myCustomSetting3', 'context.custom.myCustomSetting3 must be myCustomSetting3');
+    t.ok(context.kinesis, 'context.kinesis must be defined');
+    t.ok(context.dynamoDBDocClient, 'context.dynamoDBDocClient must be defined');
+    t.ok(context.region, 'context.region must be defined');
+    t.equal(context.region, 'us-west-1', 'context.region must be us-west-1');
+    t.ok(context.stage, 'context.stage must be defined');
+    t.equal(context.stage, expectedStage, `context.stage must be ${expectedStage}`);
+    t.ok(context.awsContext, 'context.awsContext must be defined');
+    t.equal(context.awsContext, awsContext, 'context.awsContext must be given awsContext');
+
+  } finally {
+    process.env.AWS_REGION = undefined;
+    process.env.STAGE = undefined;
+  }
 
   t.end();
 });
