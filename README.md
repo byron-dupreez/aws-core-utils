@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.13
+# aws-core-utils v5.0.14
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -387,6 +387,9 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.14
+- Fixed defect in `generateHandlerFunction` function of `api-lambdas.js` module
 
 ### 5.0.13
 - Added new `generateHandlerFunction` function to `api-lambdas.js` module

@@ -116,7 +116,7 @@ function generateHandlerFunction(settings, options, fn, logRequestResponseAtLogL
     } catch (err) {
       (context.error ? context.error : console.error)(isNotBlank(failureMsg) ? failureMsg : 'Failed to execute Lambda', err.stack);
       // Fail the Lambda callback
-      failCallback(callback, err, awsContext, failureMsg, failureCode, allowedHttpStatusCodes);
+      failCallback(callback, err, awsContext, undefined, undefined, allowedHttpStatusCodes);
     }
   }
 
