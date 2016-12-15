@@ -1,6 +1,25 @@
 'use strict';
 
 /**
+ * @typedef {function(err: *, data: *)} Callback - a standard Node-style callback function
+ */
+
+/**
+ * @typedef {Object} AwsEvent - an AWS event passed to your Lambda handler function
+ */
+
+/**
+ * @typedef {Object} AwsContext - an AWS context passed to your Lambda handler function
+ * @property {uuid} awsRequestId - a unique identifier assigned to the current invocation of your handler function by AWS Lambda
+ * @property {function(): number} getRemainingTimeInMillis - gets the remaining time to execute in milliseconds
+ */
+
+/**
+ * @typedef {function(event: AwsEvent, awsContext: AwsContext, callback: Callback)} AwsLambdaHandlerFunction - a handler
+ * function for your AWS Lambda
+ */
+
+/**
  * @typedef {StageHandling} StandardContext - an object configured as a standard context with stage handling, logging,
  * custom settings, an optional Kinesis instance and an optional DynamoDB DocumentClient instance and OPTIONALLY also
  * with the current region, the resolved stage and the AWS context
@@ -9,7 +28,7 @@
  * @property {AWS.DynamoDB.DocumentClient|undefined} [dynamoDBDocClient] - an optional AWS.DynamoDB.DocumentClient instance to use
  * @property {string|undefined} [region] - the name of the AWS region to use
  * @property {string|undefined} [stage] - the configured stage to use
- * @property {Object|undefined} [awsContext] - the AWS context passed to your Lambda function on invocation
+ * @property {AwsContext|undefined} [awsContext] - the AWS context passed to your Lambda function on invocation
  */
 
 /**
@@ -59,7 +78,7 @@
  * @typedef {StageAware} RegionStageAWSContextAware - an object configured with the name of the current AWS region,
  * the AWS context and the resolved stage, which implies pre-configured stage handling settings and logging functionality
  * @property {string} region - the name of the AWS region to use
- * @property {Object} awsContext - the AWS context passed to your Lambda function on invocation
+ * @property {AwsContext} awsContext - the AWS context passed to your Lambda function on invocation
  */
 
 /**
@@ -82,32 +101,6 @@
 /**
  * @typedef {Logging} StageHandling - an object configured with stage handling and logging functionality
  * @property {StageHandlingSettings} stageHandling - an object configured with stage handling settings and functionality to use
- */
-
-/**
- * Stage handling settings are used for configuring and customising stage handling behaviour. The stage handling
- * settings determine how {@linkcode stages.js#resolveStage}, {@linkcode stages.js#toStageQualifiedStreamName},
- * {@linkcode stages.js#extractStageFromQualifiedStreamName}, {@linkcode stages.js#toStageQualifiedResourceName},
- * {@linkcode stages.js#extractStageFromQualifiedStreamName} and other internal functions will behave when invoked.
- *
- * They can also be used to pass any additional custom configuration options and settings that you need through to any
- * custom stage handling functions that you develop and configure via {@linkcode stages.js#configureStageHandling}.
- *
- * @typedef {StageHandlingOptions} StageHandlingSettings
- * @property {Function|undefined} [customToStage] - an optional custom function that accepts: an AWS event; an AWS context;
- * and a context, and somehow extracts a usable stage from the AWS event and/or AWS context.
- * @property {Function|undefined} [convertAliasToStage] - an optional function that accepts: an extracted alias (if any);
- * an AWS event; an AWS context; and a context, and converts the alias into a stage
- * @property {Function|undefined} [injectStageIntoStreamName] - an optional function that accepts: an unqualified stream
- * name; a stage; and a context, and returns a stage-qualified stream name (effectively the reverse function of the
- * extractStageFromStreamName function)
- * @property {Function|undefined} [extractStageFromStreamName] - an optional function that accepts: a stage-qualified
- * stream name; and a context, and extracts a stage from the stream name
- * @property {Function|undefined} [injectStageIntoResourceName] - an optional function that accepts: an unqualified
- * resource name; a stage; and a context, and returns a stage-qualified resource name (effectively the reverse function
- * of the extractStageFromResourceName function)
- * @property {Function|undefined} [extractStageFromResourceName] - an optional function that accepts: a stage-qualified
- * resource name; and a context, and extracts a stage from the resource name
  */
 
 /**
@@ -140,3 +133,56 @@
  * @property {string|undefined} [defaultStage] - an optional default stage to use during stage resolution as the second
  * last resort if all other attempts fail
  */
+
+/**
+ * Stage handling settings are used for configuring and customising stage handling behaviour. The stage handling
+ * settings determine how {@linkcode stages.js#resolveStage}, {@linkcode stages.js#toStageQualifiedStreamName},
+ * {@linkcode stages.js#extractStageFromQualifiedStreamName}, {@linkcode stages.js#toStageQualifiedResourceName},
+ * {@linkcode stages.js#extractStageFromQualifiedStreamName} and other internal functions will behave when invoked.
+ *
+ * They can also be used to pass any additional custom configuration options and settings that you need through to any
+ * custom stage handling functions that you develop and configure via {@linkcode stages.js#configureStageHandling}.
+ *
+ * @typedef {StageHandlingOptions} StageHandlingSettings
+ * @property {CustomToStage|undefined} [customToStage] - an optional custom to stage function
+ * @property {ConvertAliasToStage|undefined} [convertAliasToStage] - an optional function that converts an alias into a stage
+ * @property {InjectStageIntoStreamName|undefined} [injectStageIntoStreamName] - an optional function that returns a stage-qualified stream name
+ * @property {ExtractStageFromStreamName|undefined} [extractStageFromStreamName] - an optional function that extracts a stage from a stage-qualified stream name
+ * @property {InjectStageIntoResourceName|undefined} [injectStageIntoResourceName] - an optional function that returns a stage-qualified resource name
+ * @property {ExtractStageFromResourceName|undefined} [extractStageFromResourceName] - an optional function that extracts a stage from a stage-qualified resource name
+ */
+
+/**
+ * @typedef {function(event: AwsEvent, awsContext: AwsContext, context: StageHandling): (string|undefined)} CustomToStage -
+ * a custom function that accepts: an AWS event; an AWS context; and a context, and somehow extracts a usable stage from
+ * the AWS event and/or AWS context.
+ */
+
+/**
+ * @typedef {function(alias: string, event: AwsEvent, awsContext: AwsContext, context: StageHandling): (string|undefined)} ConvertAliasToStage -
+ * a function that accepts: an extracted AWS Lambda alias (if any); an AWS event; an AWS context; and a context, and
+ * converts the alias into a stage
+ */
+
+/**
+ * @typedef {function(unqualifiedStreamName: string, stage: string, context: StageHandling):(string|undefined)} InjectStageIntoStreamName -
+ * a function that accepts: an unqualified stream name; a stage; and a context, and returns a stage-qualified stream
+ * name (effectively the reverse function of the ExtractStageFromStreamNameFunction)
+ */
+
+/**
+ * @typedef {function(qualifiedStreamName: string, context: StageHandling):(string|undefined)} ExtractStageFromStreamName -
+ * a function that accepts: a stage-qualified stream name; and a context, and extracts a stage from the stream name
+ */
+
+/**
+ * @typedef {function(unqualifiedResourceName: string, stage: string, context: StageHandling):(string|undefined)} InjectStageIntoResourceName -
+ * a function that accepts: an unqualified resource name; a stage; and a context, and returns a stage-qualified resource
+ * name (effectively the reverse function of the ExtractStageFromResourceNameFunction)
+ */
+
+/**
+ * @typedef {function(qualifiedResourceName: string, context: StageHandling):(string|undefined)} ExtractStageFromResourceName -
+ * a function that accepts: a stage-qualified resource name; and a context, and extracts a stage from the resource name
+ */
+
