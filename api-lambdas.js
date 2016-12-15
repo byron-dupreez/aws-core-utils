@@ -1,6 +1,7 @@
 'use strict';
 
 const contexts = require('./contexts');
+require("core-functions/promises");
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
 const strings = require('core-functions/strings');
