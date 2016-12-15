@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.15
+# aws-core-utils v5.0.16
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -51,16 +51,16 @@ In Node.js:
 const apiLambdas = require('aws-core-utils/api-lambdas');
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
-
+const context = {}; // or your own pre-configured context
 const standardOptions = require('my-options.json'); // or whatever options you want to use to configure stage handling, logging, custom settings, ...
 const standardSettings = undefined; // or whatever settings object you want to use to configure stage handling, logging, custom settings, ...
 function exampleFunction(event, context) { /* ... */ } // implement and name your own function that does the actual work
 
 // Simplest approach - generate your API Gateway exposed Lambda's handler function
-module.exports.handler = apiLambdas.generateHandlerFunction(standardSettings, standardOptions, exampleFunction);
+module.exports.handler = apiLambdas.generateHandlerFunction(context, standardSettings, standardOptions, exampleFunction);
   
 // OR ... using all optional arguments to change the allowed HTTP status codes and customise logging in the handler function
-module.exports.handler = apiLambdas.generateHandlerFunction(standardSettings, standardOptions, exampleFunction, 'info', 
+module.exports.handler = apiLambdas.generateHandlerFunction(context, standardSettings, standardOptions, exampleFunction, 'info', 
   [400, 404, 500], 'Invalid request ...', 'Failed to ...', 'Finished ...');
 
 
@@ -387,6 +387,9 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.16
+- Added missing `context` as first argument to `generateHandlerFunction` function of `api-lambdas.js` module
 
 ### 5.0.15
 - Fixed missing require `core-functions/promises` issue in `api-lambdas.js` module

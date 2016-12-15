@@ -81,7 +81,8 @@ test('generateHandlerFunction simulating successful response', t => {
     const fn = sampleFunction(expectedResponse, undefined);
 
     // Create a sample AWS Lambda handler function
-    const handler = apiLambdas.generateHandlerFunction(undefined, require('./sample-standard-options.json'),
+    const context = {};
+    const handler = apiLambdas.generateHandlerFunction(context, undefined, require('./sample-standard-options.json'),
       fn, logging.INFO); //, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
@@ -129,7 +130,8 @@ test('generateHandlerFunction simulating invalid request', t => {
     const fn = sampleFunction(undefined, expectedError);
 
     // Create a sample AWS Lambda handler function
-    const handler = apiLambdas.generateHandlerFunction(undefined, require('./sample-standard-options.json'),
+    const context = {};
+    const handler = apiLambdas.generateHandlerFunction(context, undefined, require('./sample-standard-options.json'),
       fn, logging.DEBUG, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
@@ -186,7 +188,8 @@ test('generateHandlerFunction simulating failure', t => {
     const fn = sampleFunction(undefined, expectedError);
 
     // Create a sample AWS Lambda handler function
-    const handler = apiLambdas.generateHandlerFunction(undefined, require('./sample-standard-options.json'),
+    const context = {};
+    const handler = apiLambdas.generateHandlerFunction(context, undefined, require('./sample-standard-options.json'),
       fn, logging.TRACE, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes

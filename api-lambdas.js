@@ -58,6 +58,7 @@ function failCallback(lambdaCallback, error, awsContext, message, code, allowedH
 /**
  * Generates a handler function for your API Gateway exposed Lambda.
  *
+ * @param {Object|StandardContext} context - the context to configure as a standard context
  * @param {StandardSettings} settings - optional settings to use to configure a standard context
  * @param {StandardOptions} options - optional options to use to configure a standard context
  * @param {function(event: AwsEvent, context: StandardContext)} fn - your function that must accept the AWS event
@@ -73,7 +74,7 @@ function failCallback(lambdaCallback, error, awsContext, message, code, allowedH
  * @param {string|undefined} [successMsg] an optional message to log at info level on success
  * @returns {AwsLambdaHandlerFunction} a handler function for your API Gateway exposed Lambda
  */
-function generateHandlerFunction(settings, options, fn, logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg) {
+function generateHandlerFunction(context, settings, options, fn, logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg) {
   /**
    * An API-Gateway exposed Lambda handler function.
    * @param {Object} event - the AWS event passed to your handler
@@ -81,7 +82,6 @@ function generateHandlerFunction(settings, options, fn, logRequestResponseAtLogL
    * @param {Callback} callback - the AWS Lambda callback function passed to your handler
    */
   function handler(event, awsContext, callback) {
-    const context = {};
     try {
       // Configure the context as a standard context
       contexts.configureStandardContext(context, settings, options, event, awsContext, false);
