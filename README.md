@@ -49,27 +49,54 @@ In Node.js:
 * To use the `api-lambdas` module within your API Gateway exposed Lambda:
 ```js
 const apiLambdas = require('aws-core-utils/api-lambdas');
+const appErrors = require('core-functions/app-errors');
+const BadRequest = appErrors.BadRequest;
 
-// Example Lambda handler function
+const standardOptions = require('my-options.json'); // or whatever options you want to use to configure stage handling, logging, custom settings, ...
+const standardSettings = undefined; // or whatever settings object you want to use to configure stage handling, logging, custom settings, ...
+function exampleFunction(event, context) { /* ... */ } // implement and name your own function that does the actual work
+
+// Simplest approach - generate your API Gateway exposed Lambda's handler function
+module.exports.handler = apiLambdas.generateHandlerFunction(standardSettings, standardOptions, exampleFunction);
+  
+// OR ... using all optional arguments to change the allowed HTTP status codes and customise logging in the handler function
+module.exports.handler = apiLambdas.generateHandlerFunction(standardSettings, standardOptions, exampleFunction, 'info', 
+  [400, 404, 500], 'Invalid request ...', 'Failed to ...', 'Finished ...');
+
+
+// OR ... develop your own Lambda handler function (e.g. simplistic example below - see apiLamdas.generateHandlerFunction for a better version)
 module.exports.handler = (event, awsContext, callback) => {
   // Configure a standard context
   const context = {};
   try {
-    const standardOptions = require('my-options.json'); // or whatever options you want to use to configure stage handling, logging, custom settings, ...
-    const standardSettings = {}; // or whatever settings you want to use to configure stage handling, logging, custom settings, ...
     apiLambdas.configureStandardContext(context, standardSettings, standardOptions, event, awsContext);
     
     // ... execute Lambda specific code passing the context to your functions as needed
-    // executeMyLambdaFunction(arg1, arg2, ..., context);
+    exampleFunction(event, context)
+      .then(response => {
+        context.info('Finished ...');
+        callback(null, response);
+      })
+      .catch(err => {
+        // Fail your Lambda callback and map the error to one of the default set of HTTP status codes:
+        // i.e. [400, 401, 403, 404, 408, 429, 500, 502, 503, 504]
+        if (err instanceof BadRequest || appErrors.getHttpStatus(err) === 400) {
+          context.warn('Invalid request ...' + err.message);
+        } else {
+          context.error('Failed to ...', err.stack);
+        }
+        apiLambdas.failCallback(callback, err, awsContext);
+      });
   
   } catch (err) {
     // Fail your Lambda callback and map the error to one of the default set of HTTP status codes:
     // i.e. [400, 401, 403, 404, 408, 429, 500, 502, 503, 504]
+    context.error('Failed to ...', err.stack);
     apiLambdas.failCallback(callback, err, awsContext);
   }
 }
 
-// ALTERNATIVELY: 
+// ALTERNATIVES for failCallback: 
 // Fail your Lambda callback and map the error to one of a specified set of HTTP status codes
 apiLambdas.failCallback(callback, err, awsContext, 'My error msg', 'MyErrorCode', [400, 404, 418, 500, 508]);
 ```
