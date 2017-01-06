@@ -10,7 +10,8 @@ module.exports = {
   toValueFromAttributeValue: toValueFromAttributeValue,
   toValueFromAttributeTypeAndValue: toValueFromAttributeTypeAndValue,
   toNumber: toNumber,
-  toKeyValueStrings: toKeyValueStrings
+  toKeyValueStrings: toKeyValueStrings,
+  toKeyValuePairs: toKeyValuePairs
 };
 
 const Strings = require('core-functions/strings');
@@ -86,18 +87,25 @@ function toValueFromAttributeTypeAndValue(attributeType, value) {
 }
 
 /**
- * Attempts to convert the given value into a number.
+ * Attempts to convert the given value into a number, but keeps any integer string, which cannot be converted to a
+ * number without losing precision.
  * @param {string} value - the value to convert
- * @returns {number} the number parsed from the value
+ * @returns {number|string} the number parsed from the value
  */
 function toNumber(value) {
-  if (value && value.indexOf && value.indexOf('.') === -1) {
-    // No decimal point, so try for an integer first
-    const n = Number.parseInt(value);
-    // Check if had enough precision to hold given integer value
-    return `${n}` === value ? n : Number.parseFloat(value);
+  if (value) {
+    const typeOfValue = typeof value;
+    if (typeOfValue === 'string' && value.indexOf('.') === -1) {
+      // No decimal point, so try for an integer first
+      const n = Number.parseInt(value);
+      // Check if have enough precision to hold the given integer value ... otherwise rather keep the original string value
+      return `${n}` === value ? n : Number.isNaN(n) ? NaN : value;
+    } else if (typeOfValue === 'number') {
+      return value;
+    }
+    return Number.parseFloat(value);
   }
-  return Number.parseFloat(value);
+  return NaN;
 }
 
 /**
@@ -113,4 +121,17 @@ function toKeyValueStrings(dynamoDBMap) {
     const value = toValueFromAttributeValue(dynamoDBMap[key]);
     return `${key}:${stringify(value)}`;
   });
+}
+
+/**
+ * Extracts an array of key value pairs from the given DynamoDB map object. Each key value pair is represented as an
+ * array containing a key property name followed by its associated value.
+ * @param {Object} dynamoDBMap - a DynamoDB map object
+ * @returns {string[]} an array of key name and value pairs
+ */
+function toKeyValuePairs(dynamoDBMap) {
+  if (!dynamoDBMap || typeof dynamoDBMap !== 'object') {
+    return [];
+  }
+  return Object.getOwnPropertyNames(dynamoDBMap).map(key => [key, toValueFromAttributeValue(dynamoDBMap[key])]);
 }

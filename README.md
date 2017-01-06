@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.16
+# aws-core-utils v5.0.17
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -94,7 +94,7 @@ module.exports.handler = (event, awsContext, callback) => {
     context.error('Failed to ...', err.stack);
     apiLambdas.failCallback(callback, err, awsContext);
   }
-}
+};
 
 // ALTERNATIVES for failCallback: 
 // Fail your Lambda callback and map the error to one of a specified set of HTTP status codes
@@ -292,7 +292,7 @@ const stageHandlingSettings2 = {
     extractInCase: myExtractInCase,
 
     defaultStage: myDefaultStage, // or undefined
-}
+};
 stages.configureStageHandling(context, stageHandlingSettings2, undefined, otherSettings, otherOptions, forceConfiguration);
 
 // ... OR using custom stage handling settings and/or options and configuring dependencies at the same time
@@ -387,6 +387,14 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.17
+- Fixed critical module-scope defects in `generateHandlerFunction` function in `api-lambdas` module
+- Changes to `dynamodb-utils` module:
+  - Changed `toNumber` function to return the given string if a large integer number's precision cannot be preserved 
+  - Added `toKeyValuePairs` function
+- Updated `core-functions` dependency to version 2.0.14
+- Updated `logging-utils` dependency to version 3.0.12
 
 ### 5.0.16
 - Added missing `context` as first argument to `generateHandlerFunction` function of `api-lambdas.js` module

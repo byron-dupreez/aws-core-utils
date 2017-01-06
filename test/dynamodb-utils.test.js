@@ -14,6 +14,7 @@ const toValueFromAttributeValue = dynamoDBUtils.toValueFromAttributeValue;
 const toValueFromAttributeTypeAndValue = dynamoDBUtils.toValueFromAttributeTypeAndValue;
 const toNumber = dynamoDBUtils.toNumber;
 const toKeyValueStrings = dynamoDBUtils.toKeyValueStrings;
+const toKeyValuePairs = dynamoDBUtils.toKeyValuePairs;
 
 const strings = require('core-functions/strings');
 const stringify = strings.stringify;
@@ -24,9 +25,29 @@ test('toNumber', t => {
   // A simple float
   t.equal(toNumber('3.1415679'), 3.1415679, `toNumber('3.1415679') must be ${3.1415679}`);
 
+  // +/- 2 to the power of 53 should still give numbers, since have about 54 bits of precisions for integers
+  t.equal(toNumber('9007199254740992'), 9007199254740992, `toNumber('9007199254740992') must be ${9007199254740992}`);
+  t.equal(toNumber('-9007199254740992'), -9007199254740992, `toNumber('-9007199254740992') must be ${-9007199254740992}`);
+
+  // +/- 2 to the power of 54 is still ok
+  t.equal(toNumber('18014398509481984'), 18014398509481984, `toNumber('18014398509481984') must be ${18014398509481984}`);
+  t.equal(toNumber('-18014398509481984'), -18014398509481984, `toNumber('-18014398509481984') must be ${-18014398509481984}`);
+
+  // +/- 2 to the power of 55 is too big
+  t.notEqual(toNumber('36028797018963968'), 36028797018963968, `toNumber('36028797018963968') must NOT be ${36028797018963968}`);
+  t.notEqual(toNumber('-36028797018963968'), -36028797018963968, `toNumber('-36028797018963968') must NOT be ${-36028797018963968}`);
+  t.equal(toNumber('36028797018963968'), '36028797018963968', `toNumber('36028797018963968') must be '36028797018963968'`);
+  t.equal(toNumber('-36028797018963968'), '-36028797018963968', `toNumber('-36028797018963968') must be '-36028797018963968'`);
+
+  // +/- 2 to the power of 56 is too big
+  t.notEqual(toNumber('72057594037927936'), 72057594037927936, `toNumber('72057594037927936') must NOT be ${72057594037927936}`);
+  t.notEqual(toNumber('-72057594037927936'), -72057594037927936, `toNumber('-72057594037927936') must NOT be ${-72057594037927936}`);
+  t.equal(toNumber('72057594037927936'), '72057594037927936', `toNumber('72057594037927936') must be '72057594037927936'`);
+  t.equal(toNumber('-72057594037927936'), '-72057594037927936', `toNumber('-72057594037927936') must be '-72057594037927936'`);
+
   // Too big to hold in an integer
-  t.equal(toNumber('9223372036854775807'), 9223372036854775807, `toNumber('9223372036854775807') must be almost 9223372036854775807`);
-  t.equal(toNumber('9223372036854775807'), 9223372036854776000, `toNumber('9223372036854775807') must be actually ${9223372036854775807}`);
+  t.equal(toNumber('9223372036854775807'), '9223372036854775807', `toNumber('9223372036854775807') must be '9223372036854775807'`);
+  t.equal(toNumber('-9223372036854775808'), '-9223372036854775808', `toNumber('-9223372036854775808') must be '-9223372036854775808'`);
 
   t.ok(Number.isNaN(toNumber('')), `toNumber('') must be NaN`);
   t.ok(Number.isNaN(toNumber('abc')), `toNumber('abc') must be NaN`);
@@ -130,6 +151,20 @@ test('toKeyValueStrings', t => {
   t.deepEqual(toKeyValueStrings({id: {'N': '789'}, value: {'S': 'abc'}, bool: {'BOOL': true}}), ['id:789', 'value:abc', 'bool:true'], `toKeyValueStrings({id: {'N': '789'}, value: {'S': 'abc'}, bool: {'BOOL': true}}) => ${JSON.stringify(toKeyValueStrings({id: {'N': '789'}, value: {'S': 'abc'}, bool: {'BOOL': true}}))} must be ['id:789', 'value:abc', 'bool:true']`);
   t.deepEqual(toKeyValueStrings({id: {'N': '3.12456'}, x: {'M': { value: {'S': 'def'}}}}), ['id:3.12456', `x:${JSON.stringify({value: 'def'})}`], `toKeyValueStrings({id: {'N': '3.12456'}, x: {'M': { value: {'S': 'def'}}}}) => ${stringify(toKeyValueStrings({id: {'N': '3.12456'}, x: {'M': { value: {'S': 'def'}}}}))} must be ['id:3.12456', 'x:${JSON.stringify({value: 'def'})}']`);
   t.deepEqual(toKeyValueStrings({obj: {'M': {id: {'N': '1.01'}, value: {'S': 'xyz'}}}}), [`obj:${JSON.stringify({id: 1.01, value: 'xyz'})}`], `toKeyValueStrings({obj: {'M': {id: {'N': '1.01'}, value: {'S': 'xyz'}}}}) => ${stringify(toKeyValueStrings({obj: {'M': {id: {'N': '1.01'}, value: {'S': 'xyz'}}}}))} must be ['obj:${JSON.stringify({id: 1.01, value: 'xyz'})}']`);
+
+  t.end();
+});
+
+test('toKeyValuePairs', t => {
+  t.deepEqual(toKeyValuePairs(undefined), [], `toKeyValuePairs(undefined) => ${JSON.stringify(toKeyValuePairs(undefined))} must be []`);
+  t.deepEqual(toKeyValuePairs(null), [], `toKeyValuePairs(null) => ${JSON.stringify(toKeyValuePairs(null))} must be []`);
+  t.deepEqual(toKeyValuePairs({}), [], `toKeyValuePairs({}) => ${JSON.stringify(toKeyValuePairs({}))} must be []`);
+
+  t.deepEqual(toKeyValuePairs({id: {'N': '123'}}), [['id', 123]], `toKeyValuePairs({id: {'N': '123'}}) => ${JSON.stringify(toKeyValuePairs({id: {'N': '123'}}))} must be [['id',123]]`);
+  t.deepEqual(toKeyValuePairs({id: {'N': '456'}, value: {'S': '42'}}), [['id', 456], ['value', '42']], `toKeyValuePairs({id: {'N': '456'}, value: {'S': '42'}}) => ${JSON.stringify(toKeyValuePairs({id: {'N': '456'}, value: {'S': '42'}}))} must be [['id', 456], ['value', '42']]`);
+  t.deepEqual(toKeyValuePairs({id: {'N': '789'}, value: {'S': 'abc'}, bool: {'BOOL': true}}), [['id',789], ['value','abc'], ['bool',true]], `toKeyValuePairs({id: {'N': '789'}, value: {'S': 'abc'}, bool: {'BOOL': true}}) => ${JSON.stringify(toKeyValuePairs({id: {'N': '789'}, value: {'S': 'abc'}, bool: {'BOOL': true}}))} must be [['id',789], ['value','abc'], ['bool',true]]`);
+  t.deepEqual(toKeyValuePairs({id: {'N': '3.12456'}, x: {'M': { value: {'S': 'def'}}}}), [['id',3.12456], ['x', {value: 'def'}]], `toKeyValuePairs({id: {'N': '3.12456'}, x: {'M': { value: {'S': 'def'}}}}) => ${stringify(toKeyValuePairs({id: {'N': '3.12456'}, x: {'M': { value: {'S': 'def'}}}}))} must be [['id',3.12456], ['x', {value: 'def'}]]`);
+  t.deepEqual(toKeyValuePairs({obj: {'M': {id: {'N': '1.01'}, value: {'S': 'xyz'}}}}), [['obj', {id: 1.01, value: 'xyz'}]], `toKeyValuePairs({obj: {'M': {id: {'N': '1.01'}, value: {'S': 'xyz'}}}}) => ${stringify(toKeyValuePairs({obj: {'M': {id: {'N': '1.01'}, value: {'S': 'xyz'}}}}))} must be [['obj', {id: 1.01, value: 'xyz'}]]`);
 
   t.end();
 });

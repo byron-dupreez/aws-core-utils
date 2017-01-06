@@ -2,6 +2,7 @@
 
 const contexts = require('./contexts');
 require("core-functions/promises");
+const Objects = require('core-functions/objects');
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
 const strings = require('core-functions/strings');
@@ -58,11 +59,10 @@ function failCallback(lambdaCallback, error, awsContext, message, code, allowedH
 /**
  * Generates a handler function for your API Gateway exposed Lambda.
  *
- * @param {Object|StandardContext} context - the context to configure as a standard context
- * @param {StandardSettings} settings - optional settings to use to configure a standard context
- * @param {StandardOptions} options - optional options to use to configure a standard context
- * @param {function(event: AwsEvent, context: StandardContext)} fn - your function that must accept the AWS event
- * and a standard context and ideally return a Promise
+ * @param {Object|StandardContext|undefined} [moduleScopeContext] - an optional module-scope context from which to copy an initial standard context
+ * @param {StandardSettings|undefined} [moduleScopeSettings] - optional module-scoped settings from which to copy initial settings to use to configure a standard context
+ * @param {StandardOptions|undefined} [moduleScopeOptions] - optional module-scoped options from which to copy initial options to use to configure a standard context
+ * @param {function(event: AwsEvent, context: StandardContext)} fn - your function that must accept the AWS event and a standard context and ideally return a Promise
  * @param {string|undefined} [logRequestResponseAtLogLevel] - an optional log level at which to log the request (i.e.
  * AWS event) and response; if log level is undefined or invalid, then logs neither
  * @param {number[]|undefined} [allowedHttpStatusCodes] - an optional array of HTTP status codes that are allowed to be
@@ -74,7 +74,7 @@ function failCallback(lambdaCallback, error, awsContext, message, code, allowedH
  * @param {string|undefined} [successMsg] an optional message to log at info level on success
  * @returns {AwsLambdaHandlerFunction} a handler function for your API Gateway exposed Lambda
  */
-function generateHandlerFunction(context, settings, options, fn, logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg) {
+function generateHandlerFunction(moduleScopeContext, moduleScopeSettings, moduleScopeOptions, fn, logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg) {
   /**
    * An API-Gateway exposed Lambda handler function.
    * @param {Object} event - the AWS event passed to your handler
@@ -82,7 +82,11 @@ function generateHandlerFunction(context, settings, options, fn, logRequestRespo
    * @param {Callback} callback - the AWS Lambda callback function passed to your handler
    */
   function handler(event, awsContext, callback) {
+    const context = moduleScopeContext && typeof moduleScopeContext === 'object' ? Objects.copy(moduleScopeContext, true) : {};
     try {
+      const settings = moduleScopeSettings && typeof moduleScopeSettings === 'object' ? Objects.copy(moduleScopeSettings, true) : undefined;
+      const options = moduleScopeOptions && typeof moduleScopeOptions === 'object' ? Objects.copy(moduleScopeOptions, true) : undefined;
+
       // Configure the context as a standard context
       contexts.configureStandardContext(context, settings, options, event, awsContext, false);
 
