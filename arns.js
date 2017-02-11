@@ -80,17 +80,6 @@ function getArnAccountId(arn) {
 }
 
 /**
- * ARN resource-related components
- * @typedef {Object} ArnResources
- * @property {string} resourceType - a resource type (for DynamoDB stream eventSourceARN's this contains "table")
- * @property {string} resource - a resource name (for DynamoDB stream eventSourceARN's this is the table name)
- * @property {string} subResourceType - a sub-resource type (for DynamoDB stream eventSourceARN's this contains "stream")
- * @property {string} subResource - a sub-resource name (for DynamoDB stream eventSourceARN's this is the stream timestamp)
- * @property {string} aliasOrVersion - a Lambda alias or version number
- * @property {string[]} others - any other components after a Lambda alias or version number
- */
-
-/**
  * Attempts to extract any and all resource-related components from the given ARN (if defined) and returns them as
  * an object containing resourceType, resource, aliasOrVersion and others (just in case there were even more components
  * after aliasOrVersion).

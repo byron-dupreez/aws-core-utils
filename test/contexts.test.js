@@ -5,6 +5,9 @@ const test = require('tape');
 // Test subject
 const contexts = require('../contexts');
 
+const logging = require('logging-utils');
+const LogLevel = logging.LogLevel;
+
 const strings = require('core-functions/strings');
 const stringify = strings.stringify;
 
@@ -243,7 +246,7 @@ test('configureStandardContext without settings, options, event or awsContext', 
   contexts.configureStandardContext(context, undefined, undefined, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
-  t.equal(context.logLevel, 'info', 'context.logLevel must be "info"');
+  t.equal(context.logLevel, LogLevel.INFO, `context.logLevel must be "${LogLevel.INFO}"`);
   t.ok(typeof context.error === 'function', 'context.error must be defined');
   t.ok(typeof context.warn === 'function', 'context.warn must be defined');
   t.ok(typeof context.info === 'function', 'context.info must be defined');
@@ -269,7 +272,7 @@ test('configureStandardContext with options only', t => {
   contexts.configureStandardContext(context, undefined, standardOptions, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
-  t.equal(context.logLevel, 'trace', 'context.logLevel must be "trace"');
+  t.equal(context.logLevel, LogLevel.TRACE, `context.logLevel must be "${LogLevel.TRACE}"`);
   t.ok(typeof context.error === 'function', 'context.error must be defined');
   t.ok(typeof context.warn === 'function', 'context.warn must be defined');
   t.ok(typeof context.info === 'function', 'context.info must be defined');
@@ -299,7 +302,7 @@ test('configureStandardContext with settings only', t => {
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
   t.equal(context.stageHandling.streamNameStageSeparator, '-', 'context.stageHandling must be "-"');
-  t.equal(context.logLevel, 'error', 'context.logLevel must be "error"');
+  t.equal(context.logLevel, LogLevel.ERROR, `context.logLevel must be "${LogLevel.ERROR}"`);
   t.ok(typeof context.error === 'function', 'context.error must be defined');
   t.ok(typeof context.warn === 'function', 'context.warn must be defined');
   t.ok(typeof context.info === 'function', 'context.info must be defined');
@@ -331,7 +334,7 @@ test('configureStandardContext with settings and options only', t => {
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
   t.equal(context.stageHandling.streamNameStageSeparator, '-', 'context.stageHandling must be "-"');
-  t.equal(context.logLevel, 'error', 'context.logLevel must be "error"');
+  t.equal(context.logLevel, LogLevel.ERROR, `context.logLevel must be "${LogLevel.ERROR}"`);
   t.ok(typeof context.error === 'function', 'context.error must be defined');
   t.ok(typeof context.warn === 'function', 'context.warn must be defined');
   t.ok(typeof context.info === 'function', 'context.info must be defined');
@@ -373,7 +376,7 @@ test('configureStandardContext with settings, options, event & awsContext', t =>
 
     t.ok(context.stageHandling, 'context.stageHandling must be defined');
     t.equal(context.stageHandling.streamNameStageSeparator, '-', 'context.stageHandling must be "-"');
-    t.equal(context.logLevel, 'error', 'context.logLevel must be "error"');
+    t.equal(context.logLevel, LogLevel.ERROR, `context.logLevel must be "${LogLevel.ERROR}"`);
     t.ok(typeof context.error === 'function', 'context.error must be defined');
     t.ok(typeof context.warn === 'function', 'context.warn must be defined');
     t.ok(typeof context.info === 'function', 'context.info must be defined');

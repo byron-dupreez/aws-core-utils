@@ -53,7 +53,7 @@ module.exports = {
  */
 function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
   // If no options were specified, then use an empty object
-  const options = dynamoDBDocClientOptions ? Objects.copy(dynamoDBDocClientOptions, true) : {};
+  const options = dynamoDBDocClientOptions ? Objects.copy(dynamoDBDocClientOptions, {deep: true}) : {};
 
   // If no region was specified in the given dynamoDBDocClient options, then set it to the current region
   let region = options.region;

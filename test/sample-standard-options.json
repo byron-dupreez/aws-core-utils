@@ -1,7 +1,8 @@
 {
   "loggingOptions": {
-    "logLevel": "trace",
+    "logLevel": "TRACE",
     "useLevelPrefixes": true,
+    "envLogLevelName": "LOG_LEVEL",
     "useConsoleTrace": false
   },
 

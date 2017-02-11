@@ -23,20 +23,26 @@ const resolveStage = stages.resolveStage;
 // Stream name qualification
 // const toStageQualifiedStreamName = stages.toStageQualifiedStreamName;
 // const extractStageFromQualifiedStreamName = stages.extractStageFromQualifiedStreamName;
+// const extractNameAndStageFromQualifiedStreamName = stages.extractNameAndStageFromQualifiedStreamName;
 // Resource name qualification
 // const toStageQualifiedResourceName = stages.toStageQualifiedResourceName;
-// const extractStageFromQualifiedResourceName = stages.extractStageFromQualifiedResourceName;
+// const extractNameAndStageFromQualifiedResourceName = stages.extractNameAndStageFromQualifiedResourceName;
 
 // DEFAULTS - default implementations
 // ==================================
 // Alias conversion
 const convertAliasToStage = stages.DEFAULTS.convertAliasToStage;
+
 // Stage-suffixed stream name qualification
 const toStageSuffixedStreamName = stages.DEFAULTS.toStageSuffixedStreamName;
 const extractStageFromSuffixedStreamName = stages.DEFAULTS.extractStageFromSuffixedStreamName;
+const extractNameAndStageFromSuffixedStreamName = stages.DEFAULTS.extractNameAndStageFromSuffixedStreamName;
+
 // Stage-suffixed resource name qualification
 const toStageSuffixedResourceName = stages.DEFAULTS.toStageSuffixedResourceName;
 const extractStageFromSuffixedResourceName = stages.DEFAULTS.extractStageFromSuffixedResourceName;
+const extractNameAndStageFromSuffixedResourceName = stages.DEFAULTS.extractNameAndStageFromSuffixedResourceName;
+
 // Generic utils
 // const toStageSuffixedName = stages.DEFAULTS.toStageSuffixedName;
 const toCase = stages.DEFAULTS.toCase;
@@ -79,6 +85,10 @@ function checkExtractStageFromSuffixedStreamName(t, streamName, context, expecte
   t.equal(extractStageFromSuffixedStreamName(streamName, context), expected, `'${streamName}' must be '${expected}'`);
 }
 
+function checkExtractNameAndStageFromSuffixedStreamName(t, streamName, context, expected) {
+  t.deepEqual(extractNameAndStageFromSuffixedStreamName(streamName, context), expected, `'${streamName}' must be '${stringify(expected)}'`);
+}
+
 function checkResolveStageFromKinesisEvent(t, eventStage, functionVersion, functionAlias, streamName, context, expected) {
   // Create an AWS context
   const invokedFunctionArn = sampleInvokedFunctionArn('invokedFunctionArnRegion', 'functionName', functionAlias);
@@ -98,7 +108,7 @@ function checkResolveStageFromKinesisEvent(t, eventStage, functionVersion, funct
 }
 
 function checkResolveStageFromDynamoDBEvent(t, eventStage, functionVersion, functionAlias, tableName, context, expected) {
-  logging.configureDefaultLogging(context, {logLevel: logging.TRACE}, undefined, true);
+  logging.configureLogging(context, {logLevel: logging.TRACE}, undefined, true);
 
   // Create an AWS context
   const invokedFunctionArn = sampleInvokedFunctionArn('invokedFunctionArnRegion', 'functionName', functionAlias);
@@ -118,10 +128,10 @@ function checkResolveStageFromDynamoDBEvent(t, eventStage, functionVersion, func
   t.equal(actual, expected, `resolve = stages.alias(${functionAlias}) table(${tableName}) context(${context.stage}, ${context.defaultStage}) -> '${actual}' must be '${expected}'`);
 }
 
-function checkConfigureStageHandlingWithSettings(t, context, envStageName, customToStage,
-  convertAliasToStage, injectStageIntoStreamName, extractStageFromStreamName,
-  streamNameStageSeparator, injectStageIntoResourceName, extractStageFromResourceName,
-  resourceNameStageSeparator, injectInCase, extractInCase, defaultStage, forceConfiguration) {
+function checkConfigureStageHandlingWithSettings(t, context, envStageName, customToStage, convertAliasToStage,
+  injectStageIntoStreamName, extractStageFromStreamName, extractNameAndStageFromStreamName, streamNameStageSeparator,
+  injectStageIntoResourceName, extractStageFromResourceName, extractNameAndStageFromResourceName, resourceNameStageSeparator,
+  injectInCase, extractInCase, defaultStage, forceConfiguration) {
 
   const before = context.stageHandling;
 
@@ -132,10 +142,12 @@ function checkConfigureStageHandlingWithSettings(t, context, envStageName, custo
 
   const injectStageIntoStreamNameBefore = before ? before.injectStageIntoStreamName : undefined;
   const extractStageFromStreamNameBefore = before ? before.extractStageFromStreamName : undefined;
+  const extractNameAndStageFromStreamNameBefore = before ? before.extractNameAndStageFromStreamName : undefined;
   const streamNameStageSeparatorBefore = before ? before.streamNameStageSeparator : undefined;
 
   const injectStageIntoResourceNameBefore = before ? before.injectStageIntoResourceName : undefined;
   const extractStageFromResourceNameBefore = before ? before.extractStageFromResourceName : undefined;
+  const extractNameAndStageFromResourceNameBefore = before ? before.extractNameAndStageFromResourceName : undefined;
   const resourceNameStageSeparatorBefore = before ? before.resourceNameStageSeparator : undefined;
 
   const injectInCaseBefore = before ? before.injectInCase : undefined;
@@ -153,10 +165,12 @@ function checkConfigureStageHandlingWithSettings(t, context, envStageName, custo
 
     injectStageIntoStreamName: injectStageIntoStreamName,
     extractStageFromStreamName: extractStageFromStreamName,
+    extractNameAndStageFromStreamName: extractNameAndStageFromStreamName,
     streamNameStageSeparator: streamNameStageSeparator,
 
     injectStageIntoResourceName: injectStageIntoResourceName,
     extractStageFromResourceName: extractStageFromResourceName,
+    extractNameAndStageFromResourceName: extractNameAndStageFromResourceName,
     resourceNameStageSeparator: resourceNameStageSeparator,
 
     injectInCase: injectInCase,
@@ -175,10 +189,12 @@ function checkConfigureStageHandlingWithSettings(t, context, envStageName, custo
 
   const injectStageIntoStreamNameAfter = after ? after.injectStageIntoStreamName : undefined;
   const extractStageFromStreamNameAfter = after ? after.extractStageFromStreamName : undefined;
+  const extractNameAndStageFromStreamNameAfter = after ? after.extractNameAndStageFromStreamName : undefined;
   const streamNameStageSeparatorAfter = after ? after.streamNameStageSeparator : undefined;
 
   const injectStageIntoResourceNameAfter = after ? after.injectStageIntoResourceName : undefined;
   const extractStageFromResourceNameAfter = after ? after.extractStageFromResourceName : undefined;
+  const extractNameAndStageFromResourceNameAfter = after ? after.extractNameAndStageFromResourceName : undefined;
   const resourceNameStageSeparatorAfter = after ? after.resourceNameStageSeparator : undefined;
 
   const injectInCaseAfter = after ? after.injectInCase : undefined;
@@ -196,10 +212,12 @@ function checkConfigureStageHandlingWithSettings(t, context, envStageName, custo
 
   const injectStageIntoStreamNameExpected = mustChange ? injectStageIntoStreamName : injectStageIntoStreamNameBefore;
   const extractStageFromStreamNameExpected = mustChange ? extractStageFromStreamName : extractStageFromStreamNameBefore;
+  const extractNameAndStageFromStreamNameExpected = mustChange ? extractNameAndStageFromStreamName : extractNameAndStageFromStreamNameBefore;
   const streamNameStageSeparatorExpected = mustChange ? streamNameStageSeparator : streamNameStageSeparatorBefore;
 
   const injectStageIntoResourceNameExpected = mustChange ? injectStageIntoResourceName : injectStageIntoResourceNameBefore;
   const extractStageFromResourceNameExpected = mustChange ? extractStageFromResourceName : extractStageFromResourceNameBefore;
+  const extractNameAndStageFromResourceNameExpected = mustChange ? extractNameAndStageFromResourceName : extractNameAndStageFromResourceNameBefore;
   const resourceNameStageSeparatorExpected = mustChange ? resourceNameStageSeparator : resourceNameStageSeparatorBefore;
 
   const injectInCaseExpected = mustChange ? injectInCase : injectInCaseBefore;
@@ -213,10 +231,12 @@ function checkConfigureStageHandlingWithSettings(t, context, envStageName, custo
 
   t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoStreamName'), injectStageIntoStreamNameExpected, `injectStageIntoStreamName (${stringify(injectStageIntoStreamNameAfter)}) must be ${stringify(injectStageIntoStreamNameExpected)}`);
   t.deepEqual(getStageHandlingSetting(context, 'extractStageFromStreamName'), extractStageFromStreamNameExpected, `extractStageFromStreamName (${stringify(extractStageFromStreamNameAfter)}) must be ${stringify(extractStageFromStreamNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractNameAndStageFromStreamName'), extractNameAndStageFromStreamNameExpected, `extractNameAndStageFromStreamName (${stringify(extractNameAndStageFromStreamNameAfter)}) must be ${stringify(extractNameAndStageFromStreamNameExpected)}`);
   t.equal(getStageHandlingSetting(context, 'streamNameStageSeparator'), streamNameStageSeparatorExpected, `streamNameStageSeparator (${stringify(streamNameStageSeparatorAfter)}) must be ${stringify(streamNameStageSeparatorExpected)}`);
 
   t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoResourceName'), injectStageIntoResourceNameExpected, `injectStageIntoResourceName (${stringify(injectStageIntoResourceNameAfter)}) must be ${stringify(injectStageIntoResourceNameExpected)}`);
   t.deepEqual(getStageHandlingSetting(context, 'extractStageFromResourceName'), extractStageFromResourceNameExpected, `extractStageFromResourceName (${stringify(extractStageFromResourceNameAfter)}) must be ${stringify(extractStageFromResourceNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractNameAndStageFromResourceName'), extractNameAndStageFromResourceNameExpected, `extractNameAndStageFromResourceName (${stringify(extractNameAndStageFromResourceNameAfter)}) must be ${stringify(extractNameAndStageFromResourceNameExpected)}`);
   t.equal(getStageHandlingSetting(context, 'resourceNameStageSeparator'), resourceNameStageSeparatorExpected, `resourceNameStageSeparator (${stringify(resourceNameStageSeparatorAfter)}) must be ${stringify(resourceNameStageSeparatorExpected)}`);
 
   t.equal(getStageHandlingSetting(context, 'injectInCase'), injectInCaseExpected, `injectInCase (${stringify(injectInCaseAfter)}) must be ${stringify(injectInCaseExpected)}`);
@@ -239,10 +259,12 @@ function checkConfigureDefaultStageHandling(t, context, forceConfiguration) {
 
   const injectStageIntoStreamNameBefore = before ? before.injectStageIntoStreamName : undefined;
   const extractStageFromStreamNameBefore = before ? before.extractStageFromStreamName : undefined;
+  const extractNameAndStageFromStreamNameBefore = before ? before.extractNameAndStageFromStreamName : undefined;
   const streamNameStageSeparatorBefore = before ? before.streamNameStageSeparator : undefined;
 
   const injectStageIntoResourceNameBefore = before ? before.injectStageIntoResourceName : undefined;
   const extractStageFromResourceNameBefore = before ? before.extractStageFromResourceName : undefined;
+  const extractNameAndStageFromResourceNameBefore = before ? before.extractNameAndStageFromResourceName : undefined;
   const resourceNameStageSeparatorBefore = before ? before.resourceNameStageSeparator : undefined;
 
   const injectInCaseBefore = before ? before.injectInCase : undefined;
@@ -263,10 +285,12 @@ function checkConfigureDefaultStageHandling(t, context, forceConfiguration) {
 
   const injectStageIntoStreamNameAfter = after ? after.injectStageIntoStreamName : undefined;
   const extractStageFromStreamNameAfter = after ? after.extractStageFromStreamName : undefined;
+  const extractNameAndStageFromStreamNameAfter = after ? after.extractNameAndStageFromStreamName : undefined;
   const streamNameStageSeparatorAfter = after ? after.streamNameStageSeparator : undefined;
 
   const injectStageIntoResourceNameAfter = after ? after.injectStageIntoResourceName : undefined;
   const extractStageFromResourceNameAfter = after ? after.extractStageFromResourceName : undefined;
+  const extractNameAndStageFromResourceNameAfter = after ? after.extractNameAndStageFromResourceName : undefined;
   const resourceNameStageSeparatorAfter = after ? after.resourceNameStageSeparator : undefined;
 
   const injectInCaseAfter = after ? after.injectInCase : undefined;
@@ -283,10 +307,12 @@ function checkConfigureDefaultStageHandling(t, context, forceConfiguration) {
 
   const injectStageIntoStreamNameExpected = mustChange ? toStageSuffixedStreamName : injectStageIntoStreamNameBefore;
   const extractStageFromStreamNameExpected = mustChange ? extractStageFromSuffixedStreamName : extractStageFromStreamNameBefore;
+  const extractNameAndStageFromStreamNameExpected = mustChange ? extractNameAndStageFromSuffixedStreamName : extractNameAndStageFromStreamNameBefore;
   const streamNameStageSeparatorExpected = mustChange ? '_' : streamNameStageSeparatorBefore;
 
   const injectStageIntoResourceNameExpected = mustChange ? toStageSuffixedResourceName : injectStageIntoResourceNameBefore;
   const extractStageFromResourceNameExpected = mustChange ? extractStageFromSuffixedResourceName : extractStageFromResourceNameBefore;
+  const extractNameAndStageFromResourceNameExpected = mustChange ? extractNameAndStageFromSuffixedResourceName : extractNameAndStageFromResourceNameBefore;
   const resourceNameStageSeparatorExpected = mustChange ? '_' : resourceNameStageSeparatorBefore;
 
   const injectInCaseExpected = mustChange ? 'upper' : injectInCaseBefore;
@@ -300,10 +326,12 @@ function checkConfigureDefaultStageHandling(t, context, forceConfiguration) {
 
   t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoStreamName'), injectStageIntoStreamNameExpected, `injectStageIntoStreamName (${stringify(injectStageIntoStreamNameAfter)}) must be ${stringify(injectStageIntoStreamNameExpected)}`);
   t.deepEqual(getStageHandlingSetting(context, 'extractStageFromStreamName'), extractStageFromStreamNameExpected, `extractStageFromStreamName (${stringify(extractStageFromStreamNameAfter)}) must be ${stringify(extractStageFromStreamNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractNameAndStageFromStreamName'), extractNameAndStageFromStreamNameExpected, `extractNameAndStageFromStreamName (${stringify(extractNameAndStageFromStreamNameAfter)}) must be ${stringify(extractNameAndStageFromStreamNameExpected)}`);
   t.equal(getStageHandlingSetting(context, 'streamNameStageSeparator'), streamNameStageSeparatorExpected, `streamNameStageSeparator (${stringify(streamNameStageSeparatorAfter)}) must be ${stringify(streamNameStageSeparatorExpected)}`);
 
   t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoResourceName'), injectStageIntoResourceNameExpected, `injectStageIntoResourceName (${stringify(injectStageIntoResourceNameAfter)}) must be ${stringify(injectStageIntoResourceNameExpected)}`);
   t.deepEqual(getStageHandlingSetting(context, 'extractStageFromResourceName'), extractStageFromResourceNameExpected, `extractStageFromResourceName (${stringify(extractStageFromResourceNameAfter)}) must be ${stringify(extractStageFromResourceNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractNameAndStageFromResourceName'), extractNameAndStageFromResourceNameExpected, `extractNameAndStageFromResourceName (${stringify(extractNameAndStageFromResourceNameAfter)}) must be ${stringify(extractNameAndStageFromResourceNameExpected)}`);
   t.equal(getStageHandlingSetting(context, 'resourceNameStageSeparator'), resourceNameStageSeparatorExpected, `resourceNameStageSeparator (${stringify(resourceNameStageSeparatorAfter)}) must be ${stringify(resourceNameStageSeparatorExpected)}`);
 
   t.equal(getStageHandlingSetting(context, 'injectInCase'), injectInCaseExpected, `injectInCase (${stringify(injectInCaseAfter)}) must be ${stringify(injectInCaseExpected)}`);
@@ -326,10 +354,12 @@ function checkConfigureStageHandlingAndDependencies(t, context, settings, option
 
   const injectStageIntoStreamNameBefore = before ? before.injectStageIntoStreamName : undefined;
   const extractStageFromStreamNameBefore = before ? before.extractStageFromStreamName : undefined;
+  const extractNameAndStageFromStreamNameBefore = before ? before.extractNameAndStageFromStreamName : undefined;
   const streamNameStageSeparatorBefore = before ? before.streamNameStageSeparator : undefined;
 
   const injectStageIntoResourceNameBefore = before ? before.injectStageIntoResourceName : undefined;
   const extractStageFromResourceNameBefore = before ? before.extractStageFromResourceName : undefined;
+  const extractNameAndStageFromResourceNameBefore = before ? before.extractNameAndStageFromResourceName : undefined;
   const resourceNameStageSeparatorBefore = before ? before.resourceNameStageSeparator : undefined;
 
   const injectInCaseBefore = before ? before.injectInCase : undefined;
@@ -349,10 +379,12 @@ function checkConfigureStageHandlingAndDependencies(t, context, settings, option
 
   const injectStageIntoStreamNameAfter = after ? after.injectStageIntoStreamName : undefined;
   const extractStageFromStreamNameAfter = after ? after.extractStageFromStreamName : undefined;
+  const extractNameAndStageFromStreamNameAfter = after ? after.extractNameAndStageFromStreamName : undefined;
   const streamNameStageSeparatorAfter = after ? after.streamNameStageSeparator : undefined;
 
   const injectStageIntoResourceNameAfter = after ? after.injectStageIntoResourceName : undefined;
   const extractStageFromResourceNameAfter = after ? after.extractStageFromResourceName : undefined;
+  const extractNameAndStageFromResourceNameAfter = after ? after.extractNameAndStageFromResourceName : undefined;
   const resourceNameStageSeparatorAfter = after ? after.resourceNameStageSeparator : undefined;
 
   const injectInCaseAfter = after ? after.injectInCase : undefined;
@@ -373,10 +405,12 @@ function checkConfigureStageHandlingAndDependencies(t, context, settings, option
 
   const injectStageIntoStreamNameExpected = mustChange ? settings ? settings.injectStageIntoStreamName : defaults.injectStageIntoStreamName : injectStageIntoStreamNameBefore;
   const extractStageFromStreamNameExpected = mustChange ? settings ? settings.extractStageFromStreamName : defaults.extractStageFromStreamName : extractStageFromStreamNameBefore;
+  const extractNameAndStageFromStreamNameExpected = mustChange ? settings ? settings.extractNameAndStageFromStreamName : defaults.extractNameAndStageFromStreamName : extractNameAndStageFromStreamNameBefore;
   const streamNameStageSeparatorExpected = mustChange ? settings ? settings.streamNameStageSeparator : defaults.streamNameStageSeparator : streamNameStageSeparatorBefore;
 
   const injectStageIntoResourceNameExpected = mustChange ? settings ? settings.injectStageIntoResourceName : defaults.injectStageIntoResourceName : injectStageIntoResourceNameBefore;
   const extractStageFromResourceNameExpected = mustChange ? settings ? settings.extractStageFromResourceName : defaults.extractStageFromResourceName : extractStageFromResourceNameBefore;
+  const extractNameAndStageFromResourceNameExpected = mustChange ? settings ? settings.extractNameAndStageFromResourceName : defaults.extractNameAndStageFromResourceName : extractNameAndStageFromResourceNameBefore;
   const resourceNameStageSeparatorExpected = mustChange ? settings ? settings.resourceNameStageSeparator : defaults.resourceNameStageSeparator : resourceNameStageSeparatorBefore;
 
   const injectInCaseExpected = mustChange ? settings ? settings.injectInCase : defaults.injectInCase : injectInCaseBefore;
@@ -390,10 +424,12 @@ function checkConfigureStageHandlingAndDependencies(t, context, settings, option
 
   t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoStreamName'), injectStageIntoStreamNameExpected, `injectStageIntoStreamName (${stringify(injectStageIntoStreamNameAfter)}) must be ${stringify(injectStageIntoStreamNameExpected)}`);
   t.deepEqual(getStageHandlingSetting(context, 'extractStageFromStreamName'), extractStageFromStreamNameExpected, `extractStageFromStreamName (${stringify(extractStageFromStreamNameAfter)}) must be ${stringify(extractStageFromStreamNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractNameAndStageFromStreamName'), extractNameAndStageFromStreamNameExpected, `extractNameAndStageFromStreamName (${stringify(extractNameAndStageFromStreamNameAfter)}) must be ${stringify(extractNameAndStageFromStreamNameExpected)}`);
   t.equal(getStageHandlingSetting(context, 'streamNameStageSeparator'), streamNameStageSeparatorExpected, `streamNameStageSeparator (${stringify(streamNameStageSeparatorAfter)}) must be ${stringify(streamNameStageSeparatorExpected)}`);
 
   t.deepEqual(getStageHandlingSetting(context, 'injectStageIntoResourceName'), injectStageIntoResourceNameExpected, `injectStageIntoResourceName (${stringify(injectStageIntoResourceNameAfter)}) must be ${stringify(injectStageIntoResourceNameExpected)}`);
   t.deepEqual(getStageHandlingSetting(context, 'extractStageFromResourceName'), extractStageFromResourceNameExpected, `extractStageFromResourceName (${stringify(extractStageFromResourceNameAfter)}) must be ${stringify(extractStageFromResourceNameExpected)}`);
+  t.deepEqual(getStageHandlingSetting(context, 'extractNameAndStageFromResourceName'), extractNameAndStageFromResourceNameExpected, `extractNameAndStageFromResourceName (${stringify(extractNameAndStageFromResourceNameAfter)}) must be ${stringify(extractNameAndStageFromResourceNameExpected)}`);
   t.equal(getStageHandlingSetting(context, 'resourceNameStageSeparator'), resourceNameStageSeparatorExpected, `resourceNameStageSeparator (${stringify(resourceNameStageSeparatorAfter)}) must be ${stringify(resourceNameStageSeparatorExpected)}`);
 
   t.equal(getStageHandlingSetting(context, 'injectInCase'), injectInCaseExpected, `injectInCase (${stringify(injectInCaseAfter)}) must be ${stringify(injectInCaseExpected)}`);
@@ -415,13 +451,13 @@ test('configureStageHandlingWithSettings with all undefined', t => {
   t.notOk(isStageHandlingConfigured(context), `stage handling settings must not be configured yet`);
 
   // Configure it
-  checkConfigureStageHandlingWithSettings(t, context, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, false);
+  checkConfigureStageHandlingWithSettings(t, context, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, false);
 
   // Must NOT be able to reconfigure it with force false
-  checkConfigureStageHandlingWithSettings(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName', 'extractStageFromResourceName', 'resourceNameStageSeparator', 'injectInCase', 'extractInCase', 'defaultStage', false);
+  checkConfigureStageHandlingWithSettings(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'extractNameAndStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName', 'extractStageFromResourceName', 'extractNameAndStageFromResourceName', 'resourceNameStageSeparator', 'injectInCase', 'extractInCase', 'defaultStage', false);
 
   // Must be able to reconfigure it with force true
-  checkConfigureStageHandlingWithSettings(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator, injectInCase', 'extractInCase', 'defaultStage', true);
+  checkConfigureStageHandlingWithSettings(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'extractNameAndStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName', 'extractStageFromResourceName', 'extractNameAndStageFromResourceName', 'resourceNameStageSeparator', 'injectInCase', 'extractInCase', 'defaultStage', true);
 
   t.end();
 });
@@ -438,7 +474,7 @@ test('configureDefaultStageHandling with all undefined', t => {
   checkConfigureDefaultStageHandling(t, context, false);
 
   // Overwrite it with arbitrary values to be able to check if defaults are NOT re-instated in next step
-  checkConfigureStageHandlingWithSettings(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName, extractStageFromResourceName, resourceNameStageSeparator, injectInCase', 'extractInCase', 'defaultStage', true);
+  checkConfigureStageHandlingWithSettings(t, context, 'envStage', 'customToStage', 'convertAliasToStage', 'injectStageIntoStreamName', 'extractStageFromStreamName', 'extractNameAndStageFromStreamName', 'streamNameStageSeparator', 'injectStageIntoResourceName', 'extractStageFromResourceName', 'extractNameAndStageFromResourceName', 'resourceNameStageSeparator', 'injectInCase', 'extractInCase', 'defaultStage', true);
 
   // Must NOT be able to reconfigure it with force false
   checkConfigureDefaultStageHandling(t, context, false);
@@ -466,10 +502,12 @@ test('configureStageHandling with settings', t => {
 
     injectStageIntoStreamName: 'injectStageIntoStreamName',
     extractStageFromStreamName: 'extractStageFromStreamName',
+    extractNameAndStageFromStreamName: 'extractNameAndStageFromStreamName',
     streamNameStageSeparator: 'streamNameStageSeparator',
 
     injectStageIntoResourceName: 'injectStageIntoResourceName',
     extractStageFromResourceName: 'extractStageFromResourceName',
+    extractNameAndStageFromResourceName: 'extractNameAndStageFromResourceName',
     resourceNameStageSeparator: 'resourceNameStageSeparator',
 
     injectInCase: 'injectInCase',
@@ -543,10 +581,12 @@ test('configureStageHandling with settings AND options', t => {
 
     injectStageIntoStreamName: 'injectStageIntoStreamName',
     extractStageFromStreamName: 'extractStageFromStreamName',
+    extractNameAndStageFromStreamName: 'extractNameAndStageFromStreamName',
     streamNameStageSeparator: 'streamNameStageSeparator',
 
     injectStageIntoResourceName: 'injectStageIntoResourceName',
     extractStageFromResourceName: 'extractStageFromResourceName',
+    extractNameAndStageFromResourceName: 'extractNameAndStageFromResourceName',
     resourceNameStageSeparator: 'resourceNameStageSeparator',
 
     injectInCase: 'injectInCase',
@@ -596,10 +636,10 @@ test('convertAliasToStage', t => {
 });
 
 // =====================================================================================================================
-// Tests for convertStreamNameSuffixToStage
+// Tests for extractStageFromSuffixedStreamName
 // =====================================================================================================================
 
-test('convertStreamNameSuffixToStage with default settings, should use default "_" as separator and lowercase', t => {
+test('extractStageFromSuffixedStreamName with default settings, should use default "_" as separator and lowercase', t => {
   const context = configureDefaultStageHandling({});
   const extractInCase = context.stageHandling.extractInCase;
   t.ok(extractInCase === 'lower' || extractInCase === 'lowercase', `extractInCase (${extractInCase}) defaults to lowercase`);
@@ -618,7 +658,7 @@ test('convertStreamNameSuffixToStage with default settings, should use default "
   t.end();
 });
 
-test('convertStreamNameSuffixToStage with default settings and extractInCase "as_is", should keep stream suffixes as is', t => {
+test('extractStageFromSuffixedStreamName with default settings and extractInCase "as_is", should keep stream suffixes as is', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.extractInCase = 'as_is';
   checkExtractStageFromSuffixedStreamName(t, undefined, context, '');
@@ -636,7 +676,7 @@ test('convertStreamNameSuffixToStage with default settings and extractInCase "as
   t.end();
 });
 
-test('convertStreamNameSuffixToStage with default settings and extractInCase "uppercase", should give uppercase stream suffixes', t => {
+test('extractStageFromSuffixedStreamName with default settings and extractInCase "uppercase", should give uppercase stream suffixes', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.extractInCase = 'uppercase';
   checkExtractStageFromSuffixedStreamName(t, undefined, context, '');
@@ -654,7 +694,7 @@ test('convertStreamNameSuffixToStage with default settings and extractInCase "up
   t.end();
 });
 
-test('convertStreamNameSuffixToStage with streamNameStageSeparator set to undefined, should disable stream names as a source', t => {
+test('extractStageFromSuffixedStreamName with streamNameStageSeparator set to undefined, should disable stream names as a source', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.streamNameStageSeparator = undefined;
   context.stageHandling.extractInCase = 'as_is';
@@ -673,7 +713,7 @@ test('convertStreamNameSuffixToStage with streamNameStageSeparator set to undefi
   t.end();
 });
 
-test('convertStreamNameSuffixToStage with streamNameStageSeparator set to "", should also disable stream names as a source', t => {
+test('extractStageFromSuffixedStreamName with streamNameStageSeparator set to "", should also disable stream names as a source', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.streamNameStageSeparator = '';
   context.stageHandling.extractInCase = 'upper';
@@ -692,7 +732,7 @@ test('convertStreamNameSuffixToStage with streamNameStageSeparator set to "", sh
   t.end();
 });
 
-test('convertStreamNameSuffixToStage with context.streamNameStageSeparator set to "-", should NOT use default "_" as separator', t => {
+test('extractStageFromSuffixedStreamName with context.streamNameStageSeparator set to "-", should NOT use default "_" as separator', t => {
   const context = configureDefaultStageHandling({});
   context.stageHandling.streamNameStageSeparator = '-';
   context.stageHandling.extractInCase = 'as_is';
@@ -715,6 +755,29 @@ test('convertStreamNameSuffixToStage with context.streamNameStageSeparator set t
   checkExtractStageFromSuffixedStreamName(t, 'Test_Stream3-Prod', context, 'Prod');
   checkExtractStageFromSuffixedStreamName(t, ' Test_Stream3-Prod_01 ', context, 'Prod_01');
 
+  t.end();
+});
+
+// =====================================================================================================================
+// Tests for extractNameAndStageFromSuffixedStreamName
+// =====================================================================================================================
+
+test('extractNameAndStageFromSuffixedStreamName with default settings, should use default "_" as separator and lowercase', t => {
+  const context = configureDefaultStageHandling({});
+  const extractInCase = context.stageHandling.extractInCase;
+  t.ok(extractInCase === 'lower' || extractInCase === 'lowercase', `extractInCase (${extractInCase}) defaults to lowercase`);
+  checkExtractNameAndStageFromSuffixedStreamName(t, undefined, context, ['','']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, null, context, ['','']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, '', context, ['', '']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, 'Stream1', context, ['Stream1', '']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, 'Stream2_', context, ['Stream2', '']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, 'Stream3_Dev', context, ['Stream3', 'dev']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, 'Stream4_QA', context, ['Stream4', 'qa']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, 'Stream_5_qa', context, ['Stream_5', 'qa']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, 'Test_Stream_6_Prod', context, ['Test_Stream_6', 'prod']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, ' Test_Stream_7_Prod-01 ', context, ['Test_Stream_7', 'prod-01']);
+
+  checkExtractNameAndStageFromSuffixedStreamName(t, 'Stream_Ss', context, ['Stream', 'ss']);
   t.end();
 });
 

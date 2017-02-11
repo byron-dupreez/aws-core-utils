@@ -15,12 +15,13 @@ const apiLambdas = require('../api-lambdas');
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
 
-require('core-functions/promises');
+const Promises = require('core-functions/promises');
 
 const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
 
 const logging = require('logging-utils');
+const LogLevel = logging.LogLevel;
 
 const stages = require("../stages");
 const kinesisCache = require("../kinesis-cache");
@@ -36,7 +37,7 @@ function sampleFunction(resolvedResponse, rejectedError, ms) {
 
   function doSomethingUseful(event, context) {
     context.info(`Simulating doing something useful with event ${JSON.stringify(event)}`);
-    return Promise.delay(ms)
+    return Promises.delay(ms)
       .then(() => {
         return rejectedError ? Promise.reject(rejectedError) : Promise.resolve(resolvedResponse);
       });
@@ -83,10 +84,10 @@ test('generateHandlerFunction simulating successful response', t => {
     // Create a sample AWS Lambda handler function
     const context = {};
     const handler = apiLambdas.generateHandlerFunction(context, undefined, require('./sample-standard-options.json'),
-      fn, logging.INFO); //, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
+      fn, LogLevel.INFO); //, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
-    const handlerWithPromise = Promise.wrap(handler);
+    const handlerWithPromise = Promises.wrap(handler);
 
     // Invoke the handler function
     handlerWithPromise(event, awsContext)
@@ -132,10 +133,10 @@ test('generateHandlerFunction simulating invalid request', t => {
     // Create a sample AWS Lambda handler function
     const context = {};
     const handler = apiLambdas.generateHandlerFunction(context, undefined, require('./sample-standard-options.json'),
-      fn, logging.DEBUG, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
+      fn, LogLevel.DEBUG, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
-    const handlerWithPromise = Promise.wrap(handler);
+    const handlerWithPromise = Promises.wrap(handler);
 
     // Invoke the handler function
     handlerWithPromise(event, awsContext)
@@ -190,10 +191,10 @@ test('generateHandlerFunction simulating failure', t => {
     // Create a sample AWS Lambda handler function
     const context = {};
     const handler = apiLambdas.generateHandlerFunction(context, undefined, require('./sample-standard-options.json'),
-      fn, logging.TRACE, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
+      fn, LogLevel.TRACE, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
-    const handlerWithPromise = Promise.wrap(handler);
+    const handlerWithPromise = Promises.wrap(handler);
 
     // Invoke the handler function
     handlerWithPromise(event, awsContext)

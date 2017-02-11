@@ -10,15 +10,22 @@
  * @author Byron du Preez
  */
 module.exports = {
+  // General error checks
   isUnavailable: isUnavailable,
+  // Specific error checks
   isConditionalCheckFailed: isConditionalCheckFailed,
   isProvisionedThroughputExceeded: isProvisionedThroughputExceeded,
   isThrottlingException: isThrottlingException,
   isLimitExceededException: isLimitExceededException,
+  isItemCollectionSizeLimitExceededException: isItemCollectionSizeLimitExceededException,
+  // Summarized multiple error checks
   isThrottled: isThrottled,
+  isLimitExceeded: isLimitExceeded,
   isRetryable: isRetryable,
+  // Other specific error checks
   isExpiredCredentialsError: isExpiredCredentialsError,
   isNetworkingError: isNetworkingError,
+  // S3 not found
   wasS3ObjectNotFound: wasS3ObjectNotFound
 };
 
@@ -42,21 +49,35 @@ function isLimitExceededException(err) {
   return err.code === 'LimitExceededException';
 }
 
+function isItemCollectionSizeLimitExceededException(err) {
+  return err.code === 'ItemCollectionSizeLimitExceededException';
+}
+
+function isLimitExceeded(err) {
+  switch (err.code) {
+    // DynamoDB-specific?
+    case 'ItemCollectionSizeLimitExceededException':
+    case 'LimitExceededException':
+    // not DynamoDB-specific?
+    case 'RequestLimitExceeded':
+      return true;
+    default:
+      return false;
+  }
+}
+
 function isThrottled(err) {
   switch (err.code) {
     // DynamoDB-specific?
     case 'ProvisionedThroughputExceededException':
     case 'ThrottlingException':
-    case 'ItemCollectionSizeLimitExceededException':
-    case 'LimitExceededException':
 
     // S3-specific?
     //case 'ServiceUnavailable': // actually 503 error
-    //case 'SlowDown': // actually 503 error
+    case 'SlowDown': // actually 503 error
 
     // not DynamoDB-specific?
     case 'Throttling':
-    case 'RequestLimitExceeded':
     case 'RequestThrottled':
       return true;
     default:
@@ -65,10 +86,8 @@ function isThrottled(err) {
 }
 
 function isRetryable(err) {
-  if (isNetworkingError(err)) return true;
-  if (isExpiredCredentialsError(err)) return true;
-  if (isThrottled(err)) return true;
-  return err.statusCode >= 500;
+  return err.statusCode >= 500 || isNetworkingError(err) || isExpiredCredentialsError(err) || isThrottled(err) ||
+    isLimitExceeded(err) || err.retryable;
   //return isThrottled(err) || err.code === 'ItemCollectionSizeLimitExceededException' ||
   //    err.code === 'UnrecognizedClientException' || err.retryable;
 }

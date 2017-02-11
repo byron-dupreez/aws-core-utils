@@ -1,21 +1,24 @@
 'use strict';
 
-// Stage handling setting names
-const ENV_STAGE_NAME_SETTING = 'envStageName';
-
-const CUSTOM_TO_STAGE_SETTING = 'customToStage';
-const CONVERT_ALIAS_TO_STAGE_SETTING = 'convertAliasToStage';
-
-const STREAM_NAME_STAGE_SEPARATOR_SETTING = 'streamNameStageSeparator';
-const INJECT_STAGE_INTO_STREAM_NAME_SETTING = 'injectStageIntoStreamName';
-const EXTRACT_STAGE_FROM_STREAM_NAME_SETTING = 'extractStageFromStreamName';
-
-const RESOURCE_NAME_STAGE_SEPARATOR_SETTING = 'resourceNameStageSeparator';
-const INJECT_STAGE_INTO_RESOURCE_NAME_SETTING = 'injectStageIntoResourceName';
-const EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING = 'extractStageFromResourceName';
-
-const INJECT_IN_CASE_SETTING = 'injectInCase';
-const EXTRACT_IN_CASE_SETTING = 'extractInCase';
+/**
+ * The names of all of the standard stage handling settings.
+ * @namespace
+ */
+const settingNames = {
+  envStageName: 'envStageName',
+  customToStage: 'customToStage',
+  convertAliasToStage: 'convertAliasToStage',
+  streamNameStageSeparator: 'streamNameStageSeparator',
+  injectStageIntoStreamName: 'injectStageIntoStreamName',
+  extractStageFromStreamName: 'extractStageFromStreamName',
+  extractNameAndStageFromStreamName: 'extractNameAndStageFromStreamName',
+  resourceNameStageSeparator: 'resourceNameStageSeparator',
+  injectStageIntoResourceName: 'injectStageIntoResourceName',
+  extractStageFromResourceName: 'extractStageFromResourceName',
+  extractNameAndStageFromResourceName: 'extractNameAndStageFromResourceName',
+  injectInCase: 'injectInCase',
+  extractInCase: 'extractInCase'
+};
 
 /**
  * Stage handling utilities (primarily for AWS Lambda usage), which include the following:
@@ -28,6 +31,7 @@ const EXTRACT_IN_CASE_SETTING = 'extractInCase';
  * @author Byron du Preez
  */
 module.exports = {
+  settingNames: settingNames,
   // Stage handling configuration
   isStageHandlingConfigured: isStageHandlingConfigured,
   configureStageHandling: configureStageHandling,
@@ -48,10 +52,12 @@ module.exports = {
   // Stream name qualification
   toStageQualifiedStreamName: toStageQualifiedStreamName,
   extractStageFromQualifiedStreamName: extractStageFromQualifiedStreamName,
+  extractNameAndStageFromQualifiedStreamName: extractNameAndStageFromQualifiedStreamName,
 
   // Resource name qualification
   toStageQualifiedResourceName: toStageQualifiedResourceName,
   extractStageFromQualifiedResourceName: extractStageFromQualifiedResourceName,
+  extractNameAndStageFromQualifiedResourceName: extractNameAndStageFromQualifiedResourceName,
 
   /**
    * Default implementations of specialized versions of some of the above functions, which are NOT meant to be used
@@ -64,9 +70,11 @@ module.exports = {
     // Stage-suffixed stream name qualification
     toStageSuffixedStreamName: toStageSuffixedStreamName,
     extractStageFromSuffixedStreamName: extractStageFromSuffixedStreamName,
+    extractNameAndStageFromSuffixedStreamName: extractNameAndStageFromSuffixedStreamName,
     // Stage-suffixed resource name qualification
     toStageSuffixedResourceName: toStageSuffixedResourceName,
     extractStageFromSuffixedResourceName: extractStageFromSuffixedResourceName,
+    extractNameAndStageFromSuffixedResourceName: extractNameAndStageFromSuffixedResourceName,
     // Generic utils
     toStageSuffixedName: toStageSuffixedName,
     toCase: toCase
@@ -110,7 +118,7 @@ function isStageHandlingConfigured(context) {
  * {@linkcode toStageQualifiedResourceName}, {@linkcode extractStageFromQualifiedStreamName} and other internal
  * functions will behave when invoked.
  *
- * @param {Object|StandardContext|StageHandling|Logging} context - the context onto which to configure stage handling settings
+ * @param {Object|StandardContext|StageHandling|Logger} context - the context onto which to configure stage handling settings
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
  * @param {StageHandlingSettings} settings - the new stage handling settings to use
  * @param {Object|StandardSettings|undefined} [otherSettings] - optional other configuration settings to use
@@ -155,7 +163,7 @@ function configureStageHandlingWithSettings(context, settings, otherSettings, ot
  *
  * @see {@linkcode configureStageHandling} for more information.
  *
- * @param {Object|StandardContext|StageHandling|Logging} context - the context onto which to configure the default stage handling settings
+ * @param {Object|StandardContext|StageHandling|Logger} context - the context onto which to configure the default stage handling settings
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
  * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override the default options
  * @param {Object|StandardSettings|undefined} [otherSettings] - optional other configuration settings to use
@@ -183,10 +191,10 @@ function configureDefaultStageHandling(context, options, otherSettings, otherOpt
  * @returns {StageHandlingSettings} a stage handling settings object
  */
 function getDefaultStageHandlingSettings(options) {
-  const settings = options && typeof options === 'object' ? Objects.copy(options, true) : {};
+  const settings = options && typeof options === 'object' ? Objects.copy(options, {deep: true}) : {};
 
   const defaultOptions = loadDefaultStageHandlingOptions();
-  Objects.merge(defaultOptions, settings, false, false);
+  Objects.merge(defaultOptions, settings);
 
   const defaultSettings = {
     customToStage: undefined,
@@ -194,11 +202,13 @@ function getDefaultStageHandlingSettings(options) {
 
     injectStageIntoStreamName: toStageSuffixedStreamName,
     extractStageFromStreamName: extractStageFromSuffixedStreamName,
+    extractNameAndStageFromStreamName: extractNameAndStageFromSuffixedStreamName,
 
     injectStageIntoResourceName: toStageSuffixedResourceName,
     extractStageFromResourceName: extractStageFromSuffixedResourceName,
+    extractNameAndStageFromResourceName: extractNameAndStageFromSuffixedResourceName
   };
-  return Objects.merge(defaultSettings, settings, false, false);
+  return Objects.merge(defaultSettings, settings);
 }
 
 /**
@@ -218,7 +228,7 @@ function loadDefaultStageHandlingOptions() {
     extractInCase: 'lower',
     defaultStage: undefined
   };
-  return Objects.merge(defaults, defaultOptions, false, false);
+  return Objects.merge(defaults, defaultOptions);
 }
 
 /**
@@ -253,7 +263,7 @@ function getStageHandlingFunction(context, settingName) {
  * typically loaded from a JSON file, whereas settings are meant to be constructed in code and hence can contain both
  * non-function properties and functions if needed.
  *
- * @param {Object|StandardContext|StageHandling|Logging} context - the context to configure
+ * @param {Object|StandardContext|StageHandling|Logger} context - the context to configure
  * @param {StageHandlingSettings|undefined} [settings] - optional stage handling settings to use to configure stage handling
  * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override default options
  * @param {Object|StandardSettings|undefined} [otherSettings] - optional other settings to use to configure dependencies
@@ -275,14 +285,14 @@ function configureStageHandling(context, settings, options, otherSettings, other
   const defaultSettings = getDefaultStageHandlingSettings(options);
 
   const stageHandlingSettings = settingsAvailable ?
-    Objects.merge(defaultSettings, settings, false, false) : defaultSettings;
+    Objects.merge(defaultSettings, settings) : defaultSettings;
 
   // Configure stage handling with the given or derived stage handling settings
   configureStageHandlingWithSettings(context, stageHandlingSettings, otherSettings, otherOptions, forceConfiguration);
 
   // Log a warning if no settings and no options were provided and the default settings were applied
   if (!settingsAvailable && !optionsAvailable && (forceConfiguration || !stageHandlingWasConfigured)) {
-    context.warn(`Stage handling was configured without settings or options - used default stage handling configuration (${stringify(stageHandlingSettings)})`);
+    context.warn(`Stage handling was configured without settings or options - used default configuration`);
   }
   return context;
 }
@@ -291,19 +301,19 @@ function configureStageHandling(context, settings, options, otherSettings, other
  * Configures the given context with the stage handling dependencies (currently only logging) using the given other
  * settings and given other options.
  *
- * @param {Object|StandardContext|Logging} context - the context onto which to configure the given stage handling dependencies
+ * @param {Object|StandardContext|Logger} context - the context onto which to configure the given stage handling dependencies
  * @param {Object|StandardSettings|undefined} [otherSettings] - optional other configuration settings to use
  * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
  * @param {Object|StandardOptions|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
  * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured dependencies' settings on the given context
- * @returns {Logging|StandardContext} the context object configured with stage handling dependencies (i.e. logging functionality)
+ * @returns {Logger|StandardContext} the context object configured with stage handling dependencies (i.e. logging functionality)
  */
 function configureDependencies(context, otherSettings, otherOptions, forceConfiguration) {
   // Configure logging if not configured yet
   logging.configureLogging(context, otherSettings ? otherSettings.loggingSettings : undefined,
-    otherOptions ? otherOptions.loggingOptions : undefined, undefined, forceConfiguration);
+    otherOptions ? otherOptions.loggingOptions : undefined, forceConfiguration);
 }
 
 /**
@@ -360,7 +370,7 @@ function resolveStage(event, awsContext, context) {
   configureDefaultStageHandling(context, undefined, undefined, require('./stages-options.json'), false);
 
   // Resolve extractInCase
-  const extractInCase = getStageHandlingSetting(context, EXTRACT_IN_CASE_SETTING);
+  const extractInCase = getStageHandlingSetting(context, settingNames.extractInCase);
 
   // Attempt 1
   if (context && isNotBlank(context.stage)) {
@@ -369,7 +379,7 @@ function resolveStage(event, awsContext, context) {
   }
 
   // Attempt 2
-  const envStageName = getStageHandlingSetting(context, ENV_STAGE_NAME_SETTING);
+  const envStageName = getStageHandlingSetting(context, settingNames.envStageName);
 
   if (isNotBlank(envStageName)) {
     // Look up the current stage from the named process.env environment variable
@@ -382,7 +392,7 @@ function resolveStage(event, awsContext, context) {
   }
 
   // Attempt 3
-  const customToStage = getStageHandlingFunction(context, CUSTOM_TO_STAGE_SETTING);
+  const customToStage = getStageHandlingFunction(context, settingNames.customToStage);
 
   if (customToStage) {
     const stage = customToStage(event, awsContext, context);
@@ -401,7 +411,7 @@ function resolveStage(event, awsContext, context) {
 
   // Attempt 5
   // Check have all the pieces needed to extract an alias and apply the given convertAliasToStage function to it
-  const convertAliasToStage = getStageHandlingFunction(context, CONVERT_ALIAS_TO_STAGE_SETTING);
+  const convertAliasToStage = getStageHandlingFunction(context, settingNames.convertAliasToStage);
 
   if (convertAliasToStage && awsContext && isNotBlank(awsContext.functionVersion) && isNotBlank(awsContext.invokedFunctionArn)) {
     // Extract the alias
@@ -437,7 +447,7 @@ function resolveStage(event, awsContext, context) {
     } else {
       if (eventSourceIsKinesis) {
         // Check have all the pieces needed to extract a stream name and apply the given extractStageFromStreamName function to it
-        const extractStageFromStreamName = getStageHandlingFunction(context, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING);
+        const extractStageFromStreamName = getStageHandlingFunction(context, settingNames.extractStageFromStreamName);
         if (extractStageFromStreamName && event && event.Records) {
           stages = streamEvents.getKinesisEventSourceStreamNames(event)
             .map(streamName => isNotBlank(streamName) ? extractStageFromStreamName(trim(streamName), context) : '')
@@ -445,7 +455,7 @@ function resolveStage(event, awsContext, context) {
         }
       } else if (eventSourceIsDynamoDB) {
         // Check have all the pieces needed to extract a table name and apply the given extractStageFromResourceName function to it
-        const extractStageFromTableName = getStageHandlingFunction(context, EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING);
+        const extractStageFromTableName = getStageHandlingFunction(context, settingNames.extractStageFromResourceName);
         if (extractStageFromTableName && event && event.Records) {
           stages = streamEvents.getDynamoDBEventSourceTableNames(event)
             .map(tableName => isNotBlank(tableName) ? extractStageFromTableName(trim(tableName), context) : '')
@@ -457,7 +467,7 @@ function resolveStage(event, awsContext, context) {
       if (stages.length > 1) {
         const distinctStages = Arrays.distinct(stages);
         if (distinctStages > 1) {
-          context.warn(`WARNING - Ignoring arbitrary first stage (${stage}), since found MULTIPLE distinct stages ${stringify(distinctStages)} on event (${stringify(event)})!`);
+          context.warn(`Ignoring arbitrary first stage (${stage}), since found MULTIPLE distinct stages ${stringify(distinctStages)} on event (${stringify(event)})!`);
           stage = ''; // too many choices, so choose none
         }
       }
@@ -520,7 +530,7 @@ function convertAliasToStage(alias, event, awsContext, context) {
  * @returns {string} a stage-qualified stream name (or the given stream name)
  */
 function toStageQualifiedStreamName(unqualifiedStreamName, stage, context) {
-  return _toStageQualifiedName(unqualifiedStreamName, stage, INJECT_STAGE_INTO_STREAM_NAME_SETTING, context);
+  return _toStageQualifiedName(unqualifiedStreamName, stage, settingNames.injectStageIntoStreamName, context);
 }
 
 /**
@@ -535,7 +545,26 @@ function toStageQualifiedStreamName(unqualifiedStreamName, stage, context) {
  * @returns {string} the stage extracted from the stage-qualified stream name or an empty string
  */
 function extractStageFromQualifiedStreamName(qualifiedStreamName, context) {
-  return _extractStageFromQualifiedName(qualifiedStreamName, EXTRACT_STAGE_FROM_STREAM_NAME_SETTING, context);
+  const stage = _extractStageFromQualifiedName(qualifiedStreamName, settingNames.extractStageFromStreamName, context);
+  return isNotBlank(stage) ? stage :
+    _extractNameAndStageFromQualifiedName(qualifiedStreamName, settingNames.extractNameAndStageFromStreamName, context)[1];
+}
+
+/**
+ * Extracts the unqualified stream name and the stage from the given stage-qualified stream name (if non-blank and an
+ * extractNameAndStageFromStreamName function is configured); otherwise returns the given stream name and an empty stage
+ * string.
+ *
+ * This function uses the configured extractNameAndStageFromStreamName function (if any) on the given context to
+ * determine its actual behaviour.
+ *
+ * @param {string} qualifiedStreamName - the stage-qualified stream name
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
+ * @returns {[string,string]} an array containing: the unqualified name and the stage (if extracted); otherwise the
+ * given name and an empty stage string
+ */
+function extractNameAndStageFromQualifiedStreamName(qualifiedStreamName, context) {
+  return _extractNameAndStageFromQualifiedName(qualifiedStreamName, settingNames.extractNameAndStageFromStreamName, context);
 }
 
 // =====================================================================================================================
@@ -553,7 +582,7 @@ function extractStageFromQualifiedStreamName(qualifiedStreamName, context) {
  * @returns {string} the stage-suffixed stream name
  */
 function toStageSuffixedStreamName(unsuffixedStreamName, stage, context) {
-  return _toStageSuffixedName(unsuffixedStreamName, stage, STREAM_NAME_STAGE_SEPARATOR_SETTING, context);
+  return _toStageSuffixedName(unsuffixedStreamName, stage, settingNames.streamNameStageSeparator, context);
 }
 
 /**
@@ -567,7 +596,26 @@ function toStageSuffixedStreamName(unsuffixedStreamName, stage, context) {
  * @returns {string} the stage (if extracted) or an empty string
  */
 function extractStageFromSuffixedStreamName(stageSuffixedStreamName, context) {
-  return _extractStageFromSuffixedName(stageSuffixedStreamName, STREAM_NAME_STAGE_SEPARATOR_SETTING, context);
+  return _extractStageFromSuffixedName(stageSuffixedStreamName, settingNames.streamNameStageSeparator, context);
+}
+
+/**
+ * A default extractNameAndStageFromStreamName function that extracts the unqualified name and stage from the given
+ * stage-suffixed stream name.
+ *
+ * The unqualified name prefix is extracted from the given stream name by taking everything before the last occurrence
+ * of the configured streamNameStageSeparator (if any).
+ *
+ * The stage suffix is extracted from the given stream name by taking everything after the last occurrence of the configured
+ * streamNameStageSeparator (if any).
+ *
+ * @param {string} stageSuffixedStreamName - the stage-suffixed name of the stream
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
+ * @returns {[string,string]} an array containing: the unqualified name and the stage (if extracted); otherwise the
+ * given name and an empty stage string
+ */
+function extractNameAndStageFromSuffixedStreamName(stageSuffixedStreamName, context) {
+  return _extractNameAndStageFromSuffixedName(stageSuffixedStreamName, settingNames.streamNameStageSeparator, context);
 }
 
 // =====================================================================================================================
@@ -588,7 +636,7 @@ function extractStageFromSuffixedStreamName(stageSuffixedStreamName, context) {
  * @returns {string} a stage-qualified resource name
  */
 function toStageQualifiedResourceName(unqualifiedResourceName, stage, context) {
-  return _toStageQualifiedName(unqualifiedResourceName, stage, INJECT_STAGE_INTO_RESOURCE_NAME_SETTING, context);
+  return _toStageQualifiedName(unqualifiedResourceName, stage, settingNames.injectStageIntoResourceName, context);
 }
 
 /**
@@ -603,7 +651,27 @@ function toStageQualifiedResourceName(unqualifiedResourceName, stage, context) {
  * @returns {string} the stage extracted from the stage-qualified resource name; or an empty string
  */
 function extractStageFromQualifiedResourceName(qualifiedResourceName, context) {
-  return _extractStageFromQualifiedName(qualifiedResourceName, EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING, context);
+  const stage = _extractStageFromQualifiedName(qualifiedResourceName, settingNames.extractStageFromResourceName, context);
+  return isNotBlank(stage) ? stage :
+    _extractNameAndStageFromQualifiedName(qualifiedResourceName, settingNames.extractNameAndStageFromResourceName, context)[1];
+
+}
+
+/**
+ * Extracts the unqualified resource name and the stage from the given stage-qualified resource name (if non-blank and
+ * an extractNameAndStageFromResourceName function is configured); otherwise returns the given resource name and an
+ * empty stage string.
+ *
+ * This function uses the configured extractNameAndStageFromResourceName function (if any) on the given context to
+ * determine its actual behaviour.
+ *
+ * @param {string} qualifiedResourceName - the stage-qualified resource name
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
+ * @returns {[string,string]} an array containing: the unqualified name and the stage (if extracted); otherwise the
+ * given name and an empty stage string
+ */
+function extractNameAndStageFromQualifiedResourceName(qualifiedResourceName, context) {
+  return _extractNameAndStageFromQualifiedName(qualifiedResourceName, settingNames.extractNameAndStageFromResourceName, context);
 }
 
 // =====================================================================================================================
@@ -620,7 +688,7 @@ function extractStageFromQualifiedResourceName(qualifiedResourceName, context) {
  * @returns {string} the stage-suffixed resource name
  */
 function toStageSuffixedResourceName(unsuffixedResourceName, stage, context) {
-  return _toStageSuffixedName(unsuffixedResourceName, stage, RESOURCE_NAME_STAGE_SEPARATOR_SETTING, context);
+  return _toStageSuffixedName(unsuffixedResourceName, stage, settingNames.resourceNameStageSeparator, context);
 }
 
 /**
@@ -633,7 +701,26 @@ function toStageSuffixedResourceName(unsuffixedResourceName, stage, context) {
  * @returns {string} the stage (if extracted) or an empty string
  */
 function extractStageFromSuffixedResourceName(stageSuffixedResourceName, context) {
-  return _extractStageFromSuffixedName(stageSuffixedResourceName, RESOURCE_NAME_STAGE_SEPARATOR_SETTING, context)
+  return _extractStageFromSuffixedName(stageSuffixedResourceName, settingNames.resourceNameStageSeparator, context)
+}
+
+/**
+ * A default extractNameAndStageFromResourceName function that extracts the unqualified name and stage from the given
+ * stage-suffixed resource name.
+ *
+ * The unqualified name prefix is extracted from the given resource name by taking everything before the last occurrence
+ * of the configured resourceNameStageSeparator (if any).
+ *
+ * The stage suffix is extracted from the given resource name by taking everything after the last occurrence of the
+ * configured resourceNameStageSeparator (if any).
+ *
+ * @param {string} stageSuffixedResourceName - the stage-suffixed name of the resource
+ * @param {StageHandling|Object} context - the context to use with stage handling settings and logging functionality
+ * @returns {[string,string]} an array containing: the unqualified name and the stage (if extracted); otherwise the
+ * given name and an empty stage string
+ */
+function extractNameAndStageFromSuffixedResourceName(stageSuffixedResourceName, context) {
+  return _extractNameAndStageFromSuffixedName(stageSuffixedResourceName, settingNames.resourceNameStageSeparator, context);
 }
 
 // =====================================================================================================================
@@ -654,14 +741,39 @@ function _toStageQualifiedName(unqualifiedName, stage, injectStageIntoNameSettin
 
 function _extractStageFromQualifiedName(qualifiedName, extractStageFromNameSettingName, context) {
   if (isNotBlank(qualifiedName)) {
+    qualifiedName = trim(qualifiedName);
     configureDefaultStageHandling(context);
 
     // Resolve extractStageFromName function to use
     const extractStageFromName = getStageHandlingFunction(context, extractStageFromNameSettingName);
-
-    return extractStageFromName ? extractStageFromName(trim(qualifiedName), context) : '';
+    return extractStageFromName ? trimOrEmpty(extractStageFromName(qualifiedName, context)) : '';
   }
   return '';
+}
+
+function _extractNameAndStageFromQualifiedName(qualifiedName, extractNameAndStageFromNameSettingName, context) {
+  qualifiedName = trimOrEmpty(qualifiedName);
+  if (isNotBlank(qualifiedName)) {
+    configureDefaultStageHandling(context);
+
+    // Resolve extractNameAndStageFromName function to use
+    const extractNameAndStageFromName = getStageHandlingFunction(context, extractNameAndStageFromNameSettingName);
+    if (extractNameAndStageFromName) {
+      const nameAndStage = extractNameAndStageFromName(qualifiedName, context);
+      if (Array.isArray(nameAndStage)) {
+        if (nameAndStage.length !== 2) {
+          const extractFnName = extractNameAndStageFromName.name ? extractNameAndStageFromName.name : 'extractNameAndStageFromName';
+          context.warn(`Extracted name and stage ${stringify(nameAndStage)} contains ${nameAndStage.length} elements, but ${extractFnName} function should return an array with a resolved name & stage`);
+        }
+        return [trimOrEmpty(nameAndStage[0]), trimOrEmpty(nameAndStage[1])];
+      }
+      if (nameAndStage) {
+        const extractFnName = extractNameAndStageFromName.name ? extractNameAndStageFromName.name : 'extractNameAndStageFromName';
+        context.warn(`Ignoring extracted name and stage (${stringify(nameAndStage)}), since ${extractFnName} function MUST return an array with a resolved name & stage`);
+      }
+    }
+  }
+  return [qualifiedName, ''];
 }
 
 // =====================================================================================================================
@@ -676,7 +788,7 @@ function _toStageSuffixedName(unsuffixedName, stage, separatorSettingName, conte
     const separator = getStageHandlingSetting(context, separatorSettingName);
 
     // Resolve injectInCase
-    const injectInCase = getStageHandlingSetting(context, INJECT_IN_CASE_SETTING);
+    const injectInCase = getStageHandlingSetting(context, settingNames.injectInCase);
 
     return toStageSuffixedName(unsuffixedName, separator, stage, injectInCase);
   }
@@ -691,13 +803,32 @@ function _extractStageFromSuffixedName(stageSuffixedName, separatorSettingName, 
     const separator = getStageHandlingSetting(context, separatorSettingName);
 
     // Resolve extractInCase
-    const extractInCase = getStageHandlingSetting(context, EXTRACT_IN_CASE_SETTING);
+    const extractInCase = getStageHandlingSetting(context, settingNames.extractInCase);
 
     // Extract stage using separator and convert to case specified by extractInCase
     const suffixStartPos = stageSuffixedName.lastIndexOf(separator);
     return suffixStartPos !== -1 ? trimOrEmpty(toCase(stageSuffixedName.substring(suffixStartPos + 1), extractInCase)) : '';
   }
   return '';
+}
+
+function _extractNameAndStageFromSuffixedName(stageSuffixedName, separatorSettingName, context) {
+  if (isNotBlank(stageSuffixedName)) {
+    configureDefaultStageHandling(context);
+
+    // Resolve separator
+    const separator = getStageHandlingSetting(context, separatorSettingName);
+
+    // Resolve extractInCase
+    const extractInCase = getStageHandlingSetting(context, settingNames.extractInCase);
+
+    // Extract stage using separator and convert to case specified by extractInCase
+    const suffixStartPos = stageSuffixedName.lastIndexOf(separator);
+    return suffixStartPos !== -1 ?
+      [trimOrEmpty(stageSuffixedName.substring(0, suffixStartPos)), trimOrEmpty(toCase(stageSuffixedName.substring(suffixStartPos + 1), extractInCase))] :
+      [trimOrEmpty(stageSuffixedName), ''];
+  }
+  return [trimOrEmpty(stageSuffixedName), ''];
 }
 
 /**

@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.17
+# aws-core-utils v6.0.0
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -131,10 +131,10 @@ const standardSettings = {}; // or whatever settings you want to use to configur
 contexts.configureStandardContext(context, standardSettings, standardOptions, awsEvent, awsContext);
 
 // If you need the logic of the configureCustomSettings function, which is used by configureStandardContext, for other purposes
-const myCustomSettings = {myCustomSetting1: 1, myCustomSetting2: 2, myCustomFunction: () => {}}; // 
+const myCustomSettings = {myCustomSetting1: 1, myCustomSetting2: 2, myCustomFunction: () => {}};
 const myCustomOptions = require('my-custom-options.json');
 contexts.configureCustomSettings(context, myCustomSettings, myCustomOptions);
-console.log(`context.custom = ${JSON.stringify(context.custom)}`);
+console.log(`context.custom = ${JSON.stringify(context.custom)}; myCustomFunction = ${JSON.stringify(context.custom.myCustomFunction)} `);
 ```
 
 * To use the DynamoDB.DocumentClient cache to configure and cache an AWS DynamoDB.DocumentClient instance per region
@@ -144,7 +144,7 @@ const dynamoDBDocClientCache = require('aws-core-utils/dynamodb-doc-client-cache
 // Preamble to create a context and configure logging on the context
 const context = {};
 const logging = require('logging-utils');
-logging.configureDefaultLogging(context); // or your own custom logging configuration (see logging-utils README.md)
+logging.configureLogging(context); // or your own custom logging configuration (see logging-utils README.md)
 
 // Define the DynamoDB.DocumentClient's constructor options that you want to use, e.g.
 const dynamoDBDocClientOptions = {
@@ -183,7 +183,7 @@ const kinesisCache = require('aws-core-utils/kinesis-cache');
 // Preamble to create a context and configure logging on the context
 const context = {};
 const logging = require('logging-utils');
-logging.configureDefaultLogging(context); // or your own custom logging configuration (see logging-utils README.md)
+logging.configureLogging(context); // or your own custom logging configuration (see logging-utils README.md)
 
 // Define the Kinesis constructor options that you want to use, e.g.
 const kinesisOptions = {
@@ -387,6 +387,41 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 6.0.0
+- Updated `core-functions` dependency to version 3.0.0
+- Updated `logging-utils` dependency to version 4.0.0
+- Changes to `api-lambdas.js` module:
+  - Removed `log` function (replaced use with new `log` function & `log` method in `logging-utils`)
+- Changes to `arns.js` module:
+  - Moved `ArnResources` typedef to `type-defs.js`
+- Changes to `aws-errors.js` module:
+  - Added `isItemCollectionSizeLimitExceededException` function
+  - Added `isLimitExceeded` function
+  - Removed limit exceeded cases from `isThrottled` function (not backward-compatible)
+  - Added S3 `SlowDown` case to `isThrottled` function
+  - Added `isLimitExceeded` & `err.retryable` checks to `isRetryable` function
+- Changes to `dynamodb-utils.js` module:
+  - Removed `toNumber` function (replaced use with new `toNumberOrIntegerLike` function in `core-functions/numbers.js`)
+  - Added new `toStorableObject` function
+  - Added new `defaults` static property with `emptyStringReplacement` property
+- Changes to `stages.js` module:
+  - Replaced all setting names constants (e.g. CUSTOM_TO_STAGE_SETTING) with use of a new module-scope `settingNames` 
+    object property that holds all the standard stage handling settings names (e.g. settingNames.customToStage) 
+  - Added new `extractNameAndStageFromStreamName` & `extractNameAndStageFromResourceName` settings
+  - Added `extractNameAndStageFromQualifiedStreamName` & `extractNameAndStageFromQualifiedResourceName` functions
+  - Added `extractNameAndStageFromSuffixedStreamName` & `extractNameAndStageFromSuffixedResourceName` functions
+  - Added `_extractNameAndStageFromQualifiedName` & `_extractNameAndStageFromSuffixedName` functions
+  - Changed `extractStageFromQualifiedStreamName` to attempt fallback with `_extractNameAndStageFromQualifiedName`
+  - Changed `extractStageFromQualifiedResourceName` to attempt fallback with `_extractNameAndStageFromQualifiedName`
+- Changes to `stream-events.js` module:
+  - Added `MAX_PARTITION_KEY_SIZE` constant
+  - Added `DynamoDBEventName` enum
+  - Added `getEventID`, `getEventName`, `getEventSource` & `getEventSourceARN` functions
+  - Added `getKinesisShardId`, `getKinesisShardIdFromEventID`, `getKinesisShardIdAndEventNoFromEventID` & `getKinesisSequenceNumber` functions
+  - Added `getDynamoDBSequenceNumber` function
+  - Added additional validation checks to `validateStreamEventRecord`, `validateKinesisStreamEventRecord` & `validateDynamoDBStreamEventRecord` functions
+- Added many new typedefs to `type-defs.js`
 
 ### 5.0.17
 - Fixed critical module-scope defects in `generateHandlerFunction` function in `api-lambdas` module

@@ -5,17 +5,13 @@
  */
 
 /**
- * @typedef {Object} AwsEvent - an AWS event passed to your Lambda handler function
- */
-
-/**
- * @typedef {Object} AwsContext - an AWS context passed to your Lambda handler function
+ * @typedef {Object} AWSContext - an AWS context passed to your Lambda handler function
  * @property {uuid} awsRequestId - a unique identifier assigned to the current invocation of your handler function by AWS Lambda
  * @property {function(): number} getRemainingTimeInMillis - gets the remaining time to execute in milliseconds
  */
 
 /**
- * @typedef {function(event: AwsEvent, awsContext: AwsContext, callback: Callback)} AwsLambdaHandlerFunction - a handler
+ * @typedef {function(event: AWSEvent, awsContext: AWSContext, callback: Callback)} AwsLambdaHandlerFunction - a handler
  * function for your AWS Lambda
  */
 
@@ -28,7 +24,7 @@
  * @property {AWS.DynamoDB.DocumentClient|undefined} [dynamoDBDocClient] - an optional AWS.DynamoDB.DocumentClient instance to use
  * @property {string|undefined} [region] - the name of the AWS region to use
  * @property {string|undefined} [stage] - the configured stage to use
- * @property {AwsContext|undefined} [awsContext] - the AWS context passed to your Lambda function on invocation
+ * @property {AWSContext|undefined} [awsContext] - the AWS context passed to your Lambda function on invocation
  */
 
 /**
@@ -78,7 +74,7 @@
  * @typedef {StageAware} RegionStageAWSContextAware - an object configured with the name of the current AWS region,
  * the AWS context and the resolved stage, which implies pre-configured stage handling settings and logging functionality
  * @property {string} region - the name of the AWS region to use
- * @property {AwsContext} awsContext - the AWS context passed to your Lambda function on invocation
+ * @property {AWSContext} awsContext - the AWS context passed to your Lambda function on invocation
  */
 
 /**
@@ -99,7 +95,7 @@
  */
 
 /**
- * @typedef {Logging} StageHandling - an object configured with stage handling and logging functionality
+ * @typedef {Logger} StageHandling - an object configured with stage handling and logging functionality
  * @property {StageHandlingSettings} stageHandling - an object configured with stage handling settings and functionality to use
  */
 
@@ -137,8 +133,9 @@
 /**
  * Stage handling settings are used for configuring and customising stage handling behaviour. The stage handling
  * settings determine how {@linkcode stages.js#resolveStage}, {@linkcode stages.js#toStageQualifiedStreamName},
- * {@linkcode stages.js#extractStageFromQualifiedStreamName}, {@linkcode stages.js#toStageQualifiedResourceName},
- * {@linkcode stages.js#extractStageFromQualifiedStreamName} and other internal functions will behave when invoked.
+ * {@linkcode stages.js#extractStageFromQualifiedStreamName}, {@linkcode stages.js#extractNameAndStageFromQualifiedStreamName},
+ * {@linkcode stages.js#toStageQualifiedResourceName}, {@linkcode stages.js#extractStageFromQualifiedResourceName},
+ * {@linkcode stages.js#extractNameAndStageFromQualifiedResourceName} and other internal functions will behave when invoked.
  *
  * They can also be used to pass any additional custom configuration options and settings that you need through to any
  * custom stage handling functions that you develop and configure via {@linkcode stages.js#configureStageHandling}.
@@ -148,18 +145,20 @@
  * @property {ConvertAliasToStage|undefined} [convertAliasToStage] - an optional function that converts an alias into a stage
  * @property {InjectStageIntoStreamName|undefined} [injectStageIntoStreamName] - an optional function that returns a stage-qualified stream name
  * @property {ExtractStageFromStreamName|undefined} [extractStageFromStreamName] - an optional function that extracts a stage from a stage-qualified stream name
+ * @property {ExtractNameAndStageFromStreamName|undefined} [extractNameAndStageFromStreamName] - an optional function that extracts the unqualified name and stage from a stage-qualified stream name
  * @property {InjectStageIntoResourceName|undefined} [injectStageIntoResourceName] - an optional function that returns a stage-qualified resource name
  * @property {ExtractStageFromResourceName|undefined} [extractStageFromResourceName] - an optional function that extracts a stage from a stage-qualified resource name
+ * @property {ExtractNameAndStageFromResourceName|undefined} [extractNameAndStageFromResourceName] - an optional function that extracts the unqualified name and stage from a stage-qualified resource name
  */
 
 /**
- * @typedef {function(event: AwsEvent, awsContext: AwsContext, context: StageHandling): (string|undefined)} CustomToStage -
+ * @typedef {function(event: AWSEvent, awsContext: AWSContext, context: StageHandling): (string|undefined)} CustomToStage -
  * a custom function that accepts: an AWS event; an AWS context; and a context, and somehow extracts a usable stage from
  * the AWS event and/or AWS context.
  */
 
 /**
- * @typedef {function(alias: string, event: AwsEvent, awsContext: AwsContext, context: StageHandling): (string|undefined)} ConvertAliasToStage -
+ * @typedef {function(alias: string, event: AWSEvent, awsContext: AWSContext, context: StageHandling): (string|undefined)} ConvertAliasToStage -
  * a function that accepts: an extracted AWS Lambda alias (if any); an AWS event; an AWS context; and a context, and
  * converts the alias into a stage
  */
@@ -176,6 +175,12 @@
  */
 
 /**
+ * @typedef {function(qualifiedStreamName: string, context: StageHandling):[string,string]} ExtractNameAndStageFromStreamName -
+ * a function that accepts: a stage-qualified stream name; and a context, and extracts the unqualified name and stage
+ * from the stream name
+ */
+
+/**
  * @typedef {function(unqualifiedResourceName: string, stage: string, context: StageHandling):(string|undefined)} InjectStageIntoResourceName -
  * a function that accepts: an unqualified resource name; a stage; and a context, and returns a stage-qualified resource
  * name (effectively the reverse function of the ExtractStageFromResourceNameFunction)
@@ -186,3 +191,154 @@
  * a function that accepts: a stage-qualified resource name; and a context, and extracts a stage from the resource name
  */
 
+/**
+ * @typedef {function(qualifiedResourceName: string, context: StageHandling):[string,string]} ExtractNameAndStageFromResourceName -
+ * a function that accepts: a stage-qualified resource name; and a context, and extracts the unqualified name and stage
+ * from the resource name
+ */
+
+/**
+ * ARN resource-related components
+ * @typedef {Object} ArnResources
+ * @property {string} resourceType - a resource type (for DynamoDB stream eventSourceARN's this contains "table")
+ * @property {string} resource - a resource name (for DynamoDB stream eventSourceARN's this is the table name)
+ * @property {string} subResourceType - a sub-resource type (for DynamoDB stream eventSourceARN's this contains "stream")
+ * @property {string} subResource - a sub-resource name (for DynamoDB stream eventSourceARN's this is the stream timestamp)
+ * @property {string} aliasOrVersion - a Lambda alias or version number
+ * @property {string[]} others - any other components after a Lambda alias or version number
+ */
+
+/**
+ * @typedef {Object} AWSEvent - represents an AWS event typically passed to your Lambda handler function
+ * @see KinesisEvent
+ * @see DynamoDBEvent
+ * @see S3Event
+ * @see SESEvent
+ * @see SNSEvent
+ */
+
+/**
+ * @typedef {KinesisEvent|DynamoDBEvent|S3Event|SESEvent|SNSEvent} AnyAWSEvent - represents any AWS event (currently supported)
+ */
+
+/**
+ * @typedef {AWSEvent} StreamEvent - represents an AWS stream event
+ * @property {StreamEventRecord[]} Records - the records of the AWS stream event
+ * @see KinesisEvent
+ * @see DynamoDBEvent
+ */
+
+/**
+ * @typedef {KinesisEvent|DynamoDBEvent} AnyStreamEvent - represents an AWS Kinesis or DynamoDB stream event
+
+/**
+ * @typedef {StreamEvent} KinesisEvent - represents an AWS Kinesis stream event
+ * @property {KinesisEventRecord[]} Records - the records of the AWS Kinesis stream event
+ */
+
+/**
+ * @typedef {StreamEvent} DynamoDBEvent - represents an AWS DynamoDB stream event
+ * @property {DynamoDBEventRecord[]} Records - the records of the AWS DynamoDB stream event
+ */
+
+/**
+ * @typedef {AWSEvent} S3Event - represents an AWS S3 (Simple Storage Service) event
+ * @property {S3EventRecord[]} Records - the records of the AWS S3 event
+ */
+
+/**
+ * @typedef {AWSEvent} SESEvent - represents an AWS SES (Simple Email Service) event
+ * @property {SESEventRecord[]} Records - the records of the AWS SES event
+ */
+
+/**
+ * @typedef {AWSEvent} SNSEvent - represents an AWS SNS (Simple Notification Service) event
+ * @property {string} EventSource - the event source of the AWS event record
+ * @property {SNSEventRecord[]} Records - the records of the AWS SNS event
+ */
+
+/**
+ * @typedef {Object} AWSEventRecord - represents an AWS event record
+ * @see KinesisEventRecord
+ * @see DynamoDBEventRecord
+ * @see S3EventRecord
+ * @see SESEventRecord
+ * @see SNSEventRecord
+ */
+
+/**
+ * @typedef {KinesisEventRecord|DynamoDBEventRecord|S3EventRecord|SESEventRecord|SNSEventRecord} AnyAWSEventRecord - represents any AWS event record (currently supported)
+ */
+
+/**
+ * @typedef {AWSEventRecord} StreamEventRecord - represents an AWS stream event record
+ * @property {string} eventID - the event ID, which should uniquely identify the record
+ * @property {string} eventSource - the event source, which should be either 'aws:kinesis' or 'aws:dynamodb'
+ * @property {string} eventSourceARN - the event source ARN (Amazon Resource Number), which identifies the event source stream or table
+ * @property {string} eventVersion - the version of the event
+ * @property {string} awsRegion - the AWS region in which the event took place
+ * @property {string} eventName - the "name" of the event - for Kinesis this will be 'aws:kinesis:record'; for DynamoDB this will be 'INSERT', 'MODIFY' or 'REMOVE'
+ * @see KinesisEventRecord
+ * @see DynamoDBEventRecord
+ */
+
+/**
+ * @typedef {KinesisEventRecord|DynamoDBEventRecord} AnyStreamEventRecord - represents any AWS stream event record (currently supported)
+ */
+
+/**
+ * @typedef {StreamEventRecord} KinesisEventRecord - represents an AWS Kinesis stream event record
+ * @property {KinesisProperty} kinesis - the kinesis property contains the data and details of the Kinesis event record
+ * @property {string} invokeIdentityArn - the invoke identity ARN (Amazon Resource Number)
+ * @see KinesisEvent
+ */
+
+/**
+ * @typedef {Object} KinesisProperty - represents the kinesis property of an AWS Kinesis stream event record
+ * @property {string} partitionKey - the partition key of the Kinesis event record
+ * @property {string} data - the actual data of a Kinesis event record in base 64 format
+ * @property {string} sequenceNumber - the sequence number of the Kinesis event record
+ * @property {string} kinesisSchemaVersion - the schema version of the Kinesis event record
+ */
+
+/**
+ * @typedef {StreamEventRecord} DynamoDBEventRecord - represents an AWS DynamoDB stream event record
+ * @property {DynamodbProperty} dynamodb - the dynamodb property contains the details of the DynamoDB record that was inserted, modified or removed
+ * @see DynamoDBEvent
+ */
+
+/**
+ * @typedef {Object} DynamodbProperty - represents the dynamodb property of an AWS DynamoDB stream event record
+ * @property {Object} Keys - the keys of the DynamoDB record (in DynamoDB attribute value format)
+ * @property {Object} [NewImage] - the new image of the DynamoDB record (in DynamoDB attribute value format)
+ * @property {Object} [OldImage] - the old image of the DynamoDB record (in DynamoDB attribute value format)
+ * @property {string} SequenceNumber - the sequence number of the event
+ * @property {string} SizeBytes - the size of the event in bytes
+ * @property {string} StreamViewType - the type of stream view, which defines whether NewImage and OldImage should be
+ * present or not, and which should be 'KEYS_ONLY', 'NEW_IMAGE', 'OLD_IMAGE' or 'NEW_AND_OLD_IMAGES'
+ */
+
+/**
+ * @typedef {AWSEventRecord} S3EventRecord - represents an AWS S3 event record
+ * @property {string} eventSource - the event source of the AWS S3 event record
+ * @see S3Event
+ */
+
+/**
+ * @typedef {AWSEventRecord} SESEventRecord - represents an AWS SES event record
+ * @property {string} eventSource - the event source of the AWS SES event record
+ * @see SESEvent
+ */
+
+/**
+ * @typedef {AWSEventRecord} SNSEventRecord - represents an AWS SNS event record
+ * @property {string} EventSource - the event source of the AWS SNS event record
+ * @see SNSEvent
+ */
+
+/**
+ * @typedef {Object} DynamoDBUtilsDefaults - Defaults used by the dynamodb-utils module, which can be overridden to
+ * alter the default behaviour
+ * @property {string} emptyStringReplacement - a non-empty string to use as a replacement for empty strings, which
+ * cannot be stored to DynamoDB (defaults to ' ', i.e. a single space)
+ */

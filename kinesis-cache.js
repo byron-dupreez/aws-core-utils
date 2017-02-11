@@ -50,7 +50,7 @@ module.exports = {
  */
 function setKinesis(kinesisOptions, context) {
   // If no options were specified, then use an empty object
-  const options = kinesisOptions ? Objects.copy(kinesisOptions, true) : {};
+  const options = kinesisOptions ? Objects.copy(kinesisOptions, {deep: true}) : {};
 
   // If no region was specified in the given kinesis options, then set it to the current region
   let region = options.region;

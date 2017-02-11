@@ -22,6 +22,7 @@ const getRegion = regions.getRegion;
 // const setRegionIfNotSet = regions.ONLY_FOR_TESTING.setRegionIfNotSet;
 
 const logging = require('logging-utils');
+const LogLevel = logging.LogLevel;
 
 const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
@@ -36,7 +37,7 @@ const stringify = Strings.stringify;
 
 test('setDynamoDBDocClient and getDynamoDBDocClient', t => {
   const context = {};
-  logging.configureLoggingWithSettings(context, logging.TRACE);
+  logging.configureLogging(context, {logLevel: LogLevel.TRACE});
 
   // Set current region
   process.env.AWS_REGION = 'us-west-1';
@@ -154,7 +155,7 @@ test('setDynamoDBDocClient and getDynamoDBDocClient', t => {
 
 test('configureDynamoDBDocClient', t => {
   const context = {};
-  logging.configureLoggingWithSettings(context, logging.DEBUG);
+  logging.configureLogging(context, {logLevel: LogLevel.DEBUG});
 
   process.env.AWS_REGION = 'us-west-1';
   const region1 = getRegion();

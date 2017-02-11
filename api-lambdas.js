@@ -1,7 +1,7 @@
 'use strict';
 
 const contexts = require('./contexts');
-require("core-functions/promises");
+const Promises = require('core-functions/promises');
 const Objects = require('core-functions/objects');
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
@@ -9,6 +9,8 @@ const strings = require('core-functions/strings');
 const isNotBlank = strings.isNotBlank;
 
 const logging = require('logging-utils');
+const LogLevel = logging.LogLevel;
+const log = logging.log;
 
 /**
  * Utilities for working with Lambdas exposed to AWS API Gateway, including functions to:
@@ -59,11 +61,11 @@ function failCallback(lambdaCallback, error, awsContext, message, code, allowedH
 /**
  * Generates a handler function for your API Gateway exposed Lambda.
  *
- * @param {Object|StandardContext|undefined} [moduleScopeContext] - an optional module-scope context from which to copy an initial standard context
- * @param {StandardSettings|undefined} [moduleScopeSettings] - optional module-scoped settings from which to copy initial settings to use to configure a standard context
- * @param {StandardOptions|undefined} [moduleScopeOptions] - optional module-scoped options from which to copy initial options to use to configure a standard context
- * @param {function(event: AwsEvent, context: StandardContext)} fn - your function that must accept the AWS event and a standard context and ideally return a Promise
- * @param {string|undefined} [logRequestResponseAtLogLevel] - an optional log level at which to log the request (i.e.
+ * @param {Object|StandardContext|undefined} [initContext] - an optional module-scope context from which to copy an initial standard context
+ * @param {StandardSettings|undefined} [initSettings] - optional module-scoped settings from which to copy initial settings to use to configure a standard context
+ * @param {StandardOptions|undefined} [initOptions] - optional module-scoped options from which to copy initial options to use to configure a standard context
+ * @param {function(event: AWSEvent, context: StandardContext)} fn - your function that must accept the AWS event and a standard context and ideally return a Promise
+ * @param {LogLevel|string|undefined} [logRequestResponseAtLogLevel] - an optional log level at which to log the request (i.e.
  * AWS event) and response; if log level is undefined or invalid, then logs neither
  * @param {number[]|undefined} [allowedHttpStatusCodes] - an optional array of HTTP status codes that are allowed to be
  * returned directly to API Gateway (without conversion to either 400 or 500). NB: 400 and 500 CANNOT be excluded and
@@ -74,7 +76,7 @@ function failCallback(lambdaCallback, error, awsContext, message, code, allowedH
  * @param {string|undefined} [successMsg] an optional message to log at info level on success
  * @returns {AwsLambdaHandlerFunction} a handler function for your API Gateway exposed Lambda
  */
-function generateHandlerFunction(moduleScopeContext, moduleScopeSettings, moduleScopeOptions, fn, logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg) {
+function generateHandlerFunction(initContext, initSettings, initOptions, fn, logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg) {
   /**
    * An API-Gateway exposed Lambda handler function.
    * @param {Object} event - the AWS event passed to your handler
@@ -82,22 +84,26 @@ function generateHandlerFunction(moduleScopeContext, moduleScopeSettings, module
    * @param {Callback} callback - the AWS Lambda callback function passed to your handler
    */
   function handler(event, awsContext, callback) {
-    const context = moduleScopeContext && typeof moduleScopeContext === 'object' ? Objects.copy(moduleScopeContext, true) : {};
+    const context = initContext && typeof initContext === 'object' ? Objects.copy(initContext, {deep: true}) : {};
     try {
-      const settings = moduleScopeSettings && typeof moduleScopeSettings === 'object' ? Objects.copy(moduleScopeSettings, true) : undefined;
-      const options = moduleScopeOptions && typeof moduleScopeOptions === 'object' ? Objects.copy(moduleScopeOptions, true) : undefined;
+      const settings = initSettings && typeof initSettings === 'object' ? Objects.copy(initSettings, {deep: true}) : undefined;
+      const options = initOptions && typeof initOptions === 'object' ? Objects.copy(initOptions, {deep: true}) : undefined;
 
       // Configure the context as a standard context
       contexts.configureStandardContext(context, settings, options, event, awsContext, false);
 
       // Optionally log the request
-      log('Request: ', event, logRequestResponseAtLogLevel, context);
+      if (logRequestResponseAtLogLevel && logging.isValidLogLevel(logRequestResponseAtLogLevel)) {
+        context.log(logRequestResponseAtLogLevel, 'Request:', JSON.stringify(event));
+      }
 
       // Execute the given function
-      Promise.try(() => fn(event, context))
+      Promises.try(() => fn(event, context))
         .then(response => {
           // Optionally log the response
-          log('Response: ', response, logRequestResponseAtLogLevel, context);
+          if (logRequestResponseAtLogLevel && logging.isValidLogLevel(logRequestResponseAtLogLevel)) {
+            context.log(logRequestResponseAtLogLevel, 'Response:', JSON.stringify(response));
+          }
 
           // Log the given success message (if any)
           if (isNotBlank(successMsg)) context.info(successMsg);
@@ -119,37 +125,11 @@ function generateHandlerFunction(moduleScopeContext, moduleScopeSettings, module
         });
 
     } catch (err) {
-      (context.error ? context.error : console.error)(isNotBlank(failureMsg) ? failureMsg : 'Failed to execute Lambda', err.stack);
+      log(context, LogLevel.ERROR, isNotBlank(failureMsg) ? failureMsg : 'Failed to execute Lambda', err.stack);
       // Fail the Lambda callback
       failCallback(callback, err, awsContext, undefined, undefined, allowedHttpStatusCodes);
     }
   }
 
   return handler;
-}
-
-function log(prefix, object, logLevel, context) {
-  if (isNotBlank(logLevel)) {
-    const msg = `${isNotBlank(prefix) ? prefix : ''}${JSON.stringify(object)}`;
-    switch (logLevel.toLowerCase()) {
-      case logging.INFO:
-        context.info(msg);
-        break;
-      case logging.DEBUG:
-        context.debug(msg);
-        break;
-      case logging.TRACE:
-        context.trace(msg);
-        break;
-      case logging.WARN:
-        context.warn(msg);
-        break;
-      case logging.ERROR:
-        context.error(msg);
-        break;
-      default:
-        context.warn(`Unexpected log level (${logLevel})`);
-        break;
-    }
-  }
 }

@@ -104,14 +104,14 @@ function configureCustomSettings(context, settings, options) {
   const settingsAvailable = settings && typeof settings == 'object';
   const optionsAvailable = options && typeof options === 'object';
 
-  const customOptions = optionsAvailable ? Objects.copy(options, true) : {};
+  const customOptions = optionsAvailable ? Objects.copy(options, {deep: true}) : {};
 
   const customSettings = settingsAvailable ?
-    optionsAvailable ? Objects.merge(customOptions, settings, false, false) : settings :
+    optionsAvailable ? Objects.merge(customOptions, settings) : settings :
     customOptions;
 
   context.custom = context.custom && typeof context.custom === 'object' ?
-    Objects.merge(customSettings, context.custom, false, false) : customSettings;
+    Objects.merge(customSettings, context.custom) : customSettings;
 
   return context;
 }

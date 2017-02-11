@@ -1,6 +1,14 @@
 'use strict';
 
 /**
+ * Defaults used by this module, which can be overridden to alter the default behaviour.
+ * @namespace {DynamoDBUtilsDefaults} defaults
+ */
+const defaults = {
+  emptyStringReplacement: ' '
+};
+
+/**
  * Utilities for working with AWS DynamoDB.
  * @module aws-core-utils/dynamodb-utils
  * @author Byron du Preez
@@ -9,13 +17,17 @@ module.exports = {
   toObjectFromDynamoDBMap: toObjectFromDynamoDBMap,
   toValueFromAttributeValue: toValueFromAttributeValue,
   toValueFromAttributeTypeAndValue: toValueFromAttributeTypeAndValue,
-  toNumber: toNumber,
   toKeyValueStrings: toKeyValueStrings,
-  toKeyValuePairs: toKeyValuePairs
+  toKeyValuePairs: toKeyValuePairs,
+  toStorableObject: toStorableObject,
+  defaults: defaults
 };
 
 const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
+
+const Numbers = require('core-functions/numbers');
+const toNumberOrIntegerLike = Numbers.toNumberOrIntegerLike;
 
 /**
  * Attempts to convert the given DynamoDB map object containing keys and Attribute values into a JavaScript object.
@@ -65,7 +77,7 @@ function toValueFromAttributeTypeAndValue(attributeType, value) {
     case 'S':
       return value;
     case 'N':
-      return toNumber(value);
+      return toNumberOrIntegerLike(value);
     case 'BOOL':
       return value === true || value === 'true';
     case 'NULL':
@@ -77,7 +89,7 @@ function toValueFromAttributeTypeAndValue(attributeType, value) {
     case 'SS':
       return value;
     case 'NS':
-      return value.map(v => toNumber(v));
+      return value.map(v => toNumberOrIntegerLike(v));
     case 'B':
     case 'BS':
       return value;
@@ -87,51 +99,45 @@ function toValueFromAttributeTypeAndValue(attributeType, value) {
 }
 
 /**
- * Attempts to convert the given value into a number, but keeps any integer string, which cannot be converted to a
- * number without losing precision.
- * @param {string} value - the value to convert
- * @returns {number|string} the number parsed from the value
- */
-function toNumber(value) {
-  if (value) {
-    const typeOfValue = typeof value;
-    if (typeOfValue === 'string' && value.indexOf('.') === -1) {
-      // No decimal point, so try for an integer first
-      const n = Number.parseInt(value);
-      // Check if have enough precision to hold the given integer value ... otherwise rather keep the original string value
-      return `${n}` === value ? n : Number.isNaN(n) ? NaN : value;
-    } else if (typeOfValue === 'number') {
-      return value;
-    }
-    return Number.parseFloat(value);
-  }
-  return NaN;
-}
-
-/**
  * Extracts an array of colon-separated key name and value strings from the given DynamoDB map object.
  * @param {Object} dynamoDBMap - a DynamoDB map object
  * @returns {string[]} an array of colon-separated key name and value strings
  */
 function toKeyValueStrings(dynamoDBMap) {
-  if (!dynamoDBMap || typeof dynamoDBMap !== 'object') {
-    return [];
-  }
-  return Object.getOwnPropertyNames(dynamoDBMap).map(key => {
-    const value = toValueFromAttributeValue(dynamoDBMap[key]);
-    return `${key}:${stringify(value)}`;
-  });
+  return dynamoDBMap && typeof dynamoDBMap === 'object' ?
+    Object.getOwnPropertyNames(dynamoDBMap).map(key => `${key}:${stringify(toValueFromAttributeValue(dynamoDBMap[key]))}`) : [];
 }
 
 /**
  * Extracts an array of key value pairs from the given DynamoDB map object. Each key value pair is represented as an
  * array containing a key property name followed by its associated value.
  * @param {Object} dynamoDBMap - a DynamoDB map object
- * @returns {string[]} an array of key name and value pairs
+ * @returns {KeyValuePair[]} an array of key value pairs
  */
 function toKeyValuePairs(dynamoDBMap) {
-  if (!dynamoDBMap || typeof dynamoDBMap !== 'object') {
-    return [];
-  }
-  return Object.getOwnPropertyNames(dynamoDBMap).map(key => [key, toValueFromAttributeValue(dynamoDBMap[key])]);
+  return dynamoDBMap && typeof dynamoDBMap === 'object' ?
+    Object.getOwnPropertyNames(dynamoDBMap).map(key => [key, toValueFromAttributeValue(dynamoDBMap[key])]) : [];
+}
+
+/**
+ * Transforms the given object into an object that can be safely stored to DynamoDB with all of its empty strings
+ * replaced with Defaults.emptyStringReplacement and with no undefined properties.
+ * @param {Object} object - an object to be stored in DynamoDB
+ * @returns {Object} an object that can be safely stored in DynamoDB
+ */
+function toStorableObject(object) {
+  // Round-trip to JSON and back to eliminate all undefined properties and replace all empty strings
+  return JSON.parse(JSON.stringify(object, emptyStringReplacer));
+}
+
+//noinspection JSUnusedLocalSymbols
+/**
+ * A replacer function to be used with JSON.stringify, which replaces all empty string values with Defaults.emptyStringReplacement.
+ * @param {string} key - the key of the property being stringified (initially an empty key representing the object being stringified)
+ * @param {*} value - the value being stringified
+ * @returns {string} the non-empty string replacement value
+ */
+function emptyStringReplacer(key, value) {
+  // DynamoDB does NOT accept any empty strings including ones inside arrays, so no special case for arrays is necessary
+  return value === '' ? defaults.emptyStringReplacement : value;
 }
