@@ -26,7 +26,9 @@ module.exports = {
   isExpiredCredentialsError: isExpiredCredentialsError,
   isNetworkingError: isNetworkingError,
   // S3 not found
-  wasS3ObjectNotFound: wasS3ObjectNotFound
+  wasS3ObjectNotFound: wasS3ObjectNotFound,
+  // DynamoDB resource not found
+  isResourceNotFoundException: isResourceNotFoundException
 };
 
 function isUnavailable(err) {
@@ -101,6 +103,10 @@ function isNetworkingError(err) {
 }
 
 function wasS3ObjectNotFound(err) {
-  return err.statusCode == 404 || // "no such key" if caller has s3:ListBucket permission
-    err.statusCode == 403; // "access denied" if caller does NOT have s3:ListBucket permission
+  return err.statusCode === 404 || err.statusCode === '404' || // "no such key" if caller has s3:ListBucket permission
+    err.statusCode === 403 || err.statusCode === '403'; // "access denied" if caller does NOT have s3:ListBucket permission
+}
+
+function isResourceNotFoundException(err) {
+  return err.code === 'ResourceNotFoundException';
 }

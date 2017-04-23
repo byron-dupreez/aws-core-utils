@@ -96,7 +96,7 @@ function checkResolveStageFromKinesisEvent(t, eventStage, functionVersion, funct
 
   // Create a Kinesis event
   const eventSourceArn = sampleKinesisEventSourceArn('eventSourceArnRegion', streamName);
-  const event = sampleKinesisEventWithSampleRecord(undefined, undefined, eventSourceArn, 'eventAwsRegion');
+  const event = sampleKinesisEventWithSampleRecord(undefined, undefined, undefined, undefined, eventSourceArn, 'eventAwsRegion');
   if (isNotBlank(eventStage)) {
     event.stage = eventStage;
   }
@@ -1277,7 +1277,7 @@ test('configureRegionStageAndAwsContext', t => {
 
     // Create a Kinesis event
     const eventSourceArn = sampleKinesisEventSourceArn('eventSourceArnRegion', 'TestStream_QA');
-    const event = sampleKinesisEventWithSampleRecord(undefined, undefined, eventSourceArn, 'eventAwsRegion');
+    const event = sampleKinesisEventWithSampleRecord(undefined, undefined, undefined, undefined, eventSourceArn, 'eventAwsRegion');
 
     configureRegionStageAndAwsContext(context, event, awsContext);
 

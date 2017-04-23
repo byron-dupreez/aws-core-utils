@@ -15,10 +15,16 @@ const toValueFromAttributeTypeAndValue = dynamoDBUtils.toValueFromAttributeTypeA
 const toKeyValueStrings = dynamoDBUtils.toKeyValueStrings;
 const toKeyValuePairs = dynamoDBUtils.toKeyValuePairs;
 const toStorableObject = dynamoDBUtils.toStorableObject;
+const simplifyKeysNewImageAndOldImage = dynamoDBUtils.simplifyKeysNewImageAndOldImage;
 const defaults = dynamoDBUtils.defaults;
 
 const strings = require('core-functions/strings');
 const stringify = strings.stringify;
+
+const copying = require('core-functions/copying');
+const copy = copying.copy;
+
+const samples = require('./samples');
 
 const putRequest = {
   TableName : 'Table',
@@ -160,7 +166,7 @@ test('toStorableObject with default emptyStringReplacement', t => {
   //Defaults.emptyStringReplacement = emptyStringReplacement;
 
   const item = toStorableObject(putRequest.Item);
-  console.log(`toStorableObject(putRequest.Item) = ${stringify(item)}`);
+  // console.log(`toStorableObject(putRequest.Item) = ${stringify(item)}`);
 
   const oldItem = putRequest.Item;
 
@@ -201,7 +207,7 @@ test('toStorableObject with overridden Defaults.emptyStringReplacement', t => {
   defaults.emptyStringReplacement = emptyStringReplacement;
 
   const item = toStorableObject(putRequest.Item);
-  console.log(`toStorableObject(putRequest.Item) = ${stringify(item)}`);
+  // console.log(`toStorableObject(putRequest.Item) = ${stringify(item)}`);
 
   const oldItem = putRequest.Item;
 
@@ -232,6 +238,60 @@ test('toStorableObject with overridden Defaults.emptyStringReplacement', t => {
   t.equal(item.null1, null, `item.null1 must be null`);
   t.equal(item.map1.map2.null2, null, `item.map1.map2.null2 must be null`);
   t.equal(item.list1[4], null, `item.list1[4] must be null`);
+
+  t.end();
+});
+
+test('simplifyKeysNewImageAndOldImage', t => {
+  const eventSourceARN = samples.sampleDynamoDBEventSourceArn('us-west-2', 'TestTable_DEV', '2017-03-13T21:33:45');
+  const record = samples.sampleDynamoDBMessage('E001', '10000000000000000', eventSourceARN, '123', 456, 'ABC', 10, 1, 2, 3, '4', '5', true);
+  const msg = copy(record, {deep: true});
+  const dynamodb = msg.dynamodb;
+
+  t.ok(dynamodb.Keys, `dynamodb.Keys must still exist`);
+  t.ok(dynamodb.NewImage, `dynamodb.NewImage must still exist`);
+  t.ok(dynamodb.OldImage, `dynamodb.OldImage must still exist`);
+  t.notOk(dynamodb.keys, `dynamodb.keys must not exist yet`);
+  t.notOk(dynamodb.newImage, `dynamodb.newImage must not exist yet`);
+  t.notOk(dynamodb.oldImage, `dynamodb.oldImage must not exist yet`);
+
+  simplifyKeysNewImageAndOldImage(dynamodb);
+
+  const expected = {
+    "keys": {
+      "k1": "ABC",
+      "k2": 10
+    },
+    "newImage": {
+      "k1": "ABC",
+      "k2": 10,
+      "id1": "123",
+      "id2": "456",
+      "n1": 1,
+      "n2": 2,
+      "n3": 3,
+      "n4": '4',
+      "n5": '5'
+    },
+    "oldImage": {
+      "k1": "ABC",
+      "k2": 10,
+      "id1": "123",
+      "id2": "456",
+      "n1": 1,
+      "n2": 2,
+      "n3": 2,
+      "n4": '4',
+      "n5": '5'
+    }
+  };
+
+  t.deepEqual(dynamodb.keys, expected.keys, `dynamodb.keys must be ${stringify(expected.keys)}`);
+  t.deepEqual(dynamodb.newImage, expected.newImage, `dynamodb.newImage must be ${stringify(expected.newImage)}`);
+  t.deepEqual(dynamodb.oldImage, expected.oldImage, `dynamodb.oldImage must be ${stringify(expected.oldImage)}`);
+  t.notOk(dynamodb.Keys, `dynamodb.Keys must no longer exist`);
+  t.notOk(dynamodb.NewImage, `dynamodb.NewImage must no longer exist`);
+  t.notOk(dynamodb.OldImage, `dynamodb.OldImage must no longer exist`);
 
   t.end();
 });

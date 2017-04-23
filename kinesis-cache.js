@@ -12,7 +12,8 @@ const regionKeysByRegion = new Map();
 
 const regions = require('./regions');
 
-const Objects = require('core-functions/objects');
+const copying = require('core-functions/copying');
+const copy = copying.copy;
 
 const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
@@ -50,7 +51,7 @@ module.exports = {
  */
 function setKinesis(kinesisOptions, context) {
   // If no options were specified, then use an empty object
-  const options = kinesisOptions ? Objects.copy(kinesisOptions, {deep: true}) : {};
+  const options = kinesisOptions ? copy(kinesisOptions, {deep: true}) : {};
 
   // If no region was specified in the given kinesis options, then set it to the current region
   let region = options.region;

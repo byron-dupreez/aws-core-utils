@@ -283,10 +283,6 @@
  */
 
 /**
- * @typedef {KinesisEventRecord|DynamoDBEventRecord} AnyStreamEventRecord - represents any AWS stream event record (currently supported)
- */
-
-/**
  * @typedef {StreamEventRecord} KinesisEventRecord - represents an AWS Kinesis stream event record
  * @property {KinesisProperty} kinesis - the kinesis property contains the data and details of the Kinesis event record
  * @property {string} invokeIdentityArn - the invoke identity ARN (Amazon Resource Number)
@@ -296,9 +292,19 @@
 /**
  * @typedef {Object} KinesisProperty - represents the kinesis property of an AWS Kinesis stream event record
  * @property {string} partitionKey - the partition key of the Kinesis event record
- * @property {string} data - the actual data of a Kinesis event record in base 64 format
  * @property {string} sequenceNumber - the sequence number of the Kinesis event record
+ * @property {string} data - the actual data of a Kinesis event record in base 64 format
  * @property {string} kinesisSchemaVersion - the schema version of the Kinesis event record
+ * @property {number} approximateArrivalTimestamp - the approximate arrival timestamp (e.g. 1487258439.42)
+ */
+
+/**
+ * @typedef {Object} UserRecord - represents a "user record" extracted from an AWS Kinesis stream event record using the `aws-kinesis-agg` module
+ * @property {string} partitionKey - the original partition key of this user record, which was used in the Kinesis put record request either sent directly or added to an aggregate record
+ * @property {string|undefined} [explicitPartitionKey] - an explicit partition key added by `aws-kinesis-agg` (Note that it can contain the string "undefined" and is omitted or undefined if the Kinesis record is a normal, non-aggregate record)
+ * @property {string} sequenceNumber: - the sequence number of the AWS Kinesis stream event record from which this UserRecord was extracted
+ * @property {number|undefined} [subSequenceNumber] - the sub-sequence number assigned to this UserRecord by `aws-kinesis-agg` (undefined if the Kinesis record is a normal, non-aggregate record)
+ * @property {string} data - the actual data of the message in base 64 format
  */
 
 /**
@@ -309,13 +315,28 @@
 
 /**
  * @typedef {Object} DynamodbProperty - represents the dynamodb property of an AWS DynamoDB stream event record
- * @property {Object} Keys - the keys of the DynamoDB record (in DynamoDB attribute value format)
- * @property {Object} [NewImage] - the new image of the DynamoDB record (in DynamoDB attribute value format)
- * @property {Object} [OldImage] - the old image of the DynamoDB record (in DynamoDB attribute value format)
+ * @property {Object} Keys - the keys of the DynamoDB record (in DynamoDB attribute type & value format)
+ * @property {Object} [NewImage] - the new image of the DynamoDB record (in DynamoDB attribute type & value format)
+ * @property {Object} [OldImage] - the old image of the DynamoDB record (in DynamoDB attribute type & value format)
  * @property {string} SequenceNumber - the sequence number of the event
  * @property {string} SizeBytes - the size of the event in bytes
  * @property {string} StreamViewType - the type of stream view, which defines whether NewImage and OldImage should be
  * present or not, and which should be 'KEYS_ONLY', 'NEW_IMAGE', 'OLD_IMAGE' or 'NEW_AND_OLD_IMAGES'
+ */
+
+/**
+ * @typedef {Object} SimpleDynamodbProperty - represents a converted, simple objects only form of a dynamodb property originally extracted from an AWS DynamoDB stream event record
+ * @property {Object} keys - the keys of the DynamoDB record (in simple object format)
+ * @property {Object} [newImage] - the new image of the DynamoDB record (in simple object format)
+ * @property {Object} [oldImage] - the old image of the DynamoDB record (in simple object format)
+ * @property {string} SequenceNumber - the sequence number of the event
+ * @property {string} SizeBytes - the size of the event in bytes
+ * @property {string} StreamViewType - the type of stream view, which defines whether newImage and oldImage should be
+ * present or not, and which should be 'KEYS_ONLY', 'NEW_IMAGE', 'OLD_IMAGE' or 'NEW_AND_OLD_IMAGES'
+ */
+
+/**
+ * @typedef {KinesisEventRecord|DynamoDBEventRecord} AnyStreamEventRecord - represents any AWS stream event record (currently supported)
  */
 
 /**

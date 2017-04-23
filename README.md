@@ -1,4 +1,4 @@
-# aws-core-utils v6.0.0
+# aws-core-utils v6.0.1
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -387,6 +387,16 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 6.0.1
+- Updated `core-functions` dependency to version 3.0.2
+- Updated `logging-utils` dependency to version 4.0.1
+- Patches to `test/samples.js`:
+  - Fixed potential shared global regular expression issues in `sampleAwsContext` function
+- Changes to `aws-errors` module:
+  - Added `isResourceNotFoundException` function
+- Changes to `dynamodb-utils` module:
+  - Added `simplifyKeysNewImageAndOldImage` function
 
 ### 6.0.0
 - Updated `core-functions` dependency to version 3.0.0

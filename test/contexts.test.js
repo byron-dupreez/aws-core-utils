@@ -55,7 +55,7 @@ const standardSettings = {
 function sampleAwsEvent(streamName, partitionKey, data, omitEventSourceARN) {
   const region = process.env.AWS_REGION;
   const eventSourceArn = omitEventSourceARN ? undefined : samples.sampleKinesisEventSourceArn(region, streamName);
-  return samples.sampleKinesisEventWithSampleRecord(partitionKey, data, eventSourceArn, region);
+  return samples.sampleKinesisEventWithSampleRecord(undefined, undefined, partitionKey, data, eventSourceArn, region);
 }
 
 function sampleAwsContext(functionVersion, functionAlias) {

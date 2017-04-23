@@ -4,7 +4,10 @@ const stages = require('./stages');
 const kinesisCache = require('./kinesis-cache');
 const dynamoDBDocClientCache = require('./dynamodb-doc-client-cache');
 
-const Objects = require('core-functions/objects');
+const copying = require('core-functions/copying');
+const copy = copying.copy;
+const merging = require('core-functions/merging');
+const merge = merging.merge;
 
 /**
  * Utilities for configuring contexts for API Gateway exposed and other types of Lambdas.
@@ -101,17 +104,17 @@ function configureStandardContext(context, settings, options, event, awsContext,
  * @returns {CustomAware} the given context configured with custom settings in context.custom
  */
 function configureCustomSettings(context, settings, options) {
-  const settingsAvailable = settings && typeof settings == 'object';
+  const settingsAvailable = settings && typeof settings === 'object';
   const optionsAvailable = options && typeof options === 'object';
 
-  const customOptions = optionsAvailable ? Objects.copy(options, {deep: true}) : {};
+  const customOptions = optionsAvailable ? copy(options, {deep: true}) : {};
 
   const customSettings = settingsAvailable ?
-    optionsAvailable ? Objects.merge(customOptions, settings) : settings :
+    optionsAvailable ? merge(customOptions, settings) : settings :
     customOptions;
 
   context.custom = context.custom && typeof context.custom === 'object' ?
-    Objects.merge(customSettings, context.custom) : customSettings;
+    merge(customSettings, context.custom) : customSettings;
 
   return context;
 }

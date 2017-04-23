@@ -90,9 +90,9 @@ test('getRegion and setRegionIfNotSet', t => {
 //   // const invokedFunctionArnRegion = 'IF_ARN_REGION';
 //
 //   const eventSourceArn = sampleEventSourceArn(streamName); //, eventSourceArnRegion);
-//   //const record = sampleKinesisRecord(eventSourceArn, eventAwsRegion);
+//   //const record = sampleKinesisRecord(... eventSourceArn, eventAwsRegion);
 //   //const event = sampleKinesisEventWithRecord(record);
-//   const event = sampleKinesisEventWithSampleRecord(eventSourceArn); //, eventAwsRegion);
+//   const event = sampleKinesisEventWithSampleRecord(... eventSourceArn); //, eventAwsRegion);
 //
 //   // Create an AWS context
 //   const functionName = sampleFunctionName;

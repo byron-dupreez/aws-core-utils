@@ -91,7 +91,10 @@ const isBlank = Strings.isBlank;
 const isNotBlank = Strings.isNotBlank;
 const stringify = Strings.stringify;
 
-const Objects = require('core-functions/objects');
+const copying = require('core-functions/copying');
+const copy = copying.copy;
+const merging = require('core-functions/merging');
+const merge = merging.merge;
 
 const streamEvents = require('./stream-events');
 
@@ -191,10 +194,10 @@ function configureDefaultStageHandling(context, options, otherSettings, otherOpt
  * @returns {StageHandlingSettings} a stage handling settings object
  */
 function getDefaultStageHandlingSettings(options) {
-  const settings = options && typeof options === 'object' ? Objects.copy(options, {deep: true}) : {};
+  const settings = options && typeof options === 'object' ? copy(options, {deep: true}) : {};
 
   const defaultOptions = loadDefaultStageHandlingOptions();
-  Objects.merge(defaultOptions, settings);
+  merge(defaultOptions, settings);
 
   const defaultSettings = {
     customToStage: undefined,
@@ -208,7 +211,7 @@ function getDefaultStageHandlingSettings(options) {
     extractStageFromResourceName: extractStageFromSuffixedResourceName,
     extractNameAndStageFromResourceName: extractNameAndStageFromSuffixedResourceName
   };
-  return Objects.merge(defaultSettings, settings);
+  return merge(defaultSettings, settings);
 }
 
 /**
@@ -228,7 +231,7 @@ function loadDefaultStageHandlingOptions() {
     extractInCase: 'lower',
     defaultStage: undefined
   };
-  return Objects.merge(defaults, defaultOptions);
+  return merge(defaults, defaultOptions);
 }
 
 /**
@@ -285,7 +288,7 @@ function configureStageHandling(context, settings, options, otherSettings, other
   const defaultSettings = getDefaultStageHandlingSettings(options);
 
   const stageHandlingSettings = settingsAvailable ?
-    Objects.merge(defaultSettings, settings) : defaultSettings;
+    merge(defaultSettings, settings) : defaultSettings;
 
   // Configure stage handling with the given or derived stage handling settings
   configureStageHandlingWithSettings(context, stageHandlingSettings, otherSettings, otherOptions, forceConfiguration);

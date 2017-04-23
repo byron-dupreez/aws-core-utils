@@ -4,8 +4,6 @@
 const MAX_PARTITION_KEY_SIZE = 256;
 
 const arns = require('./arns');
-const Strings = require('core-functions/strings');
-const stringify = Strings.stringify;
 
 /**
  * Valid event names for a DynamoDB stream event.
@@ -272,7 +270,7 @@ function validateStreamEventRecord(record) {
 
     default:
       // Only support Kinesis and DynamoDB stream event records
-      throw new Error(`Unexpected eventSource (${record.eventSource}) on stream event record (${stringify(record)})`);
+      throw new Error(`Unexpected eventSource (${record.eventSource}) on stream event record (${record.eventID})`);
   }
 }
 
@@ -291,16 +289,16 @@ function _validateStreamEventRecord(record) {
     throw new Error(`Invalid stream event record (${record}) - record must be a non-null object`);
   }
   if (!record.eventID) {
-    throw new Error(`Missing eventID property for stream event record (${stringify(record)})`);
+    throw new Error(`Missing eventID property for stream event record (${record.eventID})`);
   }
   if (!record.eventSourceARN) {
-    throw new Error(`Missing eventSourceARN property for stream event record (${stringify(record)})`);
+    throw new Error(`Missing eventSourceARN property for stream event record (${record.eventID})`);
   }
   if (!record.eventSource) {
-    throw new Error(`Missing eventSource property for stream event record (${stringify(record)})`);
+    throw new Error(`Missing eventSource property for stream event record (${record.eventID})`);
   }
   if (!record.eventName) {
-    throw new Error(`Missing eventName property for stream event record (${stringify(record)})`);
+    throw new Error(`Missing eventName property for stream event record (${record.eventID})`);
   }
 }
 
@@ -317,7 +315,7 @@ function validateKinesisStreamEventRecord(record) {
   _validateStreamEventRecord(record);
 
   if (record.eventSource !== "aws:kinesis") {
-    throw new Error(`Unexpected eventSource (${record.eventSource}) on Kinesis stream event record (${stringify(record)})`)
+    throw new Error(`Unexpected eventSource (${record.eventSource}) on Kinesis stream event record (${record.eventID})`)
   }
   _validateKinesisStreamEventRecord(record);
 }
@@ -329,16 +327,16 @@ function validateKinesisStreamEventRecord(record) {
  */
 function _validateKinesisStreamEventRecord(record) {
   if (!record.kinesis) {
-    throw new Error(`Missing kinesis property for Kinesis stream event record (${stringify(record)})`);
+    throw new Error(`Missing kinesis property for Kinesis stream event record (${record.eventID})`);
   }
   if (!record.kinesis.data) {
-    throw new Error(`Missing data property for Kinesis stream event record (${stringify(record)})`);
+    throw new Error(`Missing data property for Kinesis stream event record (${record.eventID})`);
   }
   if (!record.kinesis.partitionKey) {
-    throw new Error(`Missing partitionKey property for Kinesis stream event record (${stringify(record)})`);
+    throw new Error(`Missing partitionKey property for Kinesis stream event record (${record.eventID})`);
   }
   if (!record.kinesis.sequenceNumber) {
-    throw new Error(`Missing sequenceNumber property for Kinesis stream event record (${stringify(record)})`);
+    throw new Error(`Missing sequenceNumber property for Kinesis stream event record (${record.eventID})`);
   }
 }
 
@@ -356,7 +354,7 @@ function validateDynamoDBStreamEventRecord(record) {
   _validateStreamEventRecord(record);
 
   if (record.eventSource !== "aws:dynamodb") {
-    throw new Error(`Unexpected eventSource (${record.eventSource}) on DynamoDB stream event record (${stringify(record)})`)
+    throw new Error(`Unexpected eventSource (${record.eventSource}) on DynamoDB stream event record (${record.eventID})`)
   }
   _validateDynamoDBStreamEventRecord(record);
 }
@@ -378,19 +376,19 @@ function isDynamoDBEventNameValid(recordOrEventName) {
  */
 function _validateDynamoDBStreamEventRecord(record) {
   if (!isDynamoDBEventNameValid(record)) {
-    throw new Error(`Invalid eventName property (${record.eventName}) for DynamoDB stream event record (${stringify(record)})`);
+    throw new Error(`Invalid eventName property (${record.eventName}) for DynamoDB stream event record (${record.eventID})`);
   }
   if (!record.dynamodb) {
-    throw new Error(`Missing dynamodb property for DynamoDB stream event record (${stringify(record)})`);
+    throw new Error(`Missing dynamodb property for DynamoDB stream event record (${record.eventID})`);
   }
   if (!record.dynamodb.Keys) {
-    throw new Error(`Missing Keys property for DynamoDB stream event record (${stringify(record)})`);
+    throw new Error(`Missing Keys property for DynamoDB stream event record (${record.eventID})`);
   }
   if (!record.dynamodb.SequenceNumber) {
-    throw new Error(`Missing SequenceNumber property for DynamoDB stream event record (${stringify(record)})`);
+    throw new Error(`Missing SequenceNumber property for DynamoDB stream event record (${record.eventID})`);
   }
   if (!record.dynamodb.StreamViewType) {
-    throw new Error(`Missing StreamViewType property for DynamoDB stream event record (${stringify(record)})`);
+    throw new Error(`Missing StreamViewType property for DynamoDB stream event record (${record.eventID})`);
   }
   switch (record.dynamodb.StreamViewType) {
     case 'KEYS_ONLY':
@@ -398,23 +396,23 @@ function _validateDynamoDBStreamEventRecord(record) {
 
     case 'NEW_IMAGE':
       if (!record.dynamodb.NewImage && record.eventName !== 'REMOVE') {
-        throw new Error(`Missing NewImage property for DynamoDB stream event record (${stringify(record)})`);
+        throw new Error(`Missing NewImage property for DynamoDB stream event record (${record.eventID})`);
       }
       break;
 
     case 'OLD_IMAGE':
       if (!record.dynamodb.OldImage && record.eventName !== 'INSERT') {
-        throw new Error(`Missing OldImage property for DynamoDB stream event record (${stringify(record)})`);
+        throw new Error(`Missing OldImage property for DynamoDB stream event record (${record.eventID})`);
       }
       break;
 
     case 'NEW_AND_OLD_IMAGES':
       if ((!record.dynamodb.NewImage && record.eventName !== 'REMOVE') || (!record.dynamodb.OldImage && record.eventName !== 'INSERT')) {
-        throw new Error(`Missing both NewImage and OldImage properties for DynamoDB stream event record (${stringify(record)})`);
+        throw new Error(`Missing both NewImage and OldImage properties for DynamoDB stream event record (${record.eventID})`);
       }
       break;
 
     default:
-      throw new Error(`Unexpected StreamViewType (${record.dynamodb.StreamViewType}) on DynamoDB stream event record (${stringify(record)})`);
+      throw new Error(`Unexpected StreamViewType (${record.dynamodb.StreamViewType}) on DynamoDB stream event record (${record.eventID})`);
   }
 }

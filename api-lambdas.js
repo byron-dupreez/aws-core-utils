@@ -2,7 +2,9 @@
 
 const contexts = require('./contexts');
 const Promises = require('core-functions/promises');
-const Objects = require('core-functions/objects');
+const copying = require('core-functions/copying');
+const copy = copying.copy;
+
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
 const strings = require('core-functions/strings');
@@ -84,10 +86,10 @@ function generateHandlerFunction(initContext, initSettings, initOptions, fn, log
    * @param {Callback} callback - the AWS Lambda callback function passed to your handler
    */
   function handler(event, awsContext, callback) {
-    const context = initContext && typeof initContext === 'object' ? Objects.copy(initContext, {deep: true}) : {};
+    const context = initContext && typeof initContext === 'object' ? copy(initContext, {deep: true}) : {};
     try {
-      const settings = initSettings && typeof initSettings === 'object' ? Objects.copy(initSettings, {deep: true}) : undefined;
-      const options = initOptions && typeof initOptions === 'object' ? Objects.copy(initOptions, {deep: true}) : undefined;
+      const settings = initSettings && typeof initSettings === 'object' ? copy(initSettings, {deep: true}) : undefined;
+      const options = initOptions && typeof initOptions === 'object' ? copy(initOptions, {deep: true}) : undefined;
 
       // Configure the context as a standard context
       contexts.configureStandardContext(context, settings, options, event, awsContext, false);

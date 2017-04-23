@@ -20,6 +20,7 @@ module.exports = {
   toKeyValueStrings: toKeyValueStrings,
   toKeyValuePairs: toKeyValuePairs,
   toStorableObject: toStorableObject,
+  simplifyKeysNewImageAndOldImage: simplifyKeysNewImageAndOldImage,
   defaults: defaults
 };
 
@@ -140,4 +141,30 @@ function toStorableObject(object) {
 function emptyStringReplacer(key, value) {
   // DynamoDB does NOT accept any empty strings including ones inside arrays, so no special case for arrays is necessary
   return value === '' ? defaults.emptyStringReplacement : value;
+}
+
+/**
+ * Converts and replaces all of the original DynamoDB attribute type & value format "Keys", "NewImage" and "OldImage"
+ * properties (if any) on the given dynamodb property object with corresponding new simple object format "keys",
+ * "newImage" and "oldImage" properties (each converted using {@link toObjectFromDynamoDBMap}). Deletes the original
+ * "Keys", "NewImage" and "OldImage" properties from the given dynamodb property object after conversion.
+ * @param {DynamodbProperty|SimpleDynamodbProperty} dynamodbProperty - a dynamodb object property
+ * @returns {SimpleDynamodbProperty} the converted, simple objects only form of the given dynamodb property
+ */
+function simplifyKeysNewImageAndOldImage(dynamodbProperty) {
+  if (dynamodbProperty) {
+    if (dynamodbProperty.Keys) {
+      dynamodbProperty.keys = toObjectFromDynamoDBMap(dynamodbProperty.Keys);
+      delete dynamodbProperty.Keys;
+    }
+    if (dynamodbProperty.NewImage) {
+      dynamodbProperty.newImage = toObjectFromDynamoDBMap(dynamodbProperty.NewImage);
+      delete dynamodbProperty.NewImage;
+    }
+    if (dynamodbProperty.OldImage) {
+      dynamodbProperty.oldImage = toObjectFromDynamoDBMap(dynamodbProperty.OldImage);
+      delete dynamodbProperty.OldImage;
+    }
+  }
+  return dynamodbProperty;
 }
