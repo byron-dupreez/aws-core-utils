@@ -1,7 +1,7 @@
 {
   "name": "aws-core-utils-tests",
   "description": "Unit tests for aws-core-utils modules",
-  "version": "6.0.1",
+  "version": "6.0.2",
   "author": "Byron du Preez",
   "license": "Apache-2.0",
   "private": true,
