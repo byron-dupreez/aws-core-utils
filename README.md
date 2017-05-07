@@ -389,8 +389,14 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 ## Changes
 
 ### 6.0.2
-- Updated `core-functions` dependency to version 3.0.3
-- Updated `logging-utils` dependency to version 4.0.2
+- Upgraded to Node 6.10.3
+- Updated `core-functions` dependency to version 3.0.4
+- Updated `logging-utils` dependency to version 4.0.3
+- Upgraded `aws-sdk` dev dependency to version 2.45.0
+- Changes to `dynamodb-doc-client-cache` module: 
+  - Changed `setDynamoDBDocClient` to create & cache each new DynamoDB.DocumentClient instance with a COPY of the options
+    while still caching the ORIGINAL options to avoid subsequent cache comparison failures related to AWS SDK 2.45.0 
+    mutating the options passed to the constructor, e.g. by adding "attrValue" with value "S8"
 
 ### 6.0.1
 - Updated `core-functions` dependency to version 3.0.2

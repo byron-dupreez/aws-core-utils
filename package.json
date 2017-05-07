@@ -5,18 +5,18 @@
   "author": "Byron du Preez",
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=4.3.2"
+    "node": ">=6.10"
   },
   "scripts": {
     "test": "tape ./test/*.test.js"
   },
   "dependencies": {
-    "core-functions": "^3.0.3",
-    "logging-utils": "^4.0.2",
-    "deep-equal": "^1.0.1"
+    "core-functions": "3.0.4",
+    "logging-utils": "4.0.3",
+    "deep-equal": "1.0.1"
   },
   "devDependencies": {
-    "aws-sdk": "2.4.9"
+    "aws-sdk": "2.45.0"
   },
   "repository": "https://github.com/byron-dupreez/aws-core-utils"
 }
