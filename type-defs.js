@@ -71,10 +71,15 @@
  */
 
 /**
- * @typedef {StageAware} RegionStageAWSContextAware - an object configured with the name of the current AWS region,
+ * @typedef {StageAware} StageAndAWSContextAware - an object configured with the AWS context and the resolved stage, which
+ * implies pre-configured stage handling settings and logging functionality
+ * @property {AWSContext} awsContext - the AWS context passed to your Lambda function on invocation
+ */
+
+/**
+ * @typedef {StageAndAWSContextAware} RegionStageAWSContextAware - an object configured with the name of the current AWS region,
  * the AWS context and the resolved stage, which implies pre-configured stage handling settings and logging functionality
  * @property {string} region - the name of the AWS region to use
- * @property {AWSContext} awsContext - the AWS context passed to your Lambda function on invocation
  */
 
 /**
@@ -362,4 +367,44 @@
  * alter the default behaviour
  * @property {string} emptyStringReplacement - a non-empty string to use as a replacement for empty strings, which
  * cannot be stored to DynamoDB (defaults to ' ', i.e. a single space)
+ */
+
+/**
+ * @typedef {Object} DynamoDBGetItemOpts - a selection of DynamoDB Query options to use (other than TableName & Key & legacy parameters)
+ * @property {boolean|undefined} [ConsistentRead] - whether to do a consistent read to obtain a strongly consistent result or not (NB: GSIs ONLY support eventually consistent reads)
+ * @property {string|undefined} [ProjectionExpression] - an optional string that identifies one or more attributes to retrieve from the table
+ * @property {Object|undefined} [ExpressionAttributeNames] - optional one or more substitution tokens for attribute names in an expression
+ * @property {'NONE'|'INDEXES'|'TOTAL'|undefined} [ReturnConsumedCapacity] - determines the level of detail about provisioned throughput consumption that is returned in the response
+ */
+/**
+ * @typedef {Object} DynamoDBGetItemResult.<T> - a DynamoDB getItem result
+ * @property {T|undefined} [Item] - the returned item (if found) or undefined (if not)
+ * @property {ConsumedCapacity|undefined} [ConsumedCapacity] - the capacity units consumed by the getItem operation (if requested)
+ */
+
+/**
+ * @typedef {Object} DynamoDBQueryOpts - a selection of DynamoDB Query options to use (other than TableName, [IndexName], KeyConditionExpression, ProjectionExpression, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues & legacy parameters)
+ * @property {Object|undefined} [ExclusiveStartKey] - the optional exclusive start key from which to continue a previous query
+ * @property {number|undefined} [Limit] - the optional number of results to which to limit the query
+ * @property {boolean|undefined} [ConsistentRead] - whether to do a consistent read to obtain a strongly consistent result or not (NB: GSIs ONLY support eventually consistent reads)
+ * @property {boolean|undefined} [ReturnConsumedCapacity] - whether to return consumed capacity or not
+ * @property {boolean|undefined} [ScanIndexForward] - use this to get results in forward or reverse order, by sort key
+ * @property {'ALL_ATTRIBUTES'|'ALL_PROJECTED_ATTRIBUTES'|'SPECIFIC_ATTRIBUTES'|'COUNT'|undefined} [Select] - the selected type of result(s) to return
+ */
+// * @property {string|undefined} [ProjectionExpression] - an optional string that identifies one or more attributes to retrieve from the table
+// * @property {string|undefined} [FilterExpression] - an optional string that contains conditions that DynamoDB applies after the Query operation, but before the data is returned
+// * @property {Object|undefined} [ExpressionAttributeNames] - optional one or more substitution tokens for attribute names in an expression
+// * @property {Object|undefined} [ExpressionAttributeValues] - optional one or more substitution tokens for attribute names in an expression
+
+/**
+ * @typedef {Object} DynamoDBQueryResult.<T> - a DynamoDB query result
+ * @property {Array.<T>} Items - the returned items
+ * @property {number} Count - the number of items returned
+ * @property {number} ScannedCount - the number of items scanned before applying any filter
+ * @property {Object|undefined} [LastEvaluatedKey] - the last evaluated key (if any) to be used to get next "page"
+ * @property {ConsumedCapacity|undefined} [ConsumedCapacity] - the capacity units consumed by the getItem operation (if requested)
+ */
+
+/**
+ * @typedef {Object} ConsumedCapacity - the capacity units consumed by an operation
  */

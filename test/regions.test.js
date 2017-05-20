@@ -12,19 +12,71 @@ const uuid = require("uuid");
 // The test subject
 const regions = require('../regions');
 const getRegion = regions.getRegion;
+const setRegion = regions.setRegion;
+
 const getRegionRaw = regions.ONLY_FOR_TESTING.getRegionRaw;
-// const getDefaultRegion = regions.getDefaultRegion;
-// const resolveRegion = regions.resolveRegion;
 const setRegionIfNotSet = regions.ONLY_FOR_TESTING.setRegionIfNotSet;
 
 const Strings = require('core-functions/strings');
 const isBlank = Strings.isBlank;
-// const isNotBlank = Strings.isNotBlank;
-// const trim = Strings.trim;
-// const trimOrEmpty = Strings.trimOrEmpty;
 
 // =====================================================================================================================
-// Tests for getRegion
+// Tests for getRegion & setRegion
+// =====================================================================================================================
+
+test('getRegion and setRegion', t => {
+
+  // Attempt to preserve the original AWS_REGION setting (unfortunately cannot preserve undefined or null)
+  const origRegion = getRegionRaw();
+
+  // check orig
+  if (origRegion === undefined) {
+    t.equal(origRegion, process.env.AWS_REGION, `original raw must be '${process.env.AWS_REGION}'`);
+    t.equal(getRegion(), undefined, `original must be empty string '${process.env.AWS_REGION}'`);
+  } else if (isBlank(origRegion)) {
+    t.equal(origRegion, process.env.AWS_REGION, `original raw must be '${process.env.AWS_REGION}'`);
+    t.equal(getRegion(), '', `original must be undefined '${process.env.AWS_REGION}'`);
+  }
+
+  // Must use delete to "clear" property.env variable - since setting to undefined & null don't work as intended
+  try {
+    // Clear AWS_REGION to undefined (by deleting it)
+    delete process.env.AWS_REGION;
+    t.equal(process.env.AWS_REGION, undefined, `process.env.AWS_REGION must be '${undefined}' after delete`);
+
+    // check get when not set
+    t.equal(getRegion(), undefined, `getRegion() must be '${undefined}'`);
+    t.throws(() => getRegion(true), undefined, `getRegion(true) must throw'`);
+
+    // check will set, when not set
+    const expected = 'TEST_REGION_1';
+    setRegion(expected);
+    t.equal(getRegion(), expected, `setRegion('TEST_REGION_1') then getRegion() must be ${expected}`);
+    t.equal(process.env.AWS_REGION, expected, `process.env.AWS_REGION must be ${expected}`);
+
+    // check changed, when another set
+    const expected2 = 'TEST_REGION_3';
+    setRegion(expected2);
+    t.equal(getRegion(), expected2, `setRegion('TEST_REGION_3') then getRegion() must now be ${expected2}`);
+    t.equal(process.env.AWS_REGION, expected2, `process.env.AWS_REGION must be ${expected2}`);
+
+  } finally {
+    // "Restore" original aws region
+    setRegion(origRegion);
+    // Check "restore" worked
+    if (origRegion === undefined) {
+      t.equal(getRegion(), undefined, `getRegion() must be "restored" to undefined' (orig was ${origRegion})`);
+    } else if (isBlank(origRegion)) {
+      t.equal(getRegion(), '', `getRegion() must be "restored" to empty string (orig was '${origRegion}')`);
+    } else {
+      t.equal(getRegion(), origRegion, `getRegion() must be restored to ${origRegion}`);
+    }
+    t.end();
+  }
+});
+
+// =====================================================================================================================
+// Tests for getRegion and setRegionIfNotSet
 // =====================================================================================================================
 
 test('getRegion and setRegionIfNotSet', t => {
@@ -33,77 +85,45 @@ test('getRegion and setRegionIfNotSet', t => {
   const origRegion = getRegionRaw();
 
   // check orig
-  if (isBlank(origRegion)) {
+  if (origRegion === undefined) {
     t.equal(origRegion, process.env.AWS_REGION, `original raw must be '${process.env.AWS_REGION}'`);
-    t.equal(getRegion(), '', `original must be empty string '${process.env.AWS_REGION}'`);
+    t.equal(getRegion(), undefined, `original must be empty string '${process.env.AWS_REGION}'`);
+  } else if (isBlank(origRegion)) {
+    t.equal(origRegion, process.env.AWS_REGION, `original raw must be '${process.env.AWS_REGION}'`);
+    t.equal(getRegion(), '', `original must be undefined '${process.env.AWS_REGION}'`);
   }
 
-  // Must use empty string to "clear" property.env variable - undefined & null don't work (e.g. it sets it to 'undefined' or 'null')
-  const unset = '';
-
+  // Must use delete to "clear" property.env variable - since setting to undefined & null don't work as intended
   try {
-    // "Clear" AWS_REGION to empty string
-    //console.log(`BEFORE reset process.env.AWS_REGION = (${process.env.AWS_REGION})`);
-    process.env.AWS_REGION = unset;
-    //console.log(`AFTER reset process.env.AWS_REGION = '${process.env.AWS_REGION}' (orig was ${origRegion})`);
-    t.equal(process.env.AWS_REGION, unset, `process.env.AWS_REGION must be '${unset}' after reset`);
+    // Clear AWS_REGION to undefined (by deleting it)
+    delete process.env.AWS_REGION;
+    t.equal(process.env.AWS_REGION, undefined, `process.env.AWS_REGION must be '${undefined}' after delete`);
 
     // check get when not set
-    t.equal(getRegion(), unset, `must be '${unset}'`);
+    t.equal(getRegion(), undefined, `getRegion() must be '${undefined}'`);
+    t.throws(() => getRegion(true), undefined, `getRegion(true) must throw'`);
 
     // check will set, when not set
     const expected = 'TEST_REGION_1';
-    t.ok(setRegionIfNotSet(expected), `must set successfully`);
-    t.equal(getRegion(), expected, `must be ${expected}`);
+    t.ok(setRegionIfNotSet(expected), `setRegionIfNotSet('TEST_REGION_1') must set successfully`);
+    t.equal(getRegion(), expected, `getRegion() must be ${expected}`);
+    t.equal(process.env.AWS_REGION, expected, `process.env.AWS_REGION must be ${expected}`);
 
     // check was NOT set, when already set set
-    t.notOk(setRegionIfNotSet('TEST_REGION_3'), `must NOT set successfully`);
-    t.equal(getRegion(), expected, `must still be ${expected}`);
+    t.notOk(setRegionIfNotSet('TEST_REGION_3'), `setRegionIfNotSet('TEST_REGION_3') must NOT set successfully`);
+    t.equal(getRegion(), expected, `getRegion() must still be ${expected}`);
 
   } finally {
     // "Restore" original aws region
-    //console.log(`BEFORE restore process.env.AWS_REGION = '${process.env.AWS_REGION}' (orig was ${origRegion})`);
-    process.env.AWS_REGION = isBlank(origRegion) ? unset : origRegion;
-    //console.log(`AFTER restore process.env.AWS_REGION = '${process.env.AWS_REGION}' (orig was ${origRegion})`);
+    setRegion(origRegion);
     // Check "restore" worked
-    if (isBlank(origRegion)) {
-      t.equal(getRegion(), unset, `must be "restored" to '${unset}' (orig was ${origRegion})`);
+    if (origRegion === undefined) {
+      t.equal(getRegion(), undefined, `getRegion() must be "restored" to undefined' (orig was ${origRegion})`);
+    } else if (isBlank(origRegion)) {
+      t.equal(getRegion(), '', `getRegion() must be "restored" to empty string (orig was '${origRegion}')`);
     } else {
-      t.equal(getRegion(), origRegion, `must be restored to ${origRegion}`);
+      t.equal(getRegion(), origRegion, `getRegion() must be restored to ${origRegion}`);
     }
     t.end();
   }
 });
-
-//TODO add tests for other methods
-// =====================================================================================================================
-// Tests for resolveRegion
-// =====================================================================================================================
-
-// test('resolveRegion with event.awsRegion defined and no event.eventSourceArn and no awsContext.invokedFunctionArn', t => {
-//   // Create an event
-//   const streamName = sampleStreamName('', '');
-//   ;
-//   // Configure different regions to each of the 3 sources
-//   // const eventSourceArnRegion = 'ES_ARN_REGION';
-//   // const eventAwsRegion = 'EVENT_AWS_REGION';
-//   // const invokedFunctionArnRegion = 'IF_ARN_REGION';
-//
-//   const eventSourceArn = sampleEventSourceArn(streamName); //, eventSourceArnRegion);
-//   //const record = sampleKinesisRecord(... eventSourceArn, eventAwsRegion);
-//   //const event = sampleKinesisEventWithRecord(record);
-//   const event = sampleKinesisEventWithSampleRecord(... eventSourceArn); //, eventAwsRegion);
-//
-//   // Create an AWS context
-//   const functionName = sampleFunctionName;
-//   const functionVersion = latestFunctionVersion;
-//
-//   const functionAlias = '';
-//   const invokedFunctionArn = sampleInvokedFunctionArn(sampleFunctionName, functionAlias); //, invokedFunctionArnRegion);
-//   const awsContext = sampleAwsContext(invokedFunctionArn, functionName, functionVersion);
-//
-//   const region = regions.resolveRegion(event, awsContext);
-//   t.equal(region, EVENT_AWS_REGION);
-//
-//   t.end();
-// });

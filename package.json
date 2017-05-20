@@ -1,6 +1,6 @@
 {
   "name": "aws-core-utils",
-  "version": "6.0.2",
+  "version": "6.0.3",
   "description": "Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.",
   "author": "Byron du Preez",
   "license": "Apache-2.0",

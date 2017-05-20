@@ -1,5 +1,6 @@
 'use strict';
 
+const regions = require('./regions');
 const stages = require('./stages');
 const kinesisCache = require('./kinesis-cache');
 const dynamoDBDocClientCache = require('./dynamodb-doc-client-cache');
@@ -43,10 +44,9 @@ module.exports = {
  * typically loaded from a JSON file, whereas settings are meant to be constructed in code and hence can contain both
  * non-function properties and functions if needed.
  *
- * Note that if either the given event or AWS context are undefined, then everything other than the region, stage and
- * AWS context will be configured. This missing configuration can be configured at a later point in your code by
- * invoking {@linkcode stages#configureRegionStageAndAwsContext}. This separation of configuration is primarily useful
- * for unit testing.
+ * Note that if either the given event or AWS context are undefined, then everything other than the stage and AWS
+ * context will be configured. This missing configuration can be configured at a later point in your code by invoking
+ * {@linkcode stages#configureStageAndAwsContext}. This separation of configuration is primarily useful for unit testing.
  *
  * @param {Object|StandardContext} context - the context to configure as a standard context
  * @param {StandardSettings|undefined} [settings] - settings to use to configure a standard context
@@ -62,6 +62,9 @@ function configureStandardContext(context, settings, options, event, awsContext,
   // Configure the given context with stage handling and its dependencies (i.e. logging)
   stages.configureStageHandling(context, settings ? settings.stageHandlingSettings : undefined,
     options ? options.stageHandlingOptions : undefined, settings, options, forceConfiguration);
+
+  // Configure the region after configuring logging (failing fast if process.env.AWS_REGION is blank)
+  regions.configureRegion(context, true);
 
   // Configure the given context with any custom settings and/or custom options
   configureCustomSettings(context, settings ? settings.customSettings : undefined, options ? options.customOptions : undefined);
@@ -84,8 +87,8 @@ function configureStandardContext(context, settings, options, event, awsContext,
   }
 
   if (event && awsContext) {
-    // Configure the given context with the current region, resolved stage and AWS context
-    stages.configureRegionStageAndAwsContext(context, event, awsContext);
+    // Configure the given context with the resolved stage and AWS context
+    stages.configureStageAndAwsContext(context, event, awsContext);
   }
   return context;
 }

@@ -1,4 +1,4 @@
-# aws-core-utils v6.0.2
+# aws-core-utils v6.0.3
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -387,6 +387,23 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 6.0.3
+- Changes to `regions` module:
+  - Changed `getRegion` function to treat "undefined" or "null" regions as undefined 
+  - Added `setRegion` function
+  - Changed `setRegionIfNotSet` function to use `setRegion`
+  - Deprecated `setRegionIfNotSet` function
+  - Changed `configureRegion` function to fallback to using `console.log` if `context.info` is not configured yet 
+- Changes to `stages` module:
+  - Added `configureStageAndAwsContext` convenience function to configure resolved stage and AWS context on the given context
+  - Deprecated old `configureRegionStageAndAwsContext` convenience function
+- Changes to `contexts` module:
+  - Changed `configureStandardContext` function to invoke `regions.configureRegion` as early in the function as possible
+    & to invoke `stages.configureStageAndAwsContext` instead of `stages.configureRegionStageAndAwsContext`
+- Changes to `type-defs` module:
+   - Added `StageAndAWSContextAware` type definition
+   - Added `DynamoDBGetItemOpts`, `DynamoDBGetItemResult`, `DynamoDBQueryOpts`, `DynamoDBQueryResult` & `ConsumedCapacity` type definitions
 
 ### 6.0.2
 - Upgraded to Node 6.10.3
