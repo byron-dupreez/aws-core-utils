@@ -370,16 +370,11 @@
  */
 
 /**
- * @typedef {Object} DynamoDBGetItemOpts - a selection of DynamoDB Query options to use (other than TableName & Key & legacy parameters)
+ * @typedef {Object} DynamoDBGetOpts - a selection of DynamoDB.DocumentClient `get` method param options to use (other than TableName & Key & legacy parameters)
  * @property {boolean|undefined} [ConsistentRead] - whether to do a consistent read to obtain a strongly consistent result or not (NB: GSIs ONLY support eventually consistent reads)
  * @property {string|undefined} [ProjectionExpression] - an optional string that identifies one or more attributes to retrieve from the table
  * @property {Object|undefined} [ExpressionAttributeNames] - optional one or more substitution tokens for attribute names in an expression
  * @property {'NONE'|'INDEXES'|'TOTAL'|undefined} [ReturnConsumedCapacity] - determines the level of detail about provisioned throughput consumption that is returned in the response
- */
-/**
- * @typedef {Object} DynamoDBGetItemResult.<T> - a DynamoDB getItem result
- * @property {T|undefined} [Item] - the returned item (if found) or undefined (if not)
- * @property {ConsumedCapacity|undefined} [ConsumedCapacity] - the capacity units consumed by the getItem operation (if requested)
  */
 
 /**
@@ -390,19 +385,27 @@
  * @property {boolean|undefined} [ReturnConsumedCapacity] - whether to return consumed capacity or not
  * @property {boolean|undefined} [ScanIndexForward] - use this to get results in forward or reverse order, by sort key
  * @property {'ALL_ATTRIBUTES'|'ALL_PROJECTED_ATTRIBUTES'|'SPECIFIC_ATTRIBUTES'|'COUNT'|undefined} [Select] - the selected type of result(s) to return
+ * @property {string|undefined} [ProjectionExpression] - an optional string that identifies one or more attributes to retrieve from the table
+ * @property {string|undefined} [FilterExpression] - an optional string that contains conditions that DynamoDB applies after the Query operation, but before the data is returned
+ * @property {Object|undefined} [ExpressionAttributeNames] - optional one or more substitution tokens for attribute names in an expression
+ * @property {Object|undefined} [ExpressionAttributeValues] - optional one or more substitution tokens for attribute names in an expression
  */
-// * @property {string|undefined} [ProjectionExpression] - an optional string that identifies one or more attributes to retrieve from the table
-// * @property {string|undefined} [FilterExpression] - an optional string that contains conditions that DynamoDB applies after the Query operation, but before the data is returned
-// * @property {Object|undefined} [ExpressionAttributeNames] - optional one or more substitution tokens for attribute names in an expression
-// * @property {Object|undefined} [ExpressionAttributeValues] - optional one or more substitution tokens for attribute names in an expression
 
 /**
- * @typedef {Object} DynamoDBQueryResult.<T> - a DynamoDB query result
- * @property {Array.<T>} Items - the returned items
+ * @typedef {Object} DynamoDBGetResult.<I> - a DynamoDB.DocumentClient `get` result (or DynamoDB `getItem` result)
+ * @property {I|undefined} [Item] - the returned item (if found) or undefined (if not)
+ * @property {ConsumedCapacity|undefined} [ConsumedCapacity] - the capacity units consumed by the get operation (if requested)
+ * @template I - the type of item returned in the `Item` property of the `get` result
+ */
+
+/**
+ * @typedef {Object} DynamoDBQueryResult.<I> - a DynamoDB.DocumentClient `query` result (or DynamoDB `query` result)
+ * @property {Array.<I>} Items - the returned items
  * @property {number} Count - the number of items returned
  * @property {number} ScannedCount - the number of items scanned before applying any filter
  * @property {Object|undefined} [LastEvaluatedKey] - the last evaluated key (if any) to be used to get next "page"
- * @property {ConsumedCapacity|undefined} [ConsumedCapacity] - the capacity units consumed by the getItem operation (if requested)
+ * @property {ConsumedCapacity|undefined} [ConsumedCapacity] - the capacity units consumed by the query operation (if requested)
+ * @template I - the type of items returned in the `Items` property of the `query` result
  */
 
 /**
