@@ -1,0 +1,23 @@
+﻿{
+  "loggingOptions": {
+    "logLevel": "trace",
+    "useLevelPrefixes": true,
+    "useConsoleTrace": false
+  },
+
+  "stageHandlingOptions": {
+    "envStageName": "STAGE",
+    "streamNameStageSeparator": "_",
+    "resourceNameStageSeparator": "_",
+    "extractInCase": "lower",
+    "injectInCase": "upper"
+  },
+
+  "kinesisOptions": {
+    "maxRetries": 1
+  },
+
+  "dynamoDBDocClientOptions": {
+    "maxRetries": 1
+  }
+}

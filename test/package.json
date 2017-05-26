@@ -1,7 +1,7 @@
 {
   "name": "aws-core-utils-tests",
   "description": "Unit tests for aws-core-utils modules",
-  "version": "5.0.17",
+  "version": "5.0.18",
   "author": "Byron du Preez",
   "license": "Apache-2.0",
   "engines": {
@@ -11,6 +11,7 @@
     "test": "tape ./*.test.js"
   },
   "devDependencies": {
+    "aws-core-test-utils": "1.0.0",
     "tape": "^4.6.3",
     "uuid": "^3.0.1"
   },

@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.17
+# aws-core-utils v5.0.18
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -15,6 +15,8 @@ Currently includes:
     - Utilities for configuring contexts for AWS Gateway exposed and other types of Lambdas
 - dynamodb-doc-client-cache.js
     - A module-scope cache of AWS.DynamoDB.DocumentClient instances by region for Lambda.
+- dynamodb-doc-client-utils.js
+    - Utilities for working with AWS DynamoDB.DocumentClient.
 - dynamodb-utils.js
     - Utilities for working with AWS DynamoDB.
 - kinesis-cache.js
@@ -387,6 +389,11 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.18
+- Back-ported add of new `dynamodb-doc-client-utils` module
+- Back-ported changes to `type-defs` module:
+   - Added `DynamoDBGetItemOpts`, `DynamoDBGetItemResult`, `DynamoDBQueryOpts`, `DynamoDBQueryResult` & `ConsumedCapacity` type definitions
 
 ### 5.0.17
 - Fixed critical module-scope defects in `generateHandlerFunction` function in `api-lambdas` module
