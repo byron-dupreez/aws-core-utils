@@ -1,4 +1,4 @@
-# aws-core-utils v6.0.5
+# aws-core-utils v6.0.6
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -390,8 +390,11 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 
 ## Changes
 
+### 6.0.6
+- Upgraded `aws-core-test-utils` test dependency to 2.0.2
+
 ### 6.0.5
-- Upgraded `aws-core-test-utils` test dependency to 2.0.0
+- Upgraded `aws-core-test-utils` test dependency to 2.0.1
 
 ### 6.0.4
 - Added new `dynamodb-doc-client-utils` module
