@@ -1,6 +1,14 @@
 'use strict';
 
 /**
+ * Defaults used by this module, which can be overridden to alter the default behaviour.
+ * @namespace {DynamoDBUtilsDefaults} defaults
+ */
+const defaults = {
+  emptyStringReplacement: ' '
+};
+
+/**
  * Utilities for working with AWS DynamoDB.
  * @module aws-core-utils/dynamodb-utils
  * @author Byron du Preez
@@ -11,7 +19,10 @@ module.exports = {
   toValueFromAttributeTypeAndValue: toValueFromAttributeTypeAndValue,
   toNumber: toNumber,
   toKeyValueStrings: toKeyValueStrings,
-  toKeyValuePairs: toKeyValuePairs
+  toKeyValuePairs: toKeyValuePairs,
+  toStorableObject: toStorableObject,
+  simplifyKeysNewImageAndOldImage: simplifyKeysNewImageAndOldImage,
+  defaults: defaults
 };
 
 const Strings = require('core-functions/strings');
@@ -134,4 +145,53 @@ function toKeyValuePairs(dynamoDBMap) {
     return [];
   }
   return Object.getOwnPropertyNames(dynamoDBMap).map(key => [key, toValueFromAttributeValue(dynamoDBMap[key])]);
+}
+
+/**
+ * Transforms the given object into an object that can be safely stored to DynamoDB with all of its empty strings
+ * replaced with Defaults.emptyStringReplacement and with no undefined properties.
+ * @param {Object} object - an object to be stored in DynamoDB
+ * @returns {Object} an object that can be safely stored in DynamoDB
+ */
+function toStorableObject(object) {
+  // Round-trip to JSON and back to eliminate all undefined properties and replace all empty strings
+  return JSON.parse(JSON.stringify(object, emptyStringReplacer));
+}
+
+//noinspection JSUnusedLocalSymbols
+/**
+ * A replacer function to be used with JSON.stringify, which replaces all empty string values with Defaults.emptyStringReplacement.
+ * @param {string} key - the key of the property being stringified (initially an empty key representing the object being stringified)
+ * @param {*} value - the value being stringified
+ * @returns {string} the non-empty string replacement value
+ */
+function emptyStringReplacer(key, value) {
+  // DynamoDB does NOT accept any empty strings including ones inside arrays, so no special case for arrays is necessary
+  return value === '' ? defaults.emptyStringReplacement : value;
+}
+
+/**
+ * Converts and replaces all of the original DynamoDB attribute type & value format "Keys", "NewImage" and "OldImage"
+ * properties (if any) on the given dynamodb property object with corresponding new simple object format "keys",
+ * "newImage" and "oldImage" properties (each converted using {@link toObjectFromDynamoDBMap}). Deletes the original
+ * "Keys", "NewImage" and "OldImage" properties from the given dynamodb property object after conversion.
+ * @param {DynamodbProperty|SimpleDynamodbProperty} dynamodbProperty - a dynamodb object property
+ * @returns {SimpleDynamodbProperty} the converted, simple objects only form of the given dynamodb property
+ */
+function simplifyKeysNewImageAndOldImage(dynamodbProperty) {
+  if (dynamodbProperty) {
+    if (dynamodbProperty.Keys) {
+      dynamodbProperty.keys = toObjectFromDynamoDBMap(dynamodbProperty.Keys);
+      delete dynamodbProperty.Keys;
+    }
+    if (dynamodbProperty.NewImage) {
+      dynamodbProperty.newImage = toObjectFromDynamoDBMap(dynamodbProperty.NewImage);
+      delete dynamodbProperty.NewImage;
+    }
+    if (dynamodbProperty.OldImage) {
+      dynamodbProperty.oldImage = toObjectFromDynamoDBMap(dynamodbProperty.OldImage);
+      delete dynamodbProperty.OldImage;
+    }
+  }
+  return dynamodbProperty;
 }
