@@ -1,4 +1,4 @@
-# aws-core-utils v6.0.7
+# aws-core-utils v6.0.8
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -389,6 +389,9 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 6.0.8
+- Upgraded `aws-core-test-utils` test dependency to 2.0.4
 
 ### 6.0.7
 - Upgraded `aws-core-test-utils` test dependency to 2.0.3
