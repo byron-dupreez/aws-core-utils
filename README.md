@@ -134,6 +134,7 @@ contexts.configureStandardContext(context, standardSettings, standardOptions, aw
 
 // If you need the logic of the configureCustomSettings function, which is used by configureStandardContext, for other purposes
 const myCustomSettings = {myCustomSetting1: 1, myCustomSetting2: 2, myCustomFunction: () => {}};
+console.log(`Irrelevant logging - only added to avoid unused function warning - ${myCustomSettings.myCustomFunction()}`);
 const myCustomOptions = require('my-custom-options.json');
 contexts.configureCustomSettings(context, myCustomSettings, myCustomOptions);
 console.log(`context.custom = ${JSON.stringify(context.custom)}; myCustomFunction = ${JSON.stringify(context.custom.myCustomFunction)} `);
