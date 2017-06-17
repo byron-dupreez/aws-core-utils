@@ -17,10 +17,10 @@ module.exports.getItem = getItem;
  * @template I - the type of data returned in the DynamoDB result's `Item` property
  * @param {string} tableName - the name of the DynamoDB table from which to load
  * @param {K} key - the key of the item to get
- * @param {DynamoDBGetOpts|undefined} [opts] - optional DynamoDB `get` parameter options to use
+ * @param {DynamoGetOpts|undefined} [opts] - optional DynamoDB `get` parameter options to use
  * @param {string} desc - a description of the item being requested for logging purposes
  * @param {StandardContext} context - the context to use
- * @return {Promise.<DynamoDBGetResult.<I>>} a promise that will resolve with the result or reject with an error
+ * @return {Promise.<DynamoGetResult.<I>>} a promise that will resolve with the result or reject with an error
  */
 function getItem(tableName, key, opts, desc, context) {
   try {

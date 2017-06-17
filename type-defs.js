@@ -186,10 +186,12 @@
  * a function that accepts: a stage-qualified resource name; and a context, and extracts a stage from the resource name
  */
 
-// Back-ported type definitions
+// ---------------------------------------------------------------------------------------------------------------------
+// Start of BACKPORT copy from latest `aws-core-utils/type-defs`
+// ---------------------------------------------------------------------------------------------------------------------
 
 /**
- * @typedef {Object} DynamoDBGetOpts - a selection of DynamoDB.DocumentClient `get` method param options to use (other than TableName & Key & legacy parameters)
+ * @typedef {Object} DynamoGetOpts - a selection of DynamoDB.DocumentClient `get` method param options to use (other than TableName & Key & legacy parameters)
  * @property {boolean|undefined} [ConsistentRead] - whether to do a consistent read to obtain a strongly consistent result or not (NB: GSIs ONLY support eventually consistent reads)
  * @property {string|undefined} [ProjectionExpression] - an optional string that identifies one or more attributes to retrieve from the table
  * @property {Object|undefined} [ExpressionAttributeNames] - optional one or more substitution tokens for attribute names in an expression
@@ -197,8 +199,8 @@
  */
 
 /**
- * @typedef {Object} DynamoDBQueryOpts - a selection of DynamoDB Query options to use (other than TableName, [IndexName], KeyConditionExpression, ProjectionExpression, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues & legacy parameters)
- * @property {Object|undefined} [ExclusiveStartKey] - the optional exclusive start key from which to continue a previous query
+ * @typedef {Object} DynamoQueryOpts.<K> - a selection of DynamoDB Query options to use (other than TableName, [IndexName], KeyConditionExpression, ProjectionExpression, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues & legacy parameters)
+ * @property {K|Object|undefined} [ExclusiveStartKey] - the optional exclusive start key from which to continue a previous query
  * @property {number|undefined} [Limit] - the optional number of results to which to limit the query
  * @property {boolean|undefined} [ConsistentRead] - whether to do a consistent read to obtain a strongly consistent result or not (NB: GSIs ONLY support eventually consistent reads)
  * @property {boolean|undefined} [ReturnConsumedCapacity] - whether to return consumed capacity or not
@@ -208,25 +210,67 @@
  * @property {string|undefined} [FilterExpression] - an optional string that contains conditions that DynamoDB applies after the Query operation, but before the data is returned
  * @property {Object|undefined} [ExpressionAttributeNames] - optional one or more substitution tokens for attribute names in an expression
  * @property {Object|undefined} [ExpressionAttributeValues] - optional one or more substitution tokens for attribute names in an expression
+ * @template K
  */
 
 /**
- * @typedef {Object} DynamoDBGetResult.<I> - a DynamoDB.DocumentClient `get` result (or DynamoDB `getItem` result)
- * @property {I|undefined} [Item] - the returned item (if found) or undefined (if not)
+ * @typedef {Object} DynamoBatchGetResult.<I,K> - a DynamoDB.DocumentClient `batchGet` result (or DynamoDB `batchGetItem` result)
+ * @property {Object.<string, Array.<I|Object>>} Responses - a map of table name to a list of items
+ * @property {UnprocessedKeysMap.<K>|undefined} [UnprocessedKeys] - a map of tables and their respective keys that were not processed with the current response (map<Array<map>>)
+ * @property {Array.<ConsumedCapacity>|undefined} [ConsumedCapacity] - The read capacity units consumed by the entire operation
+ * @template I,K
+ */
+
+/**
+ * @typedef {Object} DynamoGetResult.<I> - a DynamoDB.DocumentClient `get` result (or DynamoDB `getItem` result)
+ * @property {I|Object|undefined} [Item] - the returned item (if found) or undefined (if not)
  * @property {ConsumedCapacity|undefined} [ConsumedCapacity] - the capacity units consumed by the get operation (if requested)
- * @template I - the type of item returned in the `Item` property of the `get` result
+ * @template I
  */
 
 /**
- * @typedef {Object} DynamoDBQueryResult.<I> - a DynamoDB.DocumentClient `query` result (or DynamoDB `query` result)
- * @property {Array.<I>} Items - the returned items
+ * @typedef {Object} DynamoQueryResult.<I,K> - a DynamoDB.DocumentClient `query` result (or DynamoDB `query` result)
+ * @property {Array.<I|Object>} Items - the returned items
  * @property {number} Count - the number of items returned
  * @property {number} ScannedCount - the number of items scanned before applying any filter
- * @property {Object|undefined} [LastEvaluatedKey] - the last evaluated key (if any) to be used to get next "page"
+ * @property {K|Object|undefined} [LastEvaluatedKey] - the last evaluated key (if any) to be used to get next "page"
  * @property {ConsumedCapacity|undefined} [ConsumedCapacity] - the capacity units consumed by the query operation (if requested)
- * @template I - the type of items returned in the `Items` property of the `query` result
+ * @template I,K
+ */
+
+/**
+ * @typedef {Object} DynamoScanResult.<I,K> - a DynamoDB.DocumentClient `scan` result (or DynamoDB `scan` result)
+ * @property {Array.<I|Object>} Items - the returned items
+ * @property {number} Count - the number of items returned
+ * @property {number} ScannedCount - the number of items scanned before applying any filter
+ * @property {K|Object|undefined} [LastEvaluatedKey] - the last evaluated key (if any) to be used to get next "page"
+ * @property {ConsumedCapacity|undefined} [ConsumedCapacity] - the capacity units consumed by the query operation (if requested)
+ * @template I,K
+ */
+
+/**
+ * @typedef {Object} UnprocessedKeysMap.<K> - A map of tables and their respective keys that were not processed with the current response. The UnprocessedKeys value is in the same form as RequestItems, so the value can be provided directly to a subsequent BatchGetItem operation.
+ * @property {Array.<K|Object>} Keys - An array of primary key attribute values that define specific items in the table
+ * @property {string|undefined} [ProjectionExpression] - One or more attributes to be retrieved from the table or index. By default, all attributes are returned. If a requested attribute is not found, it does not appear in the result.
+ * @property {boolean|undefined} [ConsistentRead] - The consistency of a read operation. If set to true, then a strongly consistent read is used; otherwise, an eventually consistent read is used.
+ * @property {Object.<string, string>|undefined} [ExpressionAttributeNames] - One or more substitution tokens for attribute names in an expression.
+ * @template K
  */
 
 /**
  * @typedef {Object} ConsumedCapacity - the capacity units consumed by an operation
+ * @property {string} TableName
+ * @property {number} CapacityUnits
+ * @property {CapacityUnitsMap} Table
+ * @property {Object.<string, CapacityUnitsMap>} LocalSecondaryIndexes
+ * @property {Object.<string, CapacityUnitsMap>} GlobalSecondaryIndexes
  */
+
+/**
+ * @typedef {Object} CapacityUnitsMap
+ * @property {number} CapacityUnits
+ */
+
+// ---------------------------------------------------------------------------------------------------------------------
+// End of BACKPORT copy from latest `aws-core-utils/type-defs`
+// ---------------------------------------------------------------------------------------------------------------------

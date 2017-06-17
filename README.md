@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.21
+# aws-core-utils v5.0.22
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -134,6 +134,7 @@ contexts.configureStandardContext(context, standardSettings, standardOptions, aw
 
 // If you need the logic of the configureCustomSettings function, which is used by configureStandardContext, for other purposes
 const myCustomSettings = {myCustomSetting1: 1, myCustomSetting2: 2, myCustomFunction: () => {}}; // 
+console.log(`Irrelevant logging - only added to avoid unused function warning - ${myCustomSettings.myCustomFunction()}`);
 const myCustomOptions = require('my-custom-options.json');
 contexts.configureCustomSettings(context, myCustomSettings, myCustomOptions);
 console.log(`context.custom = ${JSON.stringify(context.custom)}`);
@@ -389,6 +390,18 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.22
+- BACKPORT of changes to `type-defs` module - added more detail to type definitions:
+  - Renamed `DynamoDBGetOpts` type definition to `DynamoGetOpts`
+  - Renamed `DynamoDBQueryOpts` type definition to `DynamoQueryOpts` & added key `K` template 
+  - Renamed `DynamoDBGetResult` type definition to `DynamoGetResult`
+  - Renamed `DynamoDBQueryResult` type definition to `DynamoQueryResult` & added extra key `K` template
+  - Added new `DynamoBatchGetResult` type definition with item `I` & key `K` templates
+  - Added new `DynamoScanResult` type definition with item `I` & key `K` templates
+  - Added new `UnprocessedKeysMap` & `CapacityUnitsMap` type definitions
+  - Added details & properties to `ConsumedCapacity` type definition
+- Upgraded `aws-core-test-utils` test dependency to 1.0.4
 
 ### 5.0.21
 - Backport: Upgraded `aws-core-test-utils` test dependency to 1.0.3
