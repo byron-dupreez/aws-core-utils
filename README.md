@@ -1,4 +1,4 @@
-# aws-core-utils v6.0.9
+# aws-core-utils v6.0.10
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -389,6 +389,20 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 6.0.10
+- Changes to `type-defs` module - added more detail to type definitions:
+  - Renamed `DynamoDBGetOpts` type definition to `DynamoGetOpts`
+  - Renamed `DynamoDBQueryOpts` type definition to `DynamoQueryOpts` & added key `K` template 
+  - Renamed `DynamoDBGetResult` type definition to `DynamoGetResult`
+  - Renamed `DynamoDBQueryResult` type definition to `DynamoQueryResult` & added extra key `K` template
+  - Added new `DynamoBatchGetResult` type definition with item `I` & key `K` templates
+  - Added new `DynamoScanResult` type definition with item `I` & key `K` templates
+  - Added new `UnprocessedKeysMap` & `CapacityUnitsMap` type definitions
+  - Added details & properties to `ConsumedCapacity` type definition
+- Upgraded `aws-core-test-utils` test dependency to 2.0.6
+- Updated `core-functions` dependency to version 3.0.6
+- Updated `logging-utils` dependency to version 4.0.5
 
 ### 6.0.9
 - Upgraded `aws-core-test-utils` test dependency to 2.0.5

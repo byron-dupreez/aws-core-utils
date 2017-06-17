@@ -34,7 +34,7 @@ test('getItem with simulated simple object result & no opts', t => {
   }
 
   context.dynamoDBDocClient = mockDynamoDBDocClient(t, 'dynamodb-utils.test', 1,
-    {get: {result: result, validateParams: validateGetParams}});
+    {get: {result: result, validateArgs: validateGetParams}});
 
   getItem(tableName, key, opts, `country (${key.country})`, context)
     .then(
@@ -66,7 +66,7 @@ test('getItem with simulated simple object result & opts with 1 option', t => {
   }
 
   context.dynamoDBDocClient = mockDynamoDBDocClient(t, 'dynamodb-utils.test', 1,
-    {get: {result: result, validateParams: validateGetParams}});
+    {get: {result: result, validateArgs: validateGetParams}});
 
   getItem(tableName, key, opts, `country (${key.country})`, context)
     .then(
@@ -100,7 +100,7 @@ test('getItem with simulated DynamoDB-style result & opts with 2 options', t => 
   }
 
   context.dynamoDBDocClient = mockDynamoDBDocClient(t, 'dynamodb-utils.test', 1,
-    {get: {result: result, validateParams: validateGetParams}});
+    {get: {result: result, validateArgs: validateGetParams}});
 
   getItem(tableName, key, opts, `country (${key.country})`, context)
     .then(
@@ -132,7 +132,7 @@ test('getItem with simulated failure', t => {
   }
 
   context.dynamoDBDocClient = mockDynamoDBDocClient(t, 'dynamodb-utils.test', 1,
-    {get: {error: fatalError, validateParams: validateGetParams}});
+    {get: {error: fatalError, validateArgs: validateGetParams}});
 
   getItem(tableName, key, opts, `country (${key.country})`, context)
     .then(
