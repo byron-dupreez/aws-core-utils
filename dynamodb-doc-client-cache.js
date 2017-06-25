@@ -1,6 +1,6 @@
 'use strict';
 
-let AWS = require("aws-sdk");
+let AWS = require('aws-sdk');
 
 // Module-scope cache of AWS.DynamoDB.DocumentClient instances by region key
 let dynamoDBDocClientByRegionKey = new WeakMap();

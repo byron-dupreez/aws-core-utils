@@ -1,6 +1,6 @@
 'use strict';
 
-let AWS = require("aws-sdk");
+let AWS = require('aws-sdk');
 
 // Module-scope cache of AWS.Kinesis instances by region key
 let kinesisByRegionKey = new WeakMap();

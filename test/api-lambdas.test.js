@@ -63,10 +63,10 @@ function deleteCachedInstances() {
 }
 
 // =====================================================================================================================
-// generateHandlerFunction simulating successful response
+// generateHandlerFunction simulating successful response (with legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating successful response', t => {
+test('generateHandlerFunction simulating successful response (with legacy parameters)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -112,10 +112,10 @@ test('generateHandlerFunction simulating successful response', t => {
 });
 
 // =====================================================================================================================
-// generateHandlerFunction simulating invalid request
+// generateHandlerFunction simulating invalid request (with legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating invalid request', t => {
+test('generateHandlerFunction simulating invalid request (with legacy parameters)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -170,10 +170,10 @@ test('generateHandlerFunction simulating invalid request', t => {
 
 
 // =====================================================================================================================
-// generateHandlerFunction simulating failure
+// generateHandlerFunction simulating failure (with legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating failure', t => {
+test('generateHandlerFunction simulating failure (with legacy parameters)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -213,6 +213,57 @@ test('generateHandlerFunction simulating failure', t => {
         t.equal(e.cause, expectedCause, `e.cause must be "${expectedCause}"`);
         t.equal(e.causeStatus, undefined, `e.causeStatus must be undefined`);
         t.equal(e.awsRequestId, awsContext.awsRequestId, `e.awsRequestId must be "${awsContext.awsRequestId}"`);
+        t.end();
+      });
+
+  } catch (err) {
+    t.fail(`handler should not have failed in try-catch - ${err.stack}`);
+    t.end();
+
+  } finally {
+    // Clean up environment
+    setRegionStageAndDeleteCachedInstances(undefined, undefined);
+  }
+});
+
+// =====================================================================================================================
+// generateHandlerFunction simulating successful response (with NON-legacy parameters)
+// =====================================================================================================================
+
+test('generateHandlerFunction simulating successful response (with NON-legacy parameters)', t => {
+  try {
+    // Set up environment for testing
+    const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
+
+    // Create sample AWS event and AWS context
+    const event = {body: {abc: 123}};
+    const invokedFunctionArn = sampleInvokedFunctionArn(region, 'myLambdaFunctionName', 'dev77');
+    const awsContext = sampleAwsContext('myLambdaFunctionName', '1.0.1', invokedFunctionArn, 500);
+
+    const expectedResponse = {def: 456};
+
+    // Create a sample function to be executed within the Lambda handler function
+    const fn = sampleFunction(expectedResponse, undefined);
+
+    // Create a sample AWS Lambda handler function
+    const generateContext = () => { return {}; }; // NB: Do NOT use () => {}, since this returns undefined & not an object!
+    const generateSettings = () => undefined;
+    const generateOptions = () => require('./sample-standard-options.json');
+    const handler = apiLambdas.generateHandlerFunction(generateContext, generateSettings, generateOptions, fn,
+      LogLevel.INFO); //, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
+
+    // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
+    const handlerWithPromise = Promises.wrap(handler);
+
+    // Invoke the handler function
+    handlerWithPromise(event, awsContext)
+      .then(response => {
+        t.pass(`handler should have passed`);
+        t.equal(response, expectedResponse, `response must be ${JSON.stringify(expectedResponse)}`);
+        t.end();
+      })
+      .catch(err => {
+        t.fail(`handler should not have failed - ${err.stack}`);
         t.end();
       });
 

@@ -63,9 +63,9 @@ function failCallback(lambdaCallback, error, awsContext, message, code, allowedH
 /**
  * Generates a handler function for your API Gateway exposed Lambda.
  *
- * @param {Object|StandardContext|undefined} [initContext] - an optional module-scope context from which to copy an initial standard context
- * @param {StandardSettings|undefined} [initSettings] - optional module-scoped settings from which to copy initial settings to use to configure a standard context
- * @param {StandardOptions|undefined} [initOptions] - optional module-scoped options from which to copy initial options to use to configure a standard context
+ * @param {(function(): (Object|StandardContext))|undefined|Object|StandardContext} [generateContext] - an optional function that will be used to generate the initial context to be configured & used (OR or an optional LEGACY module-scope context from which to copy an initial standard context)
+ * @param {(function(): (Object|StandardSettings))|undefined|Object|StandardSettings} [generateSettings] - an optional function that will be used to generate initial standard settings to use (OR optional LEGACY module-scoped settings from which to copy initial settings to use)
+ * @param {(function(): (Object|StandardOptions))|undefined|Object|StandardOptions} [generateOptions] -  an optional function that will be used to generate initial standard options to use (OR optional LEGACY module-scoped options from which to copy initial options to use)
  * @param {function(event: AWSEvent, context: StandardContext)} fn - your function that must accept the AWS event and a standard context and ideally return a Promise
  * @param {LogLevel|string|undefined} [logRequestResponseAtLogLevel] - an optional log level at which to log the request (i.e.
  * AWS event) and response; if log level is undefined or invalid, then logs neither
@@ -78,7 +78,8 @@ function failCallback(lambdaCallback, error, awsContext, message, code, allowedH
  * @param {string|undefined} [successMsg] an optional message to log at info level on success
  * @returns {AwsLambdaHandlerFunction} a handler function for your API Gateway exposed Lambda
  */
-function generateHandlerFunction(initContext, initSettings, initOptions, fn, logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg) {
+function generateHandlerFunction(generateContext, generateSettings, generateOptions, fn,
+  logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg) {
   /**
    * An API-Gateway exposed Lambda handler function.
    * @param {Object} event - the AWS event passed to your handler
@@ -86,10 +87,19 @@ function generateHandlerFunction(initContext, initSettings, initOptions, fn, log
    * @param {Callback} callback - the AWS Lambda callback function passed to your handler
    */
   function handler(event, awsContext, callback) {
-    const context = initContext && typeof initContext === 'object' ? copy(initContext, {deep: true}) : {};
+    let context = undefined;
+    const deep = {deep: true};
     try {
-      const settings = initSettings && typeof initSettings === 'object' ? copy(initSettings, {deep: true}) : undefined;
-      const options = initOptions && typeof initOptions === 'object' ? copy(initOptions, {deep: true}) : undefined;
+      // Configure the context as a standard context
+      context = typeof generateContext === 'function' ? generateContext() :
+        generateContext && typeof generateContext === 'object' ? copy(generateContext, deep) : {};
+      if (!context) context = {};
+
+      const settings = typeof generateSettings === 'function' ? copy(generateSettings(), deep) :
+        generateSettings && typeof generateSettings === 'object' ? copy(generateSettings, deep) : undefined;
+
+      const options = typeof generateOptions === 'function' ? copy(generateOptions(), deep) :
+        generateOptions && typeof generateOptions === 'object' ? copy(generateOptions, deep) : undefined;
 
       // Configure the context as a standard context
       contexts.configureStandardContext(context, settings, options, event, awsContext, false);

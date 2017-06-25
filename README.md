@@ -392,6 +392,14 @@ See the [package source](https://github.com/byron-dupreez/aws-core-utils) for mo
 ## Changes
 
 ### 6.0.12
+- Changes to `api-lambdas` module:
+  - Renamed `initContext`, `initSettings` & `initOptions` parameters of `generateHandler` function to `generateContext`, 
+    `generateSettings` & `generateOptions` respectively
+  - Changed `generateHandler` function to accept `generateContext`, `generateSettings` & `generateOptions` arguments 
+    as functions that can be used to generate non-shared objects, in addition to still providing legacy support for them 
+    being passed as shared, module-scoped objects that must be copied to be safely used
+- Upgraded `logging-utils` dependency to 4.0.6
+- Upgraded `aws-sdk` dev dependency to 2.54.0 to match current AWS Lambda runtime version
 - Upgraded `aws-core-test-utils` test dependency to 2.0.8
 
 ### 6.0.11
