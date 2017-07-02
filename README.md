@@ -1,4 +1,4 @@
-# aws-core-utils v5.0.23
+# aws-core-utils v5.0.24
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -390,6 +390,10 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.0.24
+- BACKPORT of fixes to `dynamodb-doc-client-cache` module from version 6.0.12 to resolve caching failures with current `aws-sdk` versions (e.g. 2.45.0 & 2.54.0)
+- Upgraded `aws-sdk` dev dependency to 2.54.0
 
 ### 5.0.23
 - Upgraded `aws-core-test-utils` test dependency to 1.0.5

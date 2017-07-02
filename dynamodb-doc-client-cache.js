@@ -13,6 +13,7 @@ const regionKeysByRegion = new Map();
 const regions = require('./regions');
 
 const Objects = require('core-functions/objects');
+const copy = Objects.copy;
 
 const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
@@ -53,7 +54,7 @@ module.exports = {
  */
 function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
   // If no options were specified, then use an empty object
-  const options = dynamoDBDocClientOptions ? Objects.copy(dynamoDBDocClientOptions, true) : {};
+  const options = dynamoDBDocClientOptions ? copy(dynamoDBDocClientOptions) : {};
 
   // If no region was specified in the given dynamoDBDocClient options, then set it to the current region
   let region = options.region;
@@ -90,10 +91,14 @@ function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
       logWarn(`Replacing cached DynamoDB.DocumentClient instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
     }
   }
-  // Create a new DynamoDB.DocumentClient instance with the modified options
-  dynamoDBDocClient = new AWS.DynamoDB.DocumentClient(options);
-  // Cache the new instance and the options used to create it
+  // Create a new DynamoDB.DocumentClient instance with a COPY of the resolved options (COPY avoids subsequent cache
+  // comparison failures failures due to later versions of AWS SDK (e.g. 2.45.0) mutating the options passed to the
+  // constructor, e.g. by adding "attrValue" with value "S8"
+  dynamoDBDocClient = new AWS.DynamoDB.DocumentClient(options ? copy(options) : options);
+
+  // Cache the new instance ...
   dynamoDBDocClientByRegionKey.set(regionKey, dynamoDBDocClient);
+  // ... and cache the ORIGINAL (pre-COPY) options "used" to create it
   dynamoDBDocClientOptionsByRegionKey.set(regionKey, options);
 
   return dynamoDBDocClient;
