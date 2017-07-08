@@ -1,4 +1,4 @@
-# aws-core-utils v6.0.12
+# aws-core-utils v6.0.13
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -390,6 +390,15 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 6.0.13
+- Changes to `dynamodb-doc-client-utils` module:
+  - Added new `updateProjectionExpression`, `updateExpressionAttributeNames` & `updateExpressionAttributeValues` functions
+  - Changed `getItem` function to throw a TypeError if no result or non-object result is returned
+- Moved test devDependencies to package.json & removed test/package.json
+- Upgraded `aws-core-test-utils` test dependency to 2.0.9
+- Updated `core-functions` dependency to version 3.0.7
+- Updated `logging-utils` dependency to version 4.0.7
 
 ### 6.0.12
 - Changes to `api-lambdas` module:

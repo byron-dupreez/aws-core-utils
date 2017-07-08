@@ -13,8 +13,18 @@ const mockDynamoDBDocClient = dynamoDBMocking.mockDynamoDBDocClient;
 // The test subject
 const dynamoDBDocClientUtils = require('../dynamodb-doc-client-utils');
 const getItem = dynamoDBDocClientUtils.getItem;
+const updateProjectionExpression = dynamoDBDocClientUtils.updateProjectionExpression;
+const updateExpressionAttributeNames = dynamoDBDocClientUtils.updateExpressionAttributeNames;
+const updateExpressionAttributeValues = dynamoDBDocClientUtils.updateExpressionAttributeValues;
+
+const copy = require('core-functions/copying').copy;
+const deep = {deep: true};
 
 const contexts = require('../contexts');
+
+// ---------------------------------------------------------------------------------------------------------------------
+// getItem
+// ---------------------------------------------------------------------------------------------------------------------
 
 test('getItem with simulated simple object result & no opts', t => {
   process.env.AWS_REGION = 'us-west-2';
@@ -145,4 +155,130 @@ test('getItem with simulated failure', t => {
         t.end();
       }
     );
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// updateProjectionExpression
+// ---------------------------------------------------------------------------------------------------------------------
+
+test('updateProjectionExpression', t => {
+  function check(opts, expressions, expected) {
+    const before = copy(opts, deep);
+    t.deepEqual(updateProjectionExpression(opts, expressions), expected, `updateProjectExpression(${JSON.stringify(before)}, ${JSON.stringify(expressions)}) must be ${JSON.stringify(expected)}`);
+  }
+
+  // Empty or non-array expressions
+  check(undefined, undefined, undefined);
+  check(null, undefined, null);
+  check({}, undefined, {});
+
+  check(undefined, null, undefined);
+  check(null, null, null);
+  check({}, null, {});
+
+  check(undefined, [], undefined);
+  check(null, [], null);
+  check({}, [], {});
+
+  let expressions = ['', '   '];
+  check(undefined, expressions, {ProjectionExpression: undefined});
+  check(null, expressions, {ProjectionExpression: undefined});
+  check({}, expressions, {ProjectionExpression: undefined});
+  check({ProjectionExpression: undefined}, expressions, {ProjectionExpression: undefined});
+  check({ProjectionExpression: null}, expressions, {ProjectionExpression: undefined});
+  check({ProjectionExpression: ''}, expressions, {ProjectionExpression: undefined});
+  check({ProjectionExpression: '    '}, expressions, {ProjectionExpression: undefined});
+  check({ProjectionExpression: '#col0'}, expressions, {ProjectionExpression: '#col0'});
+
+  expressions = ['#col1'];
+  check(undefined, expressions, {ProjectionExpression: '#col1'});
+  check(null, expressions, {ProjectionExpression: '#col1'});
+  check({}, expressions, {ProjectionExpression: '#col1'});
+  check({ProjectionExpression: '#col1'}, expressions, {ProjectionExpression: '#col1'});
+  check({ProjectionExpression: '#col0'}, expressions, {ProjectionExpression: '#col0,#col1'});
+
+  expressions = ['col1', '#col2'];
+  check(undefined, expressions, {ProjectionExpression: 'col1,#col2'});
+  check(null, expressions, {ProjectionExpression: 'col1,#col2'});
+  check({}, expressions, {ProjectionExpression: 'col1,#col2'});
+  check({ProjectionExpression: 'col1'}, expressions, {ProjectionExpression: 'col1,#col2'});
+  check({ProjectionExpression: '#col1'}, expressions, {ProjectionExpression: '#col1,col1,#col2'});
+  check({ProjectionExpression: '#col0'}, expressions, {ProjectionExpression: '#col0,col1,#col2'});
+  check({ProjectionExpression: 'col1,#col2'}, expressions, {ProjectionExpression: 'col1,#col2'});
+  check({ProjectionExpression: '#col2,col1'}, expressions, {ProjectionExpression: '#col2,col1'});
+  check({ProjectionExpression: 'col1,#col2,#col3'}, expressions, {ProjectionExpression: 'col1,#col2,#col3'});
+
+  t.end();
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// updateExpressionAttributeNames
+// ---------------------------------------------------------------------------------------------------------------------
+
+test('updateExpressionAttributeNames', t => {
+  function check(opts, expressionAttributeNames, expected) {
+    const before = copy(opts, deep);
+    t.deepEqual(updateExpressionAttributeNames(opts, expressionAttributeNames), expected, `updateExpressionAttributeNames(${JSON.stringify(before)}, ${JSON.stringify(expressionAttributeNames)}) must be ${JSON.stringify(expected)}`);
+  }
+
+  // Empty or non-object expression attribute names
+  check(undefined, undefined, undefined);
+  check(null, undefined, null);
+  check({}, undefined, {});
+
+  check(undefined, null, undefined);
+  check(null, null, null);
+  check({}, null, {});
+
+  check(undefined, 123, undefined);
+  check(null, '123', null);
+  check({}, true, {});
+
+  check(undefined, {'#a': 'a'}, { ExpressionAttributeNames: {'#a': 'a'}});
+  check(null, {'#a': 'a'}, { ExpressionAttributeNames: {'#a': 'a'}});
+  check({}, {'#a': 'a'}, { ExpressionAttributeNames: {'#a': 'a'}});
+  check({ExpressionAttributeNames: {'#a': 'a'}}, {'#a': 'a'}, { ExpressionAttributeNames: {'#a': 'a'}});
+  check({ExpressionAttributeNames: {'#b': 'b'}}, {'#a': 'a'}, { ExpressionAttributeNames: {'#b': 'b', '#a': 'a'}});
+  check({ExpressionAttributeNames: {'#a': 'a', '#b': 'b'}}, {'#a': 'a'}, { ExpressionAttributeNames: {'#a': 'a', '#b': 'b'}});
+  check({ExpressionAttributeNames: {'#a': 'a', '#b': 'b'}}, {'#c': 'c'}, { ExpressionAttributeNames: {'#a': 'a', '#b': 'b', '#c': 'c'}});
+  check({ExpressionAttributeNames: {'#a': 'a', '#b': 'b'}}, {'#c': 'c', '#d': 'd'}, { ExpressionAttributeNames: {'#a': 'a', '#b': 'b', '#c': 'c', '#d': 'd'}});
+  check({ExpressionAttributeNames: {'#a': 'a', '#b': 'b'}}, {'#b': 'b', '#c': 'c', '#d': 'd'}, { ExpressionAttributeNames: {'#a': 'a', '#b': 'b', '#c': 'c', '#d': 'd'}});
+
+  t.end();
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// updateExpressionAttributeValues
+// ---------------------------------------------------------------------------------------------------------------------
+
+test('updateExpressionAttributeValues', t => {
+  function check(opts, expressionAttributeValues, expected) {
+    const before = copy(opts, deep);
+    t.deepEqual(updateExpressionAttributeValues(opts, expressionAttributeValues), expected, `updateExpressionAttributeValues(${JSON.stringify(before)}, ${JSON.stringify(expressionAttributeValues)}) must be ${JSON.stringify(expected)}`);
+  }
+
+  // Empty or non-object expression attribute names
+  check(undefined, undefined, undefined);
+  check(null, undefined, null);
+  check({}, undefined, {});
+
+  check(undefined, null, undefined);
+  check(null, null, null);
+  check({}, null, {});
+
+  check(undefined, 123, undefined);
+  check(null, '123', null);
+  check({}, true, {});
+
+  check(undefined, {':a': 'a'}, { ExpressionAttributeValues: {':a': 'a'}});
+  check(null, {':a': 'a'}, { ExpressionAttributeValues: {':a': 'a'}});
+  check({}, {':a': 'a'}, { ExpressionAttributeValues: {':a': 'a'}});
+  check({ExpressionAttributeValues: {':a': 'a'}}, {':a': 'a'}, { ExpressionAttributeValues: {':a': 'a'}});
+  check({ExpressionAttributeValues: {':b': 'b'}}, {':a': 'a'}, { ExpressionAttributeValues: {':b': 'b', ':a': 'a'}});
+  check({ExpressionAttributeValues: {':a': 'a', ':b': 'b'}}, {':a': 'a'}, { ExpressionAttributeValues: {':a': 'a', ':b': 'b'}});
+  check({ExpressionAttributeValues: {':a': 'a', ':b': 'b'}}, {':c': 'c'}, { ExpressionAttributeValues: {':a': 'a', ':b': 'b', ':c': 'c'}});
+  check({ExpressionAttributeValues: {':a': 'a', ':b': 'b'}}, {':c': 'c', ':d': 'd'}, { ExpressionAttributeValues: {':a': 'a', ':b': 'b', ':c': 'c', ':d': 'd'}});
+  check({ExpressionAttributeValues: {':a': 'a', ':b': 'b'}}, {':b': 'b', ':c': 'c', ':d': 'd'}, { ExpressionAttributeValues: {':a': 'a', ':b': 'b', ':c': 'c', ':d': 'd'}});
+
+  t.end();
 });
