@@ -11,12 +11,15 @@
     "test": "tape ./test/*.test.js"
   },
   "dependencies": {
-    "core-functions": "2.0.15",
-    "logging-utils": "3.0.13",
+    "core-functions": "2.0.16",
+    "logging-utils": "3.0.16",
     "deep-equal": "1.0.1"
   },
   "devDependencies": {
-    "aws-sdk": "2.54.0"
+    "aws-sdk": "2.54.0",
+    "aws-core-test-utils": "1.0.7",
+    "tape": "^4.7.0",
+    "uuid": "3.1.0"
   },
   "repository": "https://github.com/byron-dupreez/aws-core-utils"
 }
