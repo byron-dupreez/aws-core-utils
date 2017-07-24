@@ -151,7 +151,7 @@ test('generateHandlerFunction simulating invalid request (with legacy parameters
         t.equal(e.message, expectedError.message, `e.message must be "${expectedError.message}"`);
         t.equal(e.code, "BadRequest", `e.code must be "BadRequest"`);
         t.equal(e.httpStatus, 400, `e.httpStatus must be 400`);
-        const expectedCause = '';
+        const expectedCause = undefined;
         t.equal(e.cause, expectedCause, `e.cause must be "${expectedCause}"`);
         t.equal(e.causeStatus, undefined, `e.causeStatus must be undefined`);
         t.equal(e.awsRequestId, awsContext.awsRequestId, `e.awsRequestId must be "${awsContext.awsRequestId}"`);
