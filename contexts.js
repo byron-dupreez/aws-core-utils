@@ -9,6 +9,7 @@ const copying = require('core-functions/copying');
 const copy = copying.copy;
 const merging = require('core-functions/merging');
 const merge = merging.merge;
+const deep = {deep: true};
 
 /**
  * Utilities for configuring contexts for API Gateway exposed and other types of Lambdas.
@@ -31,6 +32,9 @@ module.exports = {
   /** Configures a standard context for API Gateway exposed and other types of Lambdas */
   configureStandardContext: configureStandardContext,
 
+  /** Configures the given context with the given event, given AWS context and the resolved stage */
+  configureEventAwsContextAndStage: configureEventAwsContextAndStage,
+
   /** Configures a context with custom settings and/or custom options */
   configureCustomSettings: configureCustomSettings
 };
@@ -38,21 +42,21 @@ module.exports = {
 /**
  * Configures the given context as a standard context (for API Gateway exposed and other types of Lambdas) with stage
  * handling, logging, custom settings, an optional Kinesis instance, an optional DynamoDB.DocumentClient instance, the
- * current region, the resolved stage and the given AWS context based on the given settings and options.
+ * current region, the given AWS event, given AWS context and the resolved stage based on the given settings and options.
  *
  * The distinction between options and settings is that options are meant to contain only non-function properties
  * typically loaded from a JSON file, whereas settings are meant to be constructed in code and hence can contain both
  * non-function properties and functions if needed.
  *
- * Note that if either the given event or AWS context are undefined, then everything other than the stage and AWS
- * context will be configured. This missing configuration can be configured at a later point in your code by invoking
- * {@linkcode stages#configureStageAndAwsContext}. This separation of configuration is primarily useful for unit testing.
+ * Note that if either the given event or AWS context are undefined, then everything other than the event, AWS context &
+ * stage will be configured. This missing configuration can be configured at a later point in your code by invoking
+ * {@linkcode configureEventAwsContextAndStage}. This separation of configuration is primarily useful for unit testing.
  *
  * @param {Object|StandardContext} context - the context to configure as a standard context
  * @param {StandardSettings|undefined} [settings] - settings to use to configure a standard context
  * @param {StandardOptions|undefined} [options] - options to use to configure a standard context
- * @param {Object|undefined} [event] - the AWS event, which was passed to your lambda
- * @param {Object|undefined} [awsContext] - the AWS context, which was passed to your lambda
+ * @param {AWSEvent|undefined} [event] - the AWS event, which was passed to your lambda
+ * @param {AWSContext|undefined} [awsContext] - the AWS context, which was passed to your lambda
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings and
  * options, which will ONLY override any previously configured stage handling settings on the given context
  * @return {StandardContext} the given context configured as a standard context
@@ -86,10 +90,41 @@ function configureStandardContext(context, settings, options, event, awsContext,
     }
   }
 
-  if (event && awsContext) {
-    // Configure the given context with the resolved stage and AWS context
-    stages.configureStageAndAwsContext(context, event, awsContext);
+  // Configure the given context with the given AWS event, AWS context and the resolved stage (if any)
+  if (event || awsContext) {
+    configureEventAwsContextAndStage(context, event, awsContext);
   }
+
+  return context;
+}
+
+/**
+ * Configures the given context with the given event, given AWS context and the resolved stage. In order to resolve the
+ * stage, stage handling settings and logging must already be configured on the given context (see {@linkcode
+ * stages#configureStageHandling} for details).
+ * @param {StageHandling|EventAWSContextAndStageAware} context - the context to configure
+ * @param {AWSEvent} event - the AWS event, which was passed to your lambda
+ * @param {AWSContext} awsContext - the AWS context, which was passed to your lambda
+ * @return {EventAWSContextAndStageAware} the given context configured with a stage and the given AWS context
+ * @throws {Error} if the resolved stage is blank
+ */
+function configureEventAwsContextAndStage(context, event, awsContext) {
+  // Configure context.event with the given AWS event
+  if (event) {
+    context.event = event;
+  }
+
+  // Configure context.awsContext with the given AWS context
+  if (awsContext) {
+    context.awsContext = awsContext;
+  }
+
+  // Resolve the current stage (e.g. dev, qa, prod, ...) if possible and configure context.stage with it, if it is not
+  // already configured
+  if (event && awsContext) {
+    stages.configureStage(context, event, awsContext, true);
+  }
+
   return context;
 }
 
@@ -110,7 +145,7 @@ function configureCustomSettings(context, settings, options) {
   const settingsAvailable = settings && typeof settings === 'object';
   const optionsAvailable = options && typeof options === 'object';
 
-  const customOptions = optionsAvailable ? copy(options, {deep: true}) : {};
+  const customOptions = optionsAvailable ? copy(options, deep) : {};
 
   const customSettings = settingsAvailable ?
     optionsAvailable ? merge(customOptions, settings) : settings :

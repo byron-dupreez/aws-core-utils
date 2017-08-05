@@ -7,8 +7,6 @@
 
 const test = require("tape");
 
-const uuid = require("uuid");
-
 // The test subject
 const regions = require('../regions');
 const getRegion = regions.getRegion;

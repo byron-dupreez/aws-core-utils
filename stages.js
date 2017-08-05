@@ -20,6 +20,7 @@ const settingNames = {
   extractInCase: 'extractInCase'
 };
 
+// noinspection JSUnusedGlobalSymbols
 /**
  * Stage handling utilities (primarily for AWS Lambda usage), which include the following:
  * - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources.
@@ -47,8 +48,9 @@ module.exports = {
 
   // Stage resolution and configuration
   configureStage: configureStage,
+  /** @deprecated Use configureStage instead & configure context.awsContext elsewhere (e.g. contexts.configureEventAwsContextAndStage) */
   configureStageAndAwsContext: configureStageAndAwsContext,
-  /** @deprecated Use configureStageAndAwsContext instead & either regions.getRegion or regions.configureRegion */
+  /** @deprecated Use configureStage instead & either regions.getRegion or regions.configureRegion & configure context.awsContext elsewhere (e.g. contexts.configureEventAwsContextAndStage) */
   configureRegionStageAndAwsContext: configureRegionStageAndAwsContext,
 
   // Stream name qualification
@@ -97,6 +99,7 @@ const copying = require('core-functions/copying');
 const copy = copying.copy;
 const merging = require('core-functions/merging');
 const merge = merging.merge;
+const deep = {deep: true};
 
 const streamEvents = require('./stream-events');
 
@@ -196,7 +199,7 @@ function configureDefaultStageHandling(context, options, otherSettings, otherOpt
  * @returns {StageHandlingSettings} a stage handling settings object
  */
 function getDefaultStageHandlingSettings(options) {
-  const settings = options && typeof options === 'object' ? copy(options, {deep: true}) : {};
+  const settings = options && typeof options === 'object' ? copy(options, deep) : {};
 
   const defaultOptions = loadDefaultStageHandlingOptions();
   merge(defaultOptions, settings);
@@ -903,20 +906,25 @@ function configureStage(context, event, awsContext, failFast) {
       context.stage = stage;
     }
   }
+  context.info(`Using stage (${context.stage})`);
   return context;
 }
 
 /**
- * Configures the given context with the resolved stage and the given AWS context. In order to resolve the stage,
- * stage handling settings and logging must already be configured on the given context (see {@linkcode
+ * Configures the given context with the resolved stage and the given AWS event & AWS context. In order to resolve the
+ * stage, stage handling settings and logging must already be configured on the given context (see {@linkcode
  * stages#configureStageHandling} for details).
- * @param {StageHandling|StageAndAWSContextAware} context - the context to configure
+ * @deprecated Use module:./contexts#configureEventAwsContextAndStage instead
+ * @param {StageHandling|EventAWSContextAndStageAware} context - the context to configure
  * @param {Object} event - the AWS event, which was passed to your lambda
  * @param {Object} awsContext - the AWS context, which was passed to your lambda
- * @return {StageAndAWSContextAware} the given context configured with a stage and the given AWS context
+ * @return {EventAWSContextAndStageAware} the given context configured with a stage and the given AWS context
  * @throws {Error} if the resolved stage is blank
  */
 function configureStageAndAwsContext(context, event, awsContext) {
+  // Configure context.event with the given AWS event
+  context.event = event;
+
   // Configure context.awsContext with the given AWS context, if not already configured
   if (!context.awsContext) {
     context.awsContext = awsContext;
@@ -926,7 +934,6 @@ function configureStageAndAwsContext(context, event, awsContext) {
   // already configured
   configureStage(context, event, awsContext, true);
 
-  context.info(`Using stage (${context.stage})`);
   return context;
 }
 
@@ -934,7 +941,7 @@ function configureStageAndAwsContext(context, event, awsContext) {
  * Configures the given context with the current region, the resolved stage and the given AWS context. In order to
  * resolve the stage, stage handling settings and logging must already be configured on the given context (see
  * {@linkcode stages#configureStageHandling} for details).
- * @deprecated Use configureStageAndAwsContext instead & either regions.getRegion or regions.configureRegion
+ * @deprecated Use module:./contexts#configureEventAwsContextAndStage instead & either regions.getRegion or regions.configureRegion
  * @param {StageHandling|RegionStageAWSContextAware} context - the context to configure
  * @param {Object} event - the AWS event, which was passed to your lambda
  * @param {Object} awsContext - the AWS context, which was passed to your lambda
@@ -942,6 +949,9 @@ function configureStageAndAwsContext(context, event, awsContext) {
  * @throws {Error} if no region is available in the AWS_REGION environment variable or if the resolved stage is blank
  */
 function configureRegionStageAndAwsContext(context, event, awsContext) {
+  // Configure context.event with the given AWS event
+  context.event = event;
+
   // Configure context.awsContext with the given AWS context, if not already configured
   if (!context.awsContext) {
     context.awsContext = awsContext;
@@ -953,6 +963,5 @@ function configureRegionStageAndAwsContext(context, event, awsContext) {
   // already configured
   configureStage(context, event, awsContext, true);
 
-  context.info(`Using region (${regions.getRegion()}) + context.region (${context.region}) and stage (${context.stage})`);
   return context;
 }

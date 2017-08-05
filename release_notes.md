@@ -1,5 +1,31 @@
 ## Changes
 
+### 6.1.0
+- Changes to `type-defs` module:
+  - Added `event` property to `StandardContext` type definition
+  - Renamed `StageAndAWSContextAware` type definition to `EventAWSContextAndStageAware`
+  - Added `event` property to `EventAWSContextAndStageAware` type definition
+  - Added `AWS.Lambda` related type definitions
+  - Added `AWS.KMS` related type definitions
+- Changes to `stages` module:
+  - Deprecated `configureStageAndAwsContext` function
+  - Changed `configureStageAndAwsContext` & `configureRegionStageAndAwsContext` functions to also set `context.event`
+- Changes to `contexts` module:
+  - Added `configureEventAwsContextAndStage` function
+  - Changed `configureStandardContext` function to use `configureEventAwsContextAndStage` instead of deprecated 
+    `stages.configureStageAndAwsContext` function
+- Changes to `regions` module:
+  - Added `regionKeysByRegion` cache
+  - Added `getRegionKey` function
+- Changes to `dynamodb-doc-client-cache` module:
+  - Removed `regionKeysByRegion` cache & `getRegionKey` function & replaced usage with `regions/getRegionKey`
+- Changes to `kinesis-cache` module:
+  - Removed `regionKeysByRegion` cache & `getRegionKey` function & replaced usage with `regions/getRegionKey`
+- Added new `lambda-cache` module
+- Added new `lambda-utils` module
+- Added new `kms-cache` module
+- Added new `kms-utils` module
+
 ### 6.0.14
 - Updated `core-functions` dependency to version 3.0.9
 - Updated `logging-utils` dependency to version 4.0.9

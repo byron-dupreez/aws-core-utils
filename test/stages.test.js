@@ -16,6 +16,7 @@ const configureStageHandlingWithSettings = stages.FOR_TESTING_ONLY.configureStag
 const configureDefaultStageHandling = stages.configureDefaultStageHandling;
 const getDefaultStageHandlingSettings = stages.getDefaultStageHandlingSettings;
 const configureStageHandling = stages.configureStageHandling;
+const configureStage = stages.configureStage;
 const configureStageAndAwsContext = stages.configureStageAndAwsContext;
 const configureRegionStageAndAwsContext = stages.configureRegionStageAndAwsContext;
 const getStageHandlingSetting = stages.getStageHandlingSetting;
@@ -767,8 +768,8 @@ test('extractNameAndStageFromSuffixedStreamName with default settings, should us
   const context = configureDefaultStageHandling({});
   const extractInCase = context.stageHandling.extractInCase;
   t.ok(extractInCase === 'lower' || extractInCase === 'lowercase', `extractInCase (${extractInCase}) defaults to lowercase`);
-  checkExtractNameAndStageFromSuffixedStreamName(t, undefined, context, ['','']);
-  checkExtractNameAndStageFromSuffixedStreamName(t, null, context, ['','']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, undefined, context, ['', '']);
+  checkExtractNameAndStageFromSuffixedStreamName(t, null, context, ['', '']);
   checkExtractNameAndStageFromSuffixedStreamName(t, '', context, ['', '']);
   checkExtractNameAndStageFromSuffixedStreamName(t, 'Stream1', context, ['Stream1', '']);
   checkExtractNameAndStageFromSuffixedStreamName(t, 'Stream2_', context, ['Stream2', '']);
@@ -1287,7 +1288,8 @@ test('configureRegionStageAndAwsContext', t => {
 
     t.equal(context.region, 'us-west-2', 'context.region must be us-west-2');
     t.equal(context.stage, 'qa', 'context.stage must be qa');
-    t.deepEqual(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+    t.equal(context.event, event, 'context.event must be event');
+    t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
 
   } finally {
     process.env.AWS_REGION = undefined;
@@ -1319,7 +1321,42 @@ test('configureStageAndAwsContext', t => {
     configureStageAndAwsContext(context, event, awsContext);
 
     t.equal(context.stage, 'qa', 'context.stage must be qa');
-    t.deepEqual(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+    t.equal(context.event, event, 'context.event must be event');
+    t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+    t.equal(context.region, undefined, 'context.region must be undefined');
+
+  } finally {
+    // process.env.AWS_REGION = undefined;
+    process.env.STAGE = undefined;
+  }
+  t.end();
+});
+
+// =====================================================================================================================
+// configureStage
+// =====================================================================================================================
+
+test('configureStage', t => {
+  try {
+    // process.env.AWS_REGION = 'us-west-2';
+    process.env.STAGE = undefined;
+
+    const context = {};
+    configureDefaultStageHandling(context, undefined, undefined, undefined, false);
+
+    // Create an AWS context
+    const invokedFunctionArn = sampleInvokedFunctionArn('invokedFunctionArnRegion', 'functionName', '1.0.1');
+    const awsContext = sampleAwsContext('functionName', '1.0.1', invokedFunctionArn);
+
+    // Create a Kinesis event
+    const eventSourceArn = sampleKinesisEventSourceArn('eventSourceArnRegion', 'TestStream_QA');
+    const event = sampleKinesisEventWithSampleRecord(undefined, undefined, undefined, undefined, eventSourceArn, 'eventAwsRegion');
+
+    configureStage(context, event, awsContext);
+
+    t.equal(context.stage, 'qa', 'context.stage must be qa');
+    t.equal(context.event, undefined, 'context.event must be undefined');
+    t.equal(context.awsContext, undefined, 'context.awsContext must be undefined');
     t.equal(context.region, undefined, 'context.region must be undefined');
 
   } finally {

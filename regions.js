@@ -1,5 +1,9 @@
 'use strict';
 
+// A map of region key objects by region, which is only needed, because WeakMaps can ONLY have object keys
+const regionKeysByRegion = new Map();
+
+// noinspection JSUnusedGlobalSymbols
 /**
  * Utilities for resolving the AWS region from various sources (primarily for AWS Lambda usage).
  * @module aws-core-utils/regions
@@ -13,8 +17,12 @@ module.exports = {
   getInvokedFunctionArnRegion: getInvokedFunctionArnRegion,
   getEventAwsRegions: getEventAwsRegions,
   getEventSourceArnRegions: getEventSourceArnRegions,
+  /** @deprecated simply use `getRegion` directly instead when the region is required */
   configureRegion: configureRegion,
   //resolveRegion: resolveRegion,
+
+  getRegionKey: getRegionKey,
+
   ONLY_FOR_TESTING: {
     getRegionRaw: getRegionRaw,
     getDefaultRegionRaw: getDefaultRegionRaw,
@@ -187,6 +195,23 @@ function configureRegion(context, failFast) {
   if (!context.region) {
     context.region = getRegion(failFast === true);
   }
-  (context.info ? context.info : console.log)(`Using region (${getRegion()}) + context.region (${context.region})`);
+  (context.info || console.log)(`Using region (${getRegion()}) & context.region (${context.region})`);
   return context;
+}
+
+/**
+ * Returns the region key object for the given region name.
+ * @param {string|undefined} [region] - the name of the region (defaults to current region if not defined)
+ * @param {boolean|undefined} [failFast] - an optional flag that is only used when AWS_REGION is needed and blank and
+ * that determines whether the error will be raised (if failFast is explicitly true) or simply logged as a warning
+ * @returns {{region: string}} a region key object
+ */
+function getRegionKey(region, failFast) {
+  const regionName = region ? region : getRegion(failFast === true);
+  let regionKey = regionKeysByRegion.get(regionName);
+  if (!regionKey) {
+    regionKey = {region: regionName};
+    regionKeysByRegion.set(regionName, regionKey);
+  }
+  return regionKey;
 }

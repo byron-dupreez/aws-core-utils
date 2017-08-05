@@ -259,7 +259,7 @@ test('configureStandardContext without settings, options, event or awsContext', 
   t.deepEqual(context.custom, {}, 'context.custom must be empty object');
   t.notOk(context.kinesis, 'context.kinesis must not be defined');
   t.notOk(context.dynamoDBDocClient, 'context.dynamoDBDocClient must not be defined');
-  t.equal(context.region, awsRegion, `context.region must not be ${awsRegion}`);
+  t.equal(context.region, awsRegion, `context.region must be ${awsRegion}`);
   t.notOk(context.stage, 'context.stage must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
 
@@ -412,3 +412,40 @@ test('configureStandardContext with settings, options, event & awsContext', t =>
   t.end();
 });
 
+// =====================================================================================================================
+// configureEventAwsContextAndStage
+// =====================================================================================================================
+test('configureEventAwsContextAndStage', t => {
+  try {
+    setRegionStageAndDeleteCachedInstances('us-west-1', "dev99");
+    const expectedStage = 'DEV99';
+
+    let context = {};
+
+    // Generate a sample AWS event
+    const event = sampleAwsEvent('TestStream_DEV2', 'partitionKey', '', false);
+
+    // Generate a sample AWS context
+    const awsContext = sampleAwsContext('1.0.1', 'dev1');
+
+    // Initial configuration WITHOUT event & AWS context
+    contexts.configureStandardContext(context, standardSettings, standardOptions, undefined, undefined, false);
+
+    t.notOk(context.event, 'context.event must not be defined');
+    t.notOk(context.awsContext, 'context.awsContext must not be defined');
+    t.notOk(context.stage, 'context.stage must not be defined');
+
+    // Complete configuration (later)
+    contexts.configureEventAwsContextAndStage(context, event, awsContext);
+
+    t.equal(context.event, event, 'context.event must be event');
+    t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+    t.equal(context.stage, expectedStage, `context.stage must be ${expectedStage}`);
+
+  } finally {
+    process.env.AWS_REGION = undefined;
+    process.env.STAGE = undefined;
+  }
+
+  t.end();
+});

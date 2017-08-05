@@ -1,4 +1,4 @@
-# aws-core-utils v6.0.14
+# aws-core-utils v6.1.0
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -8,33 +8,41 @@ Currently includes:
     - Configure a standard context for AWS Gateway exposed Lambdas (re-exported from contexts.js module)
     - Fail Lambda callbacks with standard AppError errors to facilitate mapping of errors to HTTP status codes on API Gateway.
 - arns.js 
-    - Utilities for working with Amazon Resource Names (ARNs)
+  - Utilities for working with Amazon Resource Names (ARNs)
 - aws-errors.js
-    - Utilities for working with AWS errors
+  - Utilities for working with AWS errors
 - contexts.js
-    - Utilities for configuring contexts for AWS Gateway exposed and other types of Lambdas
+  - Utilities for configuring contexts for AWS Gateway exposed and other types of Lambdas
 - dynamodb-doc-client-cache.js
-    - A module-scope cache of AWS.DynamoDB.DocumentClient instances by region for Lambda.
+  - A module-scope cache of AWS.DynamoDB.DocumentClient instances by region for Lambda.
 - dynamodb-doc-client-utils.js
-    - Utilities for working with AWS DynamoDB.DocumentClient.
+  - Utilities for working with AWS DynamoDB.DocumentClient.
 - dynamodb-utils.js
-    - Utilities for working with AWS DynamoDB.
+  - Utilities for working with AWS DynamoDB.
 - kinesis-cache.js
-    - A module-scope cache of AWS.Kinesis instances by region for Lambda.
+  - A module-scope cache of AWS.Kinesis instances by region for Lambda.
+- kms-cache.js
+  - A module-scope cache of AWS.KMS instances by region for Lambda usage.
+- kms-utils.js
+  - Utilities to simplify working with AWS.KMS instances.
+- lambda-cache.js
+  - A module-scope cache of AWS.Lambda instances by region for use within Lambda functions.
+- lambda-utils.js
+  - Utilities to simplify working with an AWS.Lambda instance
 - lambdas.js 
-    - Utilities for working with AWS Lambda, which enable extraction of function names, versions and, most importantly, 
-      aliases from AWS contexts and their invoked function ARNs.
-    - Utility for failing non-API Gateway Lambda's callbacks with standard AppError errors if mapping of errors to HTTP status codes is needed
+  - Utilities for working with AWS Lambda, which enable extraction of function names, versions and, most importantly, 
+    aliases from AWS contexts and their invoked function ARNs.
+  - Utility for failing non-API Gateway Lambda's callbacks with standard AppError errors if mapping of errors to HTTP status codes is needed
 - regions.js 
-    - Utilities for resolving the AWS region from various sources (primarily for AWS Lambda usage).
+  - Utilities for resolving the AWS region from various sources (primarily for AWS Lambda usage).
 - stages.js
-    - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources 
-      (primarily for AWS Lambda usage).
-    - Utilities for configuration of stage handling.
-    - Configurable and default functions for generating stage-qualified stream and resource names.
-    - Configurable and default functions for extracting stages from stage-qualified stream and resource names.
+  - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources 
+    (primarily for AWS Lambda usage).
+  - Utilities for configuration of stage handling.
+  - Configurable and default functions for generating stage-qualified stream and resource names.
+  - Configurable and default functions for extracting stages from stage-qualified stream and resource names.
 - stream-events.js
-    - Utilities for extracting information from AWS Kinesis and AWS DynamoDB stream events.
+  - Utilities for extracting information from AWS Kinesis and AWS DynamoDB stream events.
 
 This module is exported as a [Node.js](https://nodejs.org/) module.
 
@@ -215,6 +223,138 @@ const optionsUsed2 = kinesisCache.getKinesisOptionsUsed('us-west-1');
 
 // To delete and remove a cached Kinesis instance from the cache
 const deleted = kinesisCache.deleteKinesis('eu-west-1');
+```
+* To use the KMS cache to configure and cache an AWS KMS instance per region
+```js
+const kmsCache = require('aws-core-utils/kms-cache');
+
+// Preamble to create a context and configure logging on the context
+const context = {};
+const logging = require('logging-utils');
+logging.configureLogging(context); // or your own custom logging configuration (see logging-utils README.md)
+
+// Define the KMS constructor options that you want to use, e.g.
+const kmsOptions = {
+  // See http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/KMS.html#constructor-property for full details
+  maxRetries: 0
+  // ...
+};
+
+// To create and cache a new AWS KMS instance with the given KMS constructor options for either the current 
+// region or the region specified in the given options OR reuse a previously cached KMS instance (if any) that is 
+// compatible with the given options
+const kms = kmsCache.setKMS(kmsOptions, context);
+
+// To configure a new AWS.KMS instance (or re-use a cached instance) on a context 
+kmsCache.configureKMS(context, kmsOptions);
+console.log(context.kms);
+
+// To get a previously set or configured AWS KMS instance for the current AWS region
+const kms1 = kmsCache.getKMS();
+// ... or for a specified region
+const kms2 = kmsCache.getKMS('us-west-2');
+
+// To get the original options that were used to construct a cached AWS KMS instance for the current or specified AWS region
+const optionsUsed1 = kmsCache.getKMSOptionsUsed();
+const optionsUsed2 = kmsCache.getKMSOptionsUsed('us-west-1');
+
+// To delete and remove a cached KMS instance from the cache
+const deleted = kmsCache.deleteKMS('eu-west-1');
+```
+
+* To use the AWS.KMS utilities
+```js
+const kmsUtils = require('aws-core-utils/kms-utils');
+
+const kms = new AWS.KMS({region: 'eu-west-1'}); // or better yet use kms-cache module as above
+
+// Preamble to create a context and configure logging on the context
+const logging = require('logging-utils');
+const logger = logging.configureLogging({}); // or your own custom logging configuration (see logging-utils README.md)
+
+const accountId = 'XXXXXXXXXXXX'; // use your AWS account ID
+const kmsKeyAlias = 'aws/lambda'; // or use your own key alias
+const keyId = `arn:aws:kms:us-west-2:${accountId}:alias/${kmsKeyAlias}`;
+
+// To encrypt plaintext using KMS:
+const plaintext = 'Shhhhhhhhhhhhhhh'; // use your own plaintext
+kmsUtils.encryptKey(kms, keyId, plaintext, logger)
+  .then(ciphertextBase64 => console.log(JSON.stringify(ciphertextBase64)));
+
+// To decrypt ciphertext using KMS:
+const ciphertextBase64 = '...'; // use your own ciphertext
+kmsUtils.decryptKey(kms, ciphertextBase64, logger)
+  .then(plaintext => console.log(JSON.stringify(plaintext)));
+
+// To encrypt plaintext using KMS:
+const encryptParams = {KeyId: keyId, Plaintext: plaintext};
+kmsUtils.encrypt(kms, encryptParams, logger)
+  .then(result => console.log(JSON.stringify(result)));
+
+// To decrypt ciphertext using KMS:
+const decryptParams = {CiphertextBlob: new Buffer(ciphertextBase64, 'base64')};
+kmsUtils.decrypt(kms, decryptParams, logger)
+  .then(result => console.log(JSON.stringify(result)));
+```
+
+* To use the Lambda cache to configure and cache an AWS Lambda instance per region
+```js
+const lambdaCache = require('aws-core-utils/lambda-cache');
+
+// Preamble to create a context and configure logging on the context
+const context = {};
+const logging = require('logging-utils');
+logging.configureLogging(context); // or your own custom logging configuration (see logging-utils README.md)
+
+// Define the Lambda constructor options that you want to use, e.g.
+const lambdaOptions = {
+  // See http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Lambda.html#constructor-property for full details
+  maxRetries: 0
+  // ...
+};
+
+// To create and cache a new AWS Lambda instance with the given Lambda constructor options for either the current 
+// region or the region specified in the given options OR reuse a previously cached Lambda instance (if any) that is 
+// compatible with the given options
+const lambda = lambdaCache.setLambda(lambdaOptions, context);
+
+// To configure a new AWS.Lambda instance (or re-use a cached instance) on a context 
+lambdaCache.configureLambda(context, lambdaOptions);
+console.log(context.lambda);
+
+// To get a previously set or configured AWS Lambda instance for the current AWS region
+const lambda1 = lambdaCache.getLambda();
+// ... or for a specified region
+const lambda2 = lambdaCache.getLambda('us-west-2');
+
+// To get the original options that were used to construct a cached AWS Lambda instance for the current or specified AWS region
+const optionsUsed1 = lambdaCache.getLambdaOptionsUsed();
+const optionsUsed2 = lambdaCache.getLambdaOptionsUsed('us-west-1');
+
+// To delete and remove a cached Lambda instance from the cache
+const deleted = lambdaCache.deleteLambda('eu-west-1');
+```
+
+* To use the AWS.Lambda utilities
+```js
+const lambdaUtils = require('aws-core-utils/lambda-utils');
+
+const lambda = new AWS.Lambda({region: 'eu-west-1'}); // or better yet use lambda-cache module as above
+
+// To list the event source mappings on your Lambda function
+const params = {FunctionName: 'my-lambda-function'};
+lambdaUtils.listEventSourceMappings(lambda, params, context)
+  .then(result => console.log(JSON.stringify(result)));
+
+// To update an event source mapping on your Lambda function
+const params2 = {FunctionName: 'my-lambda-function', UUID: uuid, BatchSize: 99};
+lambdaUtils.updateEventSourceMapping(lambda, params2, context)
+  .then(result => console.log(JSON.stringify(result)));
+
+// To disable an event source mapping on your Lambda function
+lambdaUtils.disableEventSourceMapping(lambda, 'my-lambda-function', uuid, context)
+  .then(result => console.log(JSON.stringify(result)));
+
 ```
 
 * To use the Lambda utilities
