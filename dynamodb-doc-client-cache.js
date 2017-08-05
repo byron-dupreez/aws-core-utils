@@ -1,16 +1,15 @@
 'use strict';
 
-let AWS = require("aws-sdk");
+let AWS = require('aws-sdk');
 
 // Module-scope cache of AWS.DynamoDB.DocumentClient instances by region key
 let dynamoDBDocClientByRegionKey = new WeakMap();
 // Module-scope cache of the DynamoDB.DocumentClient options used to construct the AWS.DynamoDB.DocumentClient instances by region key
 let dynamoDBDocClientOptionsByRegionKey = new WeakMap();
 
-// A map of region key objects by region, which is only needed, because WeakMaps can ONLY have object keys
-const regionKeysByRegion = new Map();
-
 const regions = require('./regions');
+const getRegion = regions.getRegion;
+const getRegionKey = regions.getRegionKey;
 
 const Objects = require('core-functions/objects');
 const copy = Objects.copy;
@@ -59,7 +58,7 @@ function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
   // If no region was specified in the given dynamoDBDocClient options, then set it to the current region
   let region = options.region;
   if (!region) {
-    const currentRegion = regions.getRegion();
+    const currentRegion = getRegion();
     options.region = currentRegion;
     region = currentRegion;
   }
@@ -124,7 +123,7 @@ function deleteDynamoDBDocClient(region) {
  * region (if any); otherwise returns undefined
  */
 function getDynamoDBDocClient(region) {
-  const regionKey = getRegionKey(region ? region : regions.getRegion());
+  const regionKey = getRegionKey(region);
   return dynamoDBDocClientByRegionKey.get(regionKey);
 }
 
@@ -137,17 +136,8 @@ function getDynamoDBDocClient(region) {
  * DynamoDB.DocumentClient instance cached for the given or current region (if any); otherwise returns undefined
  */
 function getDynamoDBDocClientOptionsUsed(region) {
-  const regionKey = getRegionKey(region ? region : regions.getRegion());
+  const regionKey = getRegionKey(region);
   return dynamoDBDocClientOptionsByRegionKey.get(regionKey);
-}
-
-function getRegionKey(region) {
-  let regionKey = regionKeysByRegion.get(region);
-  if (!regionKey) {
-    regionKey = {region: region};
-    regionKeysByRegion.set(region, regionKey);
-  }
-  return regionKey;
 }
 
 /**

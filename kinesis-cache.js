@@ -1,18 +1,19 @@
 'use strict';
 
-let AWS = require("aws-sdk");
+let AWS = require('aws-sdk');
 
 // Module-scope cache of AWS.Kinesis instances by region key
 let kinesisByRegionKey = new WeakMap();
 // Module-scope cache of the Kinesis options used to construct the AWS.Kinesis instances by region key
 let kinesisOptionsByRegionKey = new WeakMap();
 
-// A map of region key objects by region, which is only needed, because WeakMaps can ONLY have object keys
-const regionKeysByRegion = new Map();
-
 const regions = require('./regions');
+const getRegion = regions.getRegion;
+const getRegionKey = regions.getRegionKey;
 
 const Objects = require('core-functions/objects');
+const copy = Objects.copy;
+const deep = true;
 
 const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
@@ -50,12 +51,12 @@ module.exports = {
  */
 function setKinesis(kinesisOptions, context) {
   // If no options were specified, then use an empty object
-  const options = kinesisOptions ? Objects.copy(kinesisOptions, true) : {};
+  const options = kinesisOptions ? copy(kinesisOptions, deep) : {};
 
   // If no region was specified in the given kinesis options, then set it to the current region
   let region = options.region;
   if (!region) {
-    const currentRegion = regions.getRegion();
+    const currentRegion = getRegion();
     options.region = currentRegion;
     region = currentRegion;
   }
@@ -116,7 +117,7 @@ function deleteKinesis(region) {
  * returns undefined
  */
 function getKinesis(region) {
-  const regionKey = getRegionKey(region ? region : regions.getRegion());
+  const regionKey = getRegionKey(region);
   return kinesisByRegionKey.get(regionKey);
 }
 
@@ -128,17 +129,8 @@ function getKinesis(region) {
  * current region (if any); otherwise returns undefined
  */
 function getKinesisOptionsUsed(region) {
-  const regionKey = getRegionKey(region ? region : regions.getRegion());
+  const regionKey = getRegionKey(region);
   return kinesisOptionsByRegionKey.get(regionKey);
-}
-
-function getRegionKey(region) {
-  let regionKey = regionKeysByRegion.get(region);
-  if (!regionKey) {
-    regionKey = {region: region};
-    regionKeysByRegion.set(region, regionKey);
-  }
-  return regionKey;
 }
 
 /**

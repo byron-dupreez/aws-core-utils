@@ -272,5 +272,94 @@
  */
 
 // ---------------------------------------------------------------------------------------------------------------------
+// AWS.KMS
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * @typedef {Object} KMSAware - a object configured with an AWS.KMS instance
+ * @property {AWS.KMS} kms - an instance of AWS.KMS to use
+ */
+
+/**
+ * @typedef {Object} KMSEncryptParams - the parameters to pass to an AWS.KMS `encrypt` call
+ * @property {string} KeyId - the identifier of the CMK to use for encryption. You can use the key ID or Amazon Resource Name (ARN) of the CMK, or the name or ARN of an alias that refers to the CMK.
+ * @property {string|Buffer} Plaintext - the data to encrypt (plaintext)
+ * @property {Object.<string, string>|undefined} [EncryptionContext] - name-value pair that specifies the encryption context to be used for authenticated encryption. If used here, the same value must be supplied to the Decrypt API or decryption will fail. For more information, see http://docs.aws.amazon.com/kms/latest/developerguide/encryption-context.html.
+ * @property {string[]|undefined} [GrantTokens] - A list of grant tokens. For more information, see Grant Tokens in the AWS Key Management Service Developer Guide (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
+ */
+
+/**
+ * @typedef {Object} KMSEncryptResult - a KMS encrypt result
+ * @property {string|Buffer|TypedArray|Blob} CiphertextBlob - the encrypted plaintext (ciphertext). If you are using the CLI, the value is Base64 encoded. Otherwise, it is not encoded.
+ * @property {string} KeyId - the ARN of the CMK that was used to encrypt the data, e.g. "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+ */
+
+/**
+ * @typedef {Object} KMSDecryptParams - the parameters to pass to an AWS.KMS `decrypt` call
+ * @property {string|Buffer|TypedArray|Blob} CiphertextBlob - the ciphertext to be decrypted. The blob includes metadata.
+ * @property {Object.<string, string>|undefined} [EncryptionContext] - the encryption context. If this was specified in the Encrypt function, it must be specified here or the decryption operation will fail
+ * @property {string[]|undefined} [GrantTokens] - A list of grant tokens
+ */
+
+/**
+ * @typedef {Object} KMSDecryptResult - a KMS decrypt result
+ * @property {string|Buffer|TypedArray|Blob} Plaintext - decrypted plaintext data. This value may not be returned if the customer master key is not available or if you didn't have permission to use it.
+ * @property {string} KeyId - the ARN of the key used to perform the decryption. This value is returned if no errors are encountered during the operation.
+ */
+
+// ---------------------------------------------------------------------------------------------------------------------
+// AWS.Lambda
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * @typedef {AWS.Lambda} AwsLambda - an AWS.Lambda instance with optional extra async versions of its methods that return promises instead of taking callbacks
+ * @property {function(params: ListEventSourceMappingsParams): Promise.<EventSourceMapping[]>} [listEventSourceMappingsAsync] - an async version of its `listEventSourceMappings` method
+ * @property {function(params: UpdateEventSourceMappingParams): Promise.<*>} [updateEventSourceMappingAsync] - an async version of its `updateEventSourceMapping` method
+ */
+
+/**
+ * @typedef {Object} LambdaAware - a object configured with an AWS.Lambda instance
+ * @property {AWS.Lambda|AwsLambda} lambda - an instance of AWS.Lambda to use
+ */
+
+/**
+ * @typedef {"Creating"|"Enabled"|"Disabled"|"Enabling"|"Disabling"|"Updating"|"Deleting"} EventSourceMappingState
+ */
+
+/**
+ * @typedef {Object} EventSourceMapping - an event source mapping
+ * @property {string} UUID
+ * @property {string} BatchSize
+ * @property {string} EventSourceArn
+ * @property {string} FunctionArn
+ * @property {string} LastModified
+ * @property {string} LastProcessingResult
+ * @property {EventSourceMappingState} State
+ * @property {string} StateTransitionReason
+ */
+
+/**
+ * @typedef {Object} ListEventSourceMappingsParams
+ * @property {string} FunctionName
+ * @property {string|undefined} [EventSourceArn]
+ * @property {string|undefined} [Marker]
+ * @property {number|undefined} [MaxItems]
+ */
+
+/**
+ * @typedef {Object} UpdateEventSourceMappingParams
+ * @property {string} FunctionName - the Lambda function to which you want the stream records sent
+ * @property {string} UUID - the event source mapping identifier
+ * @property {boolean|undefined} [Enabled]
+ * @property {number|undefined} [BatchSize]
+ */
+
+/**
+ * @typedef {StandardContext} ListEventSourceMappingsResult - the result returned by a call to AWS.Lambda listEventSourceMappings
+ * @property {string} NextMarker
+ * @property {EventSourceMapping[]} EventSourceMappings
+ */
+
+// ---------------------------------------------------------------------------------------------------------------------
 // End of BACKPORT copy from latest `aws-core-utils/type-defs`
 // ---------------------------------------------------------------------------------------------------------------------

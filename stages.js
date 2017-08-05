@@ -17,6 +17,7 @@ const EXTRACT_STAGE_FROM_RESOURCE_NAME_SETTING = 'extractStageFromResourceName';
 const INJECT_IN_CASE_SETTING = 'injectInCase';
 const EXTRACT_IN_CASE_SETTING = 'extractInCase';
 
+// noinspection JSUnusedGlobalSymbols
 /**
  * Stage handling utilities (primarily for AWS Lambda usage), which include the following:
  * - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources.
@@ -43,6 +44,7 @@ module.exports = {
 
   // Stage resolution and configuration
   configureStage: configureStage,
+  /** @deprecated Use configureStage instead & either regions.getRegion or regions.configureRegion & configure context.awsContext elsewhere (e.g. contexts.configureEventAwsContextAndStage) */
   configureRegionStageAndAwsContext: configureRegionStageAndAwsContext,
 
   // Stream name qualification
@@ -84,6 +86,9 @@ const isNotBlank = Strings.isNotBlank;
 const stringify = Strings.stringify;
 
 const Objects = require('core-functions/objects');
+const copy = Objects.copy;
+const merge = Objects.merge;
+const deep = true;
 
 const streamEvents = require('./stream-events');
 
@@ -183,10 +188,10 @@ function configureDefaultStageHandling(context, options, otherSettings, otherOpt
  * @returns {StageHandlingSettings} a stage handling settings object
  */
 function getDefaultStageHandlingSettings(options) {
-  const settings = options && typeof options === 'object' ? Objects.copy(options, true) : {};
+  const settings = options && typeof options === 'object' ? copy(options, deep) : {};
 
   const defaultOptions = loadDefaultStageHandlingOptions();
-  Objects.merge(defaultOptions, settings, false, false);
+  merge(defaultOptions, settings, false, false);
 
   const defaultSettings = {
     customToStage: undefined,
@@ -198,7 +203,7 @@ function getDefaultStageHandlingSettings(options) {
     injectStageIntoResourceName: toStageSuffixedResourceName,
     extractStageFromResourceName: extractStageFromSuffixedResourceName,
   };
-  return Objects.merge(defaultSettings, settings, false, false);
+  return merge(defaultSettings, settings, false, false);
 }
 
 /**
@@ -218,7 +223,7 @@ function loadDefaultStageHandlingOptions() {
     extractInCase: 'lower',
     defaultStage: undefined
   };
-  return Objects.merge(defaults, defaultOptions, false, false);
+  return merge(defaults, defaultOptions, false, false);
 }
 
 /**
@@ -275,14 +280,14 @@ function configureStageHandling(context, settings, options, otherSettings, other
   const defaultSettings = getDefaultStageHandlingSettings(options);
 
   const stageHandlingSettings = settingsAvailable ?
-    Objects.merge(defaultSettings, settings, false, false) : defaultSettings;
+    merge(defaultSettings, settings, false, false) : defaultSettings;
 
   // Configure stage handling with the given or derived stage handling settings
   configureStageHandlingWithSettings(context, stageHandlingSettings, otherSettings, otherOptions, forceConfiguration);
 
   // Log a warning if no settings and no options were provided and the default settings were applied
   if (!settingsAvailable && !optionsAvailable && (forceConfiguration || !stageHandlingWasConfigured)) {
-    context.warn(`Stage handling was configured without settings or options - used default stage handling configuration (${stringify(stageHandlingSettings)})`);
+    context.warn(`Stage handling was configured without settings or options - used default configuration`);
   }
   return context;
 }
@@ -457,7 +462,7 @@ function resolveStage(event, awsContext, context) {
       if (stages.length > 1) {
         const distinctStages = Arrays.distinct(stages);
         if (distinctStages > 1) {
-          context.warn(`WARNING - Ignoring arbitrary first stage (${stage}), since found MULTIPLE distinct stages ${stringify(distinctStages)} on event (${stringify(event)})!`);
+          context.warn(`Ignoring arbitrary first stage (${stage}), since found MULTIPLE distinct stages ${stringify(distinctStages)} on event (${stringify(event)})!`);
           stage = ''; // too many choices, so choose none
         }
       }
@@ -767,6 +772,7 @@ function configureStage(context, event, awsContext, failFast) {
       context.stage = stage;
     }
   }
+  context.info(`Using stage (${context.stage})`);
   return context;
 }
 
@@ -774,6 +780,7 @@ function configureStage(context, event, awsContext, failFast) {
  * Configures the given context with the current region, the resolved stage and the given AWS context. In order to
  * resolve the stage, stage handling settings and logging must already be configured on the given context (see
  * {@linkcode stages#configureStageHandling} for details).
+ * @deprecated Use module:./contexts#configureEventAwsContextAndStage instead & either regions.getRegion or regions.configureRegion
  * @param {StageHandling|RegionStageAWSContextAware} context - the context to configure
  * @param {Object} event - the AWS event, which was passed to your lambda
  * @param {Object} awsContext - the AWS context, which was passed to your lambda
@@ -781,6 +788,9 @@ function configureStage(context, event, awsContext, failFast) {
  * @throws {Error} if no region is available in the AWS_REGION environment variable or if the resolved stage is blank
  */
 function configureRegionStageAndAwsContext(context, event, awsContext) {
+  // Configure context.event with the given AWS event
+  context.event = event;
+
   // Configure context.awsContext with the given AWS context, if not already configured
   if (!context.awsContext) {
     context.awsContext = awsContext;
@@ -792,6 +802,5 @@ function configureRegionStageAndAwsContext(context, event, awsContext) {
   // already configured
   configureStage(context, event, awsContext, true);
 
-  context.info(`Using region (${context.region}) and stage (${context.stage})`);
   return context;
 }

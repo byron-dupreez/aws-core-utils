@@ -140,7 +140,7 @@ function sampleAwsContext(functionName, functionVersion, invokedFunctionArn, max
   return {
     callbackWaitsForEmptyEventLoop: true,
     logGroupName: `/aws/lambda/${functionName}`,
-    logStreamName: `2016/10/14/[$LATEST]${uuid1.replace(/-/g, "")}`,
+    logStreamName: logStreamName,
     functionName: functionName,
     memoryLimitInMB: 128,
     functionVersion: functionVersion,

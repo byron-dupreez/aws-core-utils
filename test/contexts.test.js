@@ -2,6 +2,8 @@
 
 const test = require('tape');
 
+const awsRegion = 'us-west-1';
+
 // Test subject
 const contexts = require('../contexts');
 
@@ -240,6 +242,7 @@ test('configureCustomSettings when existing context.custom settings', t => {
 test('configureStandardContext without settings, options, event or awsContext', t => {
   let context = {};
 
+  regions.setRegion(awsRegion);
   contexts.configureStandardContext(context, undefined, undefined, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
@@ -253,7 +256,7 @@ test('configureStandardContext without settings, options, event or awsContext', 
   t.deepEqual(context.custom, {}, 'context.custom must be empty object');
   t.notOk(context.kinesis, 'context.kinesis must not be defined');
   t.notOk(context.dynamoDBDocClient, 'context.dynamoDBDocClient must not be defined');
-  t.notOk(context.region, 'context.region must not be defined');
+  t.equal(context.region, awsRegion, `context.region must be ${awsRegion}`);
   t.notOk(context.stage, 'context.stage must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
 
@@ -266,6 +269,7 @@ test('configureStandardContext without settings, options, event or awsContext', 
 test('configureStandardContext with options only', t => {
   let context = {};
 
+  regions.setRegion(awsRegion);
   contexts.configureStandardContext(context, undefined, standardOptions, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
@@ -282,7 +286,7 @@ test('configureStandardContext with options only', t => {
   t.equal(context.custom.myCustomSetting2, 'myCustomOption2', 'context.custom.myCustomSetting2 must be myCustomOption2');
   t.ok(context.kinesis, 'context.kinesis must be defined');
   t.ok(context.dynamoDBDocClient, 'context.dynamoDBDocClient must be defined');
-  t.notOk(context.region, 'context.region must not be defined');
+  t.equal(context.region, awsRegion, `context.region must not be ${awsRegion}`);
   t.notOk(context.stage, 'context.stage must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
 
@@ -295,6 +299,7 @@ test('configureStandardContext with options only', t => {
 test('configureStandardContext with settings only', t => {
   let context = {};
 
+  regions.setRegion(awsRegion);
   contexts.configureStandardContext(context, standardSettings, undefined, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
@@ -314,7 +319,7 @@ test('configureStandardContext with settings only', t => {
   t.equal(context.custom.myCustomSetting3, 'myCustomSetting3', 'context.custom.myCustomSetting3 must be myCustomSetting3');
   t.ok(context.kinesis, 'context.kinesis must be defined');
   t.ok(context.dynamoDBDocClient, 'context.dynamoDBDocClient must be defined');
-  t.notOk(context.region, 'context.region must not be defined');
+  t.equal(context.region, awsRegion, `context.region must not be ${awsRegion}`);
   t.notOk(context.stage, 'context.stage must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
 
@@ -327,6 +332,7 @@ test('configureStandardContext with settings only', t => {
 test('configureStandardContext with settings and options only', t => {
   let context = {};
 
+  regions.setRegion(awsRegion);
   contexts.configureStandardContext(context, standardSettings, standardOptions, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
@@ -346,7 +352,7 @@ test('configureStandardContext with settings and options only', t => {
   t.equal(context.custom.myCustomSetting3, 'myCustomSetting3', 'context.custom.myCustomSetting3 must be myCustomSetting3');
   t.ok(context.kinesis, 'context.kinesis must be defined');
   t.ok(context.dynamoDBDocClient, 'context.dynamoDBDocClient must be defined');
-  t.notOk(context.region, 'context.region must not be defined');
+  t.equal(context.region, awsRegion, `context.region must not be ${awsRegion}`);
   t.notOk(context.stage, 'context.stage must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
 
@@ -403,3 +409,40 @@ test('configureStandardContext with settings, options, event & awsContext', t =>
   t.end();
 });
 
+// =====================================================================================================================
+// configureEventAwsContextAndStage
+// =====================================================================================================================
+test('configureEventAwsContextAndStage', t => {
+  try {
+    setRegionStageAndDeleteCachedInstances('us-west-1', "dev99");
+    const expectedStage = 'DEV99';
+
+    let context = {};
+
+    // Generate a sample AWS event
+    const event = sampleAwsEvent('TestStream_DEV2', 'partitionKey', '', false);
+
+    // Generate a sample AWS context
+    const awsContext = sampleAwsContext('1.0.1', 'dev1');
+
+    // Initial configuration WITHOUT event & AWS context
+    contexts.configureStandardContext(context, standardSettings, standardOptions, undefined, undefined, false);
+
+    t.notOk(context.event, 'context.event must not be defined');
+    t.notOk(context.awsContext, 'context.awsContext must not be defined');
+    t.notOk(context.stage, 'context.stage must not be defined');
+
+    // Complete configuration (later)
+    contexts.configureEventAwsContextAndStage(context, event, awsContext);
+
+    t.equal(context.event, event, 'context.event must be event');
+    t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+    t.equal(context.stage, expectedStage, `context.stage must be ${expectedStage}`);
+
+  } finally {
+    process.env.AWS_REGION = undefined;
+    process.env.STAGE = undefined;
+  }
+
+  t.end();
+});
