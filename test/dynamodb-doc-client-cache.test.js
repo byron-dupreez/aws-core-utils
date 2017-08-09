@@ -16,20 +16,12 @@ const configureDynamoDBDocClient = dynamoDBDocClientCache.configureDynamoDBDocCl
 
 const regions = require('../regions');
 const getRegion = regions.getRegion;
-// const getRegionRaw = regions.ONLY_FOR_TESTING.getRegionRaw;
-// const getDefaultRegion = regions.getDefaultRegion;
-// const resolveRegion = regions.resolveRegion;
-// const setRegionIfNotSet = regions.ONLY_FOR_TESTING.setRegionIfNotSet;
 
 const logging = require('logging-utils');
 const LogLevel = logging.LogLevel;
 
 const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
-// const isBlank = Strings.isBlank;
-// const isNotBlank = Strings.isNotBlank;
-// const trim = Strings.trim;
-// const trimOrEmpty = Strings.trimOrEmpty;
 
 // =====================================================================================================================
 // Tests for setDynamoDBDocClient and getDynamoDBDocClient

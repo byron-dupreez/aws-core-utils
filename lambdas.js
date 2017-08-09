@@ -23,54 +23,48 @@ module.exports = {
   failCallback: failCallback
 };
 
-//const LATEST_VERSION = '$LATEST';
-
 const arns = require('./arns');
 const getArnResources = arns.getArnResources;
 
 const Strings = require('core-functions/strings');
-//const trim = Strings.trim;
-const trimOrEmpty = Strings.trimOrEmpty;
-//const isBlank = Strings.isBlank;
 const isNotBlank = Strings.isNotBlank;
 
 const appErrors = require('core-functions/app-errors');
-//const AppError = appErrors.AppError;
 
 /**
  * Returns the function name from the given AWS context
- * @param awsContext the AWS context
+ * @param {AWSContext|undefined} [awsContext] - the AWS context
  * @returns {string} the function name
  */
 function getFunctionName(awsContext) {
-  return awsContext && awsContext.functionName ? trimOrEmpty(awsContext.functionName) : '';
+  return process.env.AWS_LAMBDA_FUNCTION_NAME || (awsContext && awsContext.functionName) || '';
 }
 
 /**
  * Returns the function version from the given AWS context
- * @param awsContext the AWS context
+ * @param {AWSContext|undefined} [awsContext] - the AWS context
  * @returns {string} the function version
  */
 function getFunctionVersion(awsContext) {
-  return awsContext && awsContext.functionVersion ? trimOrEmpty(awsContext.functionVersion) : '';
+  return process.env.AWS_LAMBDA_FUNCTION_VERSION || (awsContext && awsContext.functionVersion) || '';
 }
 
 /**
  * Returns the invokedFunctionArn of the given AWS context, which was passed to your Lambda function.
- * @param awsContext the AWS context
+ * @param {AWSContext} awsContext - the AWS context
  * @returns {string} the invoked function ARN
  */
 function getInvokedFunctionArn(awsContext) {
-  return awsContext && awsContext.invokedFunctionArn ? trimOrEmpty(awsContext.invokedFunctionArn) : '';
+  return (awsContext && awsContext.invokedFunctionArn) || '';
 }
 
 /**
  * Extracts and returns the function name from the given AWS context's invokedFunctionArn.
- * @param awsContext the AWS context
+ * @param {AWSContext} awsContext - the AWS context
  * @returns {string} the extracted function name
  */
 function getInvokedFunctionArnFunctionName(awsContext) {
-  const invokedFunctionArn = getInvokedFunctionArn(awsContext);
+  const invokedFunctionArn = awsContext && awsContext.invokedFunctionArn;
   const resources = getArnResources(invokedFunctionArn);
   return resources.resource;
 }
@@ -84,23 +78,28 @@ function getInvokedFunctionArnFunctionName(awsContext) {
  * - A qualified function ARN has a version or alias suffix, and maps to that version or alias.
  * - An unqualified function ARN has NO version or alias suffix) and maps to the $LATEST version.
  *
- * @param awsContext the AWS context
- * @returns {{functionName: string, version: string, alias: string}}
+ * @param {AWSContext} awsContext - the AWS context
+ * @returns {LambdaFunctionNameVersionAndAlias}
  */
 function getFunctionNameVersionAndAlias(awsContext) {
-  const functionName = getFunctionName(awsContext);
-  const version = getFunctionVersion(awsContext);
+  const name = process.env.AWS_LAMBDA_FUNCTION_NAME;
+  const version = process.env.AWS_LAMBDA_FUNCTION_VERSION;
 
-  const invokedFunctionArn = getInvokedFunctionArn(awsContext);
+  const nameFromContext = awsContext && awsContext.functionName;
+  const versionFromContext = awsContext && awsContext.functionVersion;
+
+  const invokedFunctionArn = awsContext && awsContext.invokedFunctionArn;
   const resources = getArnResources(invokedFunctionArn);
-  const functionNameFromArn = resources.resource;
-  if (functionName !== functionNameFromArn) {
-    console.error(`Lambda context with function name (${functionName}) has different name (${functionNameFromArn}) in invoked function ARN`);
+  const nameFromArn = resources.resource;
+  if (nameFromArn !== nameFromContext) {
+    console.warn(`Lambda context with function name (${nameFromContext}) has different name (${nameFromArn}) in invoked function ARN`);
   }
-  const aliasOrVersion = resources.aliasOrVersion;
-  const alias = isNotBlank(aliasOrVersion) && aliasOrVersion !== version ? aliasOrVersion : '';
 
-  return {functionName: functionName, version: version, alias: alias};
+  const aliasOrVersion = resources.aliasOrVersion;
+  const alias = isNotBlank(aliasOrVersion) && aliasOrVersion !== versionFromContext ? //&& aliasOrVersion !== version ?
+    aliasOrVersion : '';
+
+  return {functionName: name || nameFromContext || '', version: version || versionFromContext || '', alias: alias};
 }
 
 /**
@@ -111,7 +110,7 @@ function getFunctionNameVersionAndAlias(awsContext) {
  * - A qualified function ARN has a version or alias suffix, and maps to that version or alias.
  * - An unqualified function ARN has NO version or alias suffix) and maps to the $LATEST version.
  *
- * @param awsContext the AWS context
+ * @param {AWSContext} awsContext - the AWS context
  * @returns {string} the alias (if any); otherwise an empty string
  */
 function getAlias(awsContext) {
@@ -131,7 +130,7 @@ function getAlias(awsContext) {
  *
  * @param {Function} lambdaCallback - the callback function passed as the last argument to your Lambda function on invocation.
  * @param {Error} error - the error with which you need to fail your Lambda
- * @param {Object|undefined} [awsContext] - the AWS context passed as the second argument to your Lambda function on invocation
+ * @param {AWSContext|undefined} [awsContext] - the AWS context passed as the second argument to your Lambda function on invocation
  * @param {string|undefined} [awsContext.awsRequestId] - the AWS context's request ID
  * @param {string|undefined} [message] - an optional message; will use error's message if not specified and needed
  * @param {string|undefined} [code] - an optional code; will use error's code if not specified and needed

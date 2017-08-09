@@ -7,6 +7,14 @@
 /**
  * @typedef {Object} AWSContext - an AWS context passed to your Lambda handler function
  * @property {uuid} awsRequestId - a unique identifier assigned to the current invocation of your handler function by AWS Lambda
+ * @property {boolean} callbackWaitsForEmptyEventLoop
+ * @property {string} logGroupName
+ * @property {string} logStreamName
+ * @property {string} functionName
+ * @property {string} functionVersion
+ * @property {string} invokedFunctionArn
+ * @property {string} memoryLimitInMB
+ * @property {uuid} invokeid - appears to be same value as awsRequestId
  * @property {function(): number} getRemainingTimeInMillis - gets the remaining time to execute in milliseconds
  */
 
@@ -72,10 +80,18 @@
  */
 
 /**
+ * @typedef {Object} LambdaFunctionNameVersionAndAlias - the name, version & alias of the invoked Lambda function
+ * @property {string} functionName - the name of the Lambda function
+ * @property {string} version - the version of the Lambda function
+ * @property {string|undefined} [alias] - the alias of the Lambda function
+ */
+
+/**
  * @typedef {StageAware} EventAWSContextAndStageAware - an object configured with the AWS event, AWS context and the resolved stage,
  * which implies pre-configured stage handling settings and logging functionality
  * @property {AWSEvent} event - the AWS event passed to your Lambda function on invocation
  * @property {AWSContext} awsContext - the AWS context passed to your Lambda function on invocation
+ * @property {LambdaFunctionNameVersionAndAlias|undefined} [invokedLambda] - the name, version & alias of the invoked Lambda function
  */
 
 /**

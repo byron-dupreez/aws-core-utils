@@ -17,8 +17,6 @@ const configureDefaultStageHandling = stages.configureDefaultStageHandling;
 const getDefaultStageHandlingSettings = stages.getDefaultStageHandlingSettings;
 const configureStageHandling = stages.configureStageHandling;
 const configureStage = stages.configureStage;
-const configureStageAndAwsContext = stages.configureStageAndAwsContext;
-const configureRegionStageAndAwsContext = stages.configureRegionStageAndAwsContext;
 const getStageHandlingSetting = stages.getStageHandlingSetting;
 // Stage resolution
 const resolveStage = stages.resolveStage;
@@ -1259,74 +1257,6 @@ test('resolveStageFromDynamoDBEvent with table with suffix', t => {
     checkResolveStageFromDynamoDBEvent(t, 'Es', '', '', 'Table_Ts', context, 'Es');
 
   } finally {
-    process.env.STAGE = undefined;
-  }
-  t.end();
-});
-
-// =====================================================================================================================
-// configureRegionStageAndAwsContext
-// =====================================================================================================================
-
-test('configureRegionStageAndAwsContext', t => {
-  try {
-    process.env.AWS_REGION = 'us-west-2';
-    process.env.STAGE = undefined;
-
-    const context = {};
-    configureDefaultStageHandling(context, undefined, undefined, undefined, false);
-
-    // Create an AWS context
-    const invokedFunctionArn = sampleInvokedFunctionArn('invokedFunctionArnRegion', 'functionName', '1.0.1');
-    const awsContext = sampleAwsContext('functionName', '1.0.1', invokedFunctionArn);
-
-    // Create a Kinesis event
-    const eventSourceArn = sampleKinesisEventSourceArn('eventSourceArnRegion', 'TestStream_QA');
-    const event = sampleKinesisEventWithSampleRecord(undefined, undefined, undefined, undefined, eventSourceArn, 'eventAwsRegion');
-
-    configureRegionStageAndAwsContext(context, event, awsContext);
-
-    t.equal(context.region, 'us-west-2', 'context.region must be us-west-2');
-    t.equal(context.stage, 'qa', 'context.stage must be qa');
-    t.equal(context.event, event, 'context.event must be event');
-    t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
-
-  } finally {
-    process.env.AWS_REGION = undefined;
-    process.env.STAGE = undefined;
-  }
-  t.end();
-});
-
-// =====================================================================================================================
-// configureStageAndAwsContext
-// =====================================================================================================================
-
-test('configureStageAndAwsContext', t => {
-  try {
-    // process.env.AWS_REGION = 'us-west-2';
-    process.env.STAGE = undefined;
-
-    const context = {};
-    configureDefaultStageHandling(context, undefined, undefined, undefined, false);
-
-    // Create an AWS context
-    const invokedFunctionArn = sampleInvokedFunctionArn('invokedFunctionArnRegion', 'functionName', '1.0.1');
-    const awsContext = sampleAwsContext('functionName', '1.0.1', invokedFunctionArn);
-
-    // Create a Kinesis event
-    const eventSourceArn = sampleKinesisEventSourceArn('eventSourceArnRegion', 'TestStream_QA');
-    const event = sampleKinesisEventWithSampleRecord(undefined, undefined, undefined, undefined, eventSourceArn, 'eventAwsRegion');
-
-    configureStageAndAwsContext(context, event, awsContext);
-
-    t.equal(context.stage, 'qa', 'context.stage must be qa');
-    t.equal(context.event, event, 'context.event must be event');
-    t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
-    t.equal(context.region, undefined, 'context.region must be undefined');
-
-  } finally {
-    // process.env.AWS_REGION = undefined;
     process.env.STAGE = undefined;
   }
   t.end();

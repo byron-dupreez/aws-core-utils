@@ -261,7 +261,9 @@ test('configureStandardContext without settings, options, event or awsContext', 
   t.notOk(context.dynamoDBDocClient, 'context.dynamoDBDocClient must not be defined');
   t.equal(context.region, awsRegion, `context.region must be ${awsRegion}`);
   t.notOk(context.stage, 'context.stage must not be defined');
+  t.notOk(context.event, 'context.event must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
+  t.notOk(context.invokedLambda, 'context.invokedLambda must not be defined');
 
   t.end();
 });
@@ -291,7 +293,9 @@ test('configureStandardContext with options only', t => {
   t.ok(context.dynamoDBDocClient, 'context.dynamoDBDocClient must be defined');
   t.equal(context.region, awsRegion, `context.region must not be ${awsRegion}`);
   t.notOk(context.stage, 'context.stage must not be defined');
+  t.notOk(context.event, 'context.event must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
+  t.notOk(context.invokedLambda, 'context.invokedLambda must not be defined');
 
   t.end();
 });
@@ -324,7 +328,9 @@ test('configureStandardContext with settings only', t => {
   t.ok(context.dynamoDBDocClient, 'context.dynamoDBDocClient must be defined');
   t.equal(context.region, awsRegion, `context.region must not be ${awsRegion}`);
   t.notOk(context.stage, 'context.stage must not be defined');
+  t.notOk(context.event, 'context.event must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
+  t.notOk(context.invokedLambda, 'context.invokedLambda must not be defined');
 
   t.end();
 });
@@ -357,7 +363,9 @@ test('configureStandardContext with settings and options only', t => {
   t.ok(context.dynamoDBDocClient, 'context.dynamoDBDocClient must be defined');
   t.equal(context.region, awsRegion, `context.region must not be ${awsRegion}`);
   t.notOk(context.stage, 'context.stage must not be defined');
+  t.notOk(context.event, 'context.event must not be defined');
   t.notOk(context.awsContext, 'context.awsContext must not be defined');
+  t.notOk(context.invokedLambda, 'context.invokedLambda must not be defined');
 
   t.end();
 });
@@ -377,6 +385,7 @@ test('configureStandardContext with settings, options, event & awsContext', t =>
 
     // Generate a sample AWS context
     const awsContext = sampleAwsContext('1.0.1', 'dev1');
+    const invokedLambda = {functionName: 'sampleFunctionName', version: '1.0.1', alias: 'dev1'};
 
     contexts.configureStandardContext(context, standardSettings, standardOptions, event, awsContext, false);
 
@@ -397,12 +406,19 @@ test('configureStandardContext with settings, options, event & awsContext', t =>
     t.equal(context.custom.myCustomSetting3, 'myCustomSetting3', 'context.custom.myCustomSetting3 must be myCustomSetting3');
     t.ok(context.kinesis, 'context.kinesis must be defined');
     t.ok(context.dynamoDBDocClient, 'context.dynamoDBDocClient must be defined');
+
     t.ok(context.region, 'context.region must be defined');
     t.equal(context.region, 'us-west-1', 'context.region must be us-west-1');
+
+    t.ok(context.event, 'context.event must be defined');
+    t.equal(context.event, event, 'context.event must be event');
+    t.ok(context.awsContext, 'context.awsContext must be defined');
+    t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+    t.ok(context.invokedLambda, 'context.invokedLambda must be defined');
+    t.deepEqual(context.invokedLambda, invokedLambda, `context.invokedLambda must be ${JSON.stringify(invokedLambda)}`);
+
     t.ok(context.stage, 'context.stage must be defined');
     t.equal(context.stage, expectedStage, `context.stage must be ${expectedStage}`);
-    t.ok(context.awsContext, 'context.awsContext must be defined');
-    t.equal(context.awsContext, awsContext, 'context.awsContext must be given awsContext');
 
   } finally {
     process.env.AWS_REGION = undefined;
@@ -426,20 +442,35 @@ test('configureEventAwsContextAndStage', t => {
     const event = sampleAwsEvent('TestStream_DEV2', 'partitionKey', '', false);
 
     // Generate a sample AWS context
-    const awsContext = sampleAwsContext('1.0.1', 'dev1');
+    const functionAlias = 'dev1';
+    const awsContext = sampleAwsContext('1.0.1', functionAlias);
+
+    const functionName = 'my-test-function';
+    process.env.AWS_LAMBDA_FUNCTION_NAME = functionName;
+
+    const functionVersion = '1.0.23';
+    process.env.AWS_LAMBDA_FUNCTION_VERSION = functionVersion;
+
+    const invokedLambda = {functionName: functionName, version: functionVersion, alias: functionAlias};
 
     // Initial configuration WITHOUT event & AWS context
     contexts.configureStandardContext(context, standardSettings, standardOptions, undefined, undefined, false);
 
     t.notOk(context.event, 'context.event must not be defined');
     t.notOk(context.awsContext, 'context.awsContext must not be defined');
+    t.notOk(context.invokedLambda, 'context.invokedLambda must not be defined');
     t.notOk(context.stage, 'context.stage must not be defined');
 
     // Complete configuration (later)
     contexts.configureEventAwsContextAndStage(context, event, awsContext);
 
+    t.ok(context.event, 'context.event must be defined');
     t.equal(context.event, event, 'context.event must be event');
+    t.ok(context.awsContext, 'context.awsContext must be defined');
     t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+    t.ok(context.invokedLambda, 'context.invokedLambda must be defined');
+    t.deepEqual(context.invokedLambda, invokedLambda, `context.invokedLambda must be ${JSON.stringify(invokedLambda)}`);
+
     t.equal(context.stage, expectedStage, `context.stage must be ${expectedStage}`);
 
   } finally {

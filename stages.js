@@ -48,10 +48,6 @@ module.exports = {
 
   // Stage resolution and configuration
   configureStage: configureStage,
-  /** @deprecated Use configureStage instead & configure context.awsContext elsewhere (e.g. contexts.configureEventAwsContextAndStage) */
-  configureStageAndAwsContext: configureStageAndAwsContext,
-  /** @deprecated Use configureStage instead & either regions.getRegion or regions.configureRegion & configure context.awsContext elsewhere (e.g. contexts.configureEventAwsContextAndStage) */
-  configureRegionStageAndAwsContext: configureRegionStageAndAwsContext,
 
   // Stream name qualification
   toStageQualifiedStreamName: toStageQualifiedStreamName,
@@ -103,7 +99,6 @@ const deep = {deep: true};
 
 const streamEvents = require('./stream-events');
 
-const regions = require('./regions');
 const lambdas = require('./lambdas');
 
 const Arrays = require('core-functions/arrays');
@@ -907,61 +902,5 @@ function configureStage(context, event, awsContext, failFast) {
     }
   }
   context.info(`Using stage (${context.stage})`);
-  return context;
-}
-
-/**
- * Configures the given context with the resolved stage and the given AWS event & AWS context. In order to resolve the
- * stage, stage handling settings and logging must already be configured on the given context (see {@linkcode
- * stages#configureStageHandling} for details).
- * @deprecated Use module:./contexts#configureEventAwsContextAndStage instead
- * @param {StageHandling|EventAWSContextAndStageAware} context - the context to configure
- * @param {Object} event - the AWS event, which was passed to your lambda
- * @param {Object} awsContext - the AWS context, which was passed to your lambda
- * @return {EventAWSContextAndStageAware} the given context configured with a stage and the given AWS context
- * @throws {Error} if the resolved stage is blank
- */
-function configureStageAndAwsContext(context, event, awsContext) {
-  // Configure context.event with the given AWS event
-  context.event = event;
-
-  // Configure context.awsContext with the given AWS context, if not already configured
-  if (!context.awsContext) {
-    context.awsContext = awsContext;
-  }
-
-  // Resolve the current stage (e.g. dev, qa, prod, ...) if possible and configure context.stage with it, if it is not
-  // already configured
-  configureStage(context, event, awsContext, true);
-
-  return context;
-}
-
-/**
- * Configures the given context with the current region, the resolved stage and the given AWS context. In order to
- * resolve the stage, stage handling settings and logging must already be configured on the given context (see
- * {@linkcode stages#configureStageHandling} for details).
- * @deprecated Use module:./contexts#configureEventAwsContextAndStage instead & either regions.getRegion or regions.configureRegion
- * @param {StageHandling|RegionStageAWSContextAware} context - the context to configure
- * @param {Object} event - the AWS event, which was passed to your lambda
- * @param {Object} awsContext - the AWS context, which was passed to your lambda
- * @return {RegionStageAWSContextAware} the given context configured with a region, stage and the given AWS context
- * @throws {Error} if no region is available in the AWS_REGION environment variable or if the resolved stage is blank
- */
-function configureRegionStageAndAwsContext(context, event, awsContext) {
-  // Configure context.event with the given AWS event
-  context.event = event;
-
-  // Configure context.awsContext with the given AWS context, if not already configured
-  if (!context.awsContext) {
-    context.awsContext = awsContext;
-  }
-  // Configure context.region to the AWS region, if it is not already configured
-  regions.configureRegion(context, true);
-
-  // Resolve the current stage (e.g. dev, qa, prod, ...) if possible and configure context.stage with it, if it is not
-  // already configured
-  configureStage(context, event, awsContext, true);
-
   return context;
 }

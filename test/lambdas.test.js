@@ -7,8 +7,6 @@
 
 const test = require("tape");
 
-const uuid = require("uuid");
-
 // The test subject
 const lambdas = require('../lambdas');
 const getFunctionName = lambdas.getFunctionName;
@@ -17,12 +15,6 @@ const getFunctionNameVersionAndAlias = lambdas.getFunctionNameVersionAndAlias;
 const getAlias = lambdas.getAlias;
 //const getInvokedFunctionArn = lambdas.getInvokedFunctionArn;
 const getInvokedFunctionArnFunctionName = lambdas.getInvokedFunctionArnFunctionName;
-
-// const Strings = require('core-functions/strings');
-// const isBlank = Strings.isBlank;
-// const isNotBlank = Strings.isNotBlank;
-// const trim = Strings.trim;
-// const trimOrEmpty = Strings.trimOrEmpty;
 
 const samples = require('./samples');
 //const sampleInvokedFunctionArn = samples.sampleInvokedFunctionArn;
@@ -76,7 +68,9 @@ const arn7 = "arn:aws:lambda:aws-region:acct-id:function:helloworld:BETA";
 // Tests for getFunctionName
 // =====================================================================================================================
 
-test('getFunctionName', t => {
+test('getFunctionName WITHOUT process.env.AWS_LAMBDA_FUNCTION_NAME', t => {
+  delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+
   t.equal(getFunctionName(undefined), '', `undefined context must give ''`);
   t.equal(getFunctionName(null), '', `null context must give ''`);
   t.equal(getFunctionName({}), '', `{} context must give ''`);
@@ -92,11 +86,37 @@ test('getFunctionName', t => {
   t.end();
 });
 
+test('getFunctionName WITH process.env.AWS_LAMBDA_FUNCTION_NAME', t => {
+  try {
+    const expected = 'test999';
+    process.env.AWS_LAMBDA_FUNCTION_NAME = expected;
+
+    t.equal(getFunctionName(undefined), expected, `undefined context must give '${expected}'`);
+    t.equal(getFunctionName(null), expected, `null context must give '${expected}'`);
+    t.equal(getFunctionName({}), expected, `{} context must give '${expected}'`);
+
+    checkGetFunctionName('test0', '$LATEST', arn0, expected, t);
+    checkGetFunctionName('test1', '$LATEST', arn1, expected, t);
+    checkGetFunctionName('test2', '1', arn2, expected, t);
+    checkGetFunctionName('test3', '1.0.1', arn3, expected, t);
+    checkGetFunctionName('test4', '4.0', arn4, expected, t);
+    checkGetFunctionName('test5', '5.0', arn5, expected, t);
+    checkGetFunctionName('test6', '6.0', arn6, expected, t);
+    checkGetFunctionName('test7', '7.0', arn7, expected, t);
+    t.end();
+
+  } finally {
+    delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+  }
+});
+
 // =====================================================================================================================
 // Tests for getFunctionName
 // =====================================================================================================================
 
-test('getFunctionVersion', t => {
+test('getFunctionVersion WITHOUT process.env.AWS_LAMBDA_FUNCTION_VERSION', t => {
+  delete process.env.AWS_LAMBDA_FUNCTION_VERSION;
+
   t.equal(getFunctionVersion(undefined), '', `undefined context must give ''`);
   t.equal(getFunctionVersion(null), '', `null context must give ''`);
   t.equal(getFunctionVersion({}), '', `{} context must give ''`);
@@ -110,6 +130,30 @@ test('getFunctionVersion', t => {
   checkGetFunctionVersion('test6', '6.0', arn6, '6.0', t);
   checkGetFunctionVersion('test7', '7.0', arn7, '7.0', t);
   t.end();
+});
+
+test('getFunctionVersion WITH process.env.AWS_LAMBDA_FUNCTION_VERSION', t => {
+  try {
+    const expected = '999.0.123';
+    process.env.AWS_LAMBDA_FUNCTION_VERSION = expected;
+
+    t.equal(getFunctionVersion(undefined), expected, `undefined context must give '${expected}'`);
+    t.equal(getFunctionVersion(null), expected, `null context must give '${expected}'`);
+    t.equal(getFunctionVersion({}), expected, `{} context must give '${expected}'`);
+
+    checkGetFunctionVersion('test0', '$LATEST', arn0, expected, t);
+    checkGetFunctionVersion('test1', '$LATEST', arn1, expected, t);
+    checkGetFunctionVersion('test2', '1', arn2, expected, t);
+    checkGetFunctionVersion('test3', '1.0.1', arn3, expected, t);
+    checkGetFunctionVersion('test4', '4.0', arn4, expected, t);
+    checkGetFunctionVersion('test5', '5.0', arn5, expected, t);
+    checkGetFunctionVersion('test6', '6.0', arn6, expected, t);
+    checkGetFunctionVersion('test7', '7.0', arn7, expected, t);
+    t.end();
+
+  } finally {
+    delete process.env.AWS_LAMBDA_FUNCTION_VERSION;
+  }
 });
 
 // =====================================================================================================================
@@ -136,7 +180,10 @@ test('getInvokedFunctionArnFunctionName', t => {
 // Tests for getFunctionNameVersionAndAlias
 // =====================================================================================================================
 
-test('getFunctionNameVersionAndAlias', t => {
+test('getFunctionNameVersionAndAlias WITHOUT process.env.AWS_LAMBDA_FUNCTION_NAME/_VERSION', t => {
+  delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+  delete process.env.AWS_LAMBDA_FUNCTION_VERSION;
+
   const expected = {functionName: '', version: '', alias: ''};
   t.deepEqual(getFunctionNameVersionAndAlias(undefined), expected, `undefined context must give ${JSON.stringify(expected)}`);
   t.deepEqual(getFunctionNameVersionAndAlias(null), expected, `null context must give ${JSON.stringify(expected)}`);
@@ -160,6 +207,43 @@ test('getFunctionNameVersionAndAlias', t => {
   checkGetFunctionNameVersionAndAlias('test6', '6.0', arn6, expected6, t);
   checkGetFunctionNameVersionAndAlias('test7', '7.0', arn7, expected7, t);
   t.end();
+});
+
+test('getFunctionNameVersionAndAlias WITH process.env.AWS_LAMBDA_FUNCTION_NAME/_VERSION', t => {
+  try {
+    const name = 'test9999';
+    const version = '123.456.789';
+    process.env.AWS_LAMBDA_FUNCTION_NAME = name;
+    process.env.AWS_LAMBDA_FUNCTION_VERSION = version;
+
+    const expected = {functionName: name, version: version, alias: ''};
+    t.deepEqual(getFunctionNameVersionAndAlias(undefined), expected, `undefined context must give ${JSON.stringify(expected)}`);
+    t.deepEqual(getFunctionNameVersionAndAlias(null), expected, `null context must give ${JSON.stringify(expected)}`);
+    t.deepEqual(getFunctionNameVersionAndAlias({}), expected, `{} context must give ${JSON.stringify(expected)}`);
+
+    const expected0 = {functionName: name, version: version, alias: ''};
+    const expected1 = {functionName: name, version: version, alias: ''};
+    const expected2 = {functionName: name, version: version, alias: ''};
+    const expected3 = {functionName: name, version: version, alias: ''};
+    const expected4 = {functionName: name, version: version, alias: 'DEV'};
+    const expected5 = {functionName: name, version: version, alias: 'qa'};
+    const expected6 = {functionName: name, version: version, alias: 'prod'};
+    const expected7 = {functionName: name, version: version, alias: 'BETA'};
+
+    checkGetFunctionNameVersionAndAlias('test0', '$LATEST', arn0, expected0, t);
+    checkGetFunctionNameVersionAndAlias('test1', '$LATEST', arn1, expected1, t);
+    checkGetFunctionNameVersionAndAlias('test2', '1', arn2, expected2, t);
+    checkGetFunctionNameVersionAndAlias('test3', '1.0.1', arn3, expected3, t);
+    checkGetFunctionNameVersionAndAlias('test4', '4.0', arn4, expected4, t);
+    checkGetFunctionNameVersionAndAlias('test5', '5.0', arn5, expected5, t);
+    checkGetFunctionNameVersionAndAlias('test6', '6.0', arn6, expected6, t);
+    checkGetFunctionNameVersionAndAlias('test7', '7.0', arn7, expected7, t);
+    t.end();
+
+  } finally {
+    delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+    delete process.env.AWS_LAMBDA_FUNCTION_VERSION;
+  }
 });
 
 // =====================================================================================================================

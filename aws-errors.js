@@ -1,5 +1,6 @@
 "use strict";
 
+// noinspection JSUnusedGlobalSymbols
 /**
  * Utilities for working with and interpreting AWS errors.
  *

@@ -2,6 +2,7 @@
 
 const regions = require('./regions');
 const stages = require('./stages');
+const lambdas = require('./lambdas');
 const kinesisCache = require('./kinesis-cache');
 const dynamoDBDocClientCache = require('./dynamodb-doc-client-cache');
 
@@ -60,15 +61,15 @@ module.exports = {
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings and
  * options, which will ONLY override any previously configured stage handling settings on the given context
  * @return {StandardContext} the given context configured as a standard context
- * @throws {Error} an error if the region and/or stage cannot be resolved
+ * @throws {Error} an error if the stage cannot be resolved
  */
 function configureStandardContext(context, settings, options, event, awsContext, forceConfiguration) {
   // Configure the given context with stage handling and its dependencies (i.e. logging)
   stages.configureStageHandling(context, settings ? settings.stageHandlingSettings : undefined,
     options ? options.stageHandlingOptions : undefined, settings, options, forceConfiguration);
 
-  // Configure the region after configuring logging (failing fast if process.env.AWS_REGION is blank)
-  regions.configureRegion(context, true);
+  // Configure the region after configuring logging
+  regions.configureRegion(context);
 
   // Configure the given context with any custom settings and/or custom options
   configureCustomSettings(context, settings ? settings.customSettings : undefined, options ? options.customOptions : undefined);
@@ -105,7 +106,7 @@ function configureStandardContext(context, settings, options, event, awsContext,
  * @param {StageHandling|EventAWSContextAndStageAware} context - the context to configure
  * @param {AWSEvent} event - the AWS event, which was passed to your lambda
  * @param {AWSContext} awsContext - the AWS context, which was passed to your lambda
- * @return {EventAWSContextAndStageAware} the given context configured with a stage and the given AWS context
+ * @return {EventAWSContextAndStageAware} the given context configured with the given AWS event, AWS context & resolved stage
  * @throws {Error} if the resolved stage is blank
  */
 function configureEventAwsContextAndStage(context, event, awsContext) {
@@ -117,6 +118,9 @@ function configureEventAwsContextAndStage(context, event, awsContext) {
   // Configure context.awsContext with the given AWS context
   if (awsContext) {
     context.awsContext = awsContext;
+
+    // Resolve the invoked Lambda's function name, version & alias (if possible)
+    context.invokedLambda = lambdas.getFunctionNameVersionAndAlias(awsContext);
   }
 
   // Resolve the current stage (e.g. dev, qa, prod, ...) if possible and configure context.stage with it, if it is not

@@ -1,5 +1,28 @@
 ## Changes
 
+### 7.0.0
+- Changes to `type-defs` module:
+  - Defined more properties of `AWSContext` type definition
+  - Added `LambdaFunctionNameVersionAndAlias` type definition
+  - Added optional `invokedLambda` property to `EventAWSContextAndStageAware` type definition
+- Changes to `regions` module:
+  - Removed `ONLY_FOR_TESTING.setRegionIfNotSet` function
+  - Removed fail fast logic from `getRegion`, `getRegionKey` & `configureRegion` functions, since its only applicable for unit testing
+  - Replaced `ONLY_FOR_TESTING.getRegionRaw` export with direct export of `getRegionRaw` function
+  - Replaced `ONLY_FOR_TESTING.getDefaultRegionRaw` export with direct export of `getDefaultRegionRaw` function
+  - Removed `deprecation` from `configureRegion` function
+- Changes to `stages` module:
+  - Removed deprecated `configureStageAndAwsContext` function
+  - Removed deprecated `configureRegionStageAndAwsContext` function
+- Changes to `lambdas` module:
+  - Changed `getFunctionName` function to also use `process.env.AWS_LAMBDA_FUNCTION_NAME`
+  - Changed `getFunctionVersion` function to also use `process.env.AWS_LAMBDA_FUNCTION_VERSION`
+  - Changed `getFunctionNameVersionAndAlias` function to also use `process.env.AWS_LAMBDA_FUNCTION_NAME` & `AWS_LAMBDA_FUNCTION_VERSION`
+- Changes to `contexts` module:
+  - Changed `configureEventAwsContextAndStage` function to also set `context.invokedLambda` when `awsContext` provided & 
+    to NOT fail if region is not defined
+- Upgraded `aws-sdk` dependency to 2.92.0
+
 ### 6.1.0
 - Changes to `type-defs` module:
   - Added `event` property to `StandardContext` type definition
