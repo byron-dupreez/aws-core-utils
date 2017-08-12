@@ -103,10 +103,10 @@ function configureStandardContext(context, settings, options, event, awsContext,
  * Configures the given context with the given event, given AWS context and the resolved stage. In order to resolve the
  * stage, stage handling settings and logging must already be configured on the given context (see {@linkcode
  * stages#configureStageHandling} for details).
- * @param {StageHandling|EventAWSContextAndStageAware} context - the context to configure
+ * @param {StandardContext|StageHandling} context - the context to configure
  * @param {AWSEvent} event - the AWS event, which was passed to your lambda
  * @param {AWSContext} awsContext - the AWS context, which was passed to your lambda
- * @return {EventAWSContextAndStageAware} the given context configured with the given AWS event, AWS context & resolved stage
+ * @return {StandardContext|EventAWSContextAndStageAware} the given context configured with the given AWS event, AWS context & resolved stage
  * @throws {Error} if the resolved stage is blank
  */
 function configureEventAwsContextAndStage(context, event, awsContext) {

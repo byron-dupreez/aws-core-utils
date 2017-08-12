@@ -1,5 +1,8 @@
 ## Changes
 
+### 7.0.1
+- Minor patches to type definitions in `type-defs` module & to JsDoc comments in `contexts` module
+
 ### 7.0.0
 - Changes to `type-defs` module:
   - Defined more properties of `AWSContext` type definition

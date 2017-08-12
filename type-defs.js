@@ -24,16 +24,17 @@
  */
 
 /**
- * @typedef {StageHandling} StandardContext - an object configured as a standard context with stage handling, logging,
+ * @typedef {StageHandling|EventAWSContextAndStageAware} StandardContext - an object configured as a standard context with stage handling, logging,
  * custom settings, an optional Kinesis instance and an optional DynamoDB DocumentClient instance and OPTIONALLY also
  * with the current region, the resolved stage and the AWS context
- * @property {CustomSettings|undefined} custom - an object configured with optional custom settings to use
+ * @property {CustomSettings|undefined} [custom] - an object configured with optional custom settings to use
  * @property {AWS.Kinesis|undefined} [kinesis] - an optional AWS.Kinesis instance to use
  * @property {AWS.DynamoDB.DocumentClient|undefined} [dynamoDBDocClient] - an optional AWS.DynamoDB.DocumentClient instance to use
  * @property {string|undefined} [region] - the name of the AWS region to use
- * @property {string|undefined} [stage] - the configured stage to use
+ * @property {string|undefined} [stage] - the resolved or configured stage to use
  * @property {AWSEvent|undefined} [event] - the AWS event passed to your Lambda function on invocation
  * @property {AWSContext|undefined} [awsContext] - the AWS context passed to your Lambda function on invocation
+ * @property {LambdaFunctionNameVersionAndAlias|undefined} [invokedLambda] - the name, version & alias of the invoked Lambda function
  */
 
 /**
@@ -91,13 +92,7 @@
  * which implies pre-configured stage handling settings and logging functionality
  * @property {AWSEvent} event - the AWS event passed to your Lambda function on invocation
  * @property {AWSContext} awsContext - the AWS context passed to your Lambda function on invocation
- * @property {LambdaFunctionNameVersionAndAlias|undefined} [invokedLambda] - the name, version & alias of the invoked Lambda function
- */
-
-/**
- * @typedef {EventAWSContextAndStageAware} RegionStageAWSContextAware - an object configured with the name of the current AWS region,
- * the AWS context and the resolved stage, which implies pre-configured stage handling settings and logging functionality
- * @property {string} region - the name of the AWS region to use
+ * @property {LambdaFunctionNameVersionAndAlias|undefined} invokedLambda - the name, version & alias of the invoked Lambda function
  */
 
 /**
@@ -552,7 +547,7 @@
  */
 
 /**
- * @typedef {StandardContext} ListEventSourceMappingsResult - the result returned by a call to AWS.Lambda listEventSourceMappings
+ * @typedef {Object} ListEventSourceMappingsResult - the result returned by a call to AWS.Lambda listEventSourceMappings
  * @property {string} NextMarker
  * @property {EventSourceMapping[]} EventSourceMappings
  */
