@@ -1,5 +1,13 @@
 ## Changes
 
+### 7.0.2
+- Synchronized `test/samples.js` with versions from other modules:
+  - Added `sampleKinesisMessageAndRecord` & `sampleDynamoDBMessageAndRecord` functions
+  - Added `sampleMsg`, `sampleKinesisRecord2` & `sampleDynamoDBRecord` functions
+  - Removed `sampleKinesisMessage` & `sampleDynamoDBMessage` functions, which are no longer usable after removal of 
+    setting of `consumerState` properties on messages    
+- Replaced usage of deleted `sampleDynamoDBMessage` function with `sampleDynamoDBMessageAndRecord`
+
 ### 7.0.1
 - Minor patches to type definitions in `type-defs` module & to JsDoc comments in `contexts` module
 

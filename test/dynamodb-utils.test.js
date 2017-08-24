@@ -21,9 +21,6 @@ const defaults = dynamoDBUtils.defaults;
 const strings = require('core-functions/strings');
 const stringify = strings.stringify;
 
-const copying = require('core-functions/copying');
-const copy = copying.copy;
-
 const samples = require('./samples');
 
 const putRequest = {
@@ -244,8 +241,7 @@ test('toStorableObject with overridden Defaults.emptyStringReplacement', t => {
 
 test('simplifyKeysNewImageAndOldImage', t => {
   const eventSourceARN = samples.sampleDynamoDBEventSourceArn('us-west-2', 'TestTable_DEV', '2017-03-13T21:33:45');
-  const record = samples.sampleDynamoDBMessage('E001', '10000000000000000', eventSourceARN, '123', 456, 'ABC', 10, 1, 2, 3, '4', '5', true);
-  const msg = copy(record, {deep: true});
+  const [msg,] = samples.sampleDynamoDBMessageAndRecord('E001', '10000000000000000', eventSourceARN, '123', 456, 'ABC', 10, 1, 2, 3, '4', '5', true);
   const dynamodb = msg.dynamodb;
 
   t.ok(dynamodb.Keys, `dynamodb.Keys must still exist`);
