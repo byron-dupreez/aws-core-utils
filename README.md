@@ -1,4 +1,4 @@
-# aws-core-utils v5.1.0
+# aws-core-utils v5.1.1
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -530,6 +530,11 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
+
+### 5.1.1
+- Upgraded `aws-sdk` dev dependency to 2.92.0
+- Updated `core-functions` dependency to version 2.0.18
+- Updated `logging-utils` dependency to version 3.0.18
 
 ### 5.1.0
 - Backport of major changes/additions from 6.1.0 & from earlier 6.x releases
