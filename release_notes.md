@@ -1,5 +1,9 @@
 ## Changes
 
+### 7.0.3
+- Updated `core-functions` dependency to version 3.0.11
+- Updated `logging-utils` dependency to version 4.0.11
+
 ### 7.0.2
 - Synchronized `test/samples.js` with versions from other modules:
   - Added `sampleKinesisMessageAndRecord` & `sampleDynamoDBMessageAndRecord` functions
