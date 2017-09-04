@@ -5,7 +5,7 @@
  * @author Byron du Preez
  */
 
-const test = require("tape");
+const test = require('tape');
 
 const dynamoDBMocking = require('aws-core-test-utils/dynamodb-mocking');
 const mockDynamoDBDocClient = dynamoDBMocking.mockDynamoDBDocClient;

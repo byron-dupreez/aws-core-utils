@@ -6,7 +6,7 @@
  * @author Byron du Preez
  */
 
-const test = require("tape");
+const test = require('tape');
 
 // The test subject
 const arns = require('../arns');

@@ -24,16 +24,16 @@ const log = logging.log;
  * @see core-functions/app-errors.js#toAppErrorForApiGateway
  * @author Byron du Preez
  */
-module.exports = {
-  /** Configures a standard context for an API Gateway exposed Lambda (re-exported from std-contexts module for convenience) */
-  configureStandardContext: contexts.configureStandardContext,
+exports._ = '_'; //IDE workaround
+
+// Configures a standard context for an API Gateway exposed Lambda (re-exported from contexts module for convenience)
+exports.configureStandardContext = contexts.configureStandardContext;
 
   // Functions to assist with failing an AWS Gateway exposed Lambda callback and preserve the information of the error thrown
-  failCallback: failCallback,
-  failCallbackForApiGateway: failCallback, // Synonym for failCallback
+exports.failCallback = failCallback;
+exports.failCallbackForApiGateway = failCallback; // Synonym for failCallback
 
-  generateHandlerFunction: generateHandlerFunction
-};
+exports.generateHandlerFunction = generateHandlerFunction;
 
 /**
  * Fails the given callback of an AWS Lambda, which is exposed via API Gateway, with the given error, by first

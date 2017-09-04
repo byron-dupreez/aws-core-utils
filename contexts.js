@@ -29,16 +29,11 @@ const deep = {deep: true};
  * @module aws-core-utils/contexts.js
  * @author Byron du Preez
  */
-module.exports = {
-  /** Configures a standard context for API Gateway exposed and other types of Lambdas */
-  configureStandardContext: configureStandardContext,
+exports._ = '_'; //IDE workaround
 
-  /** Configures the given context with the given event, given AWS context and the resolved stage */
-  configureEventAwsContextAndStage: configureEventAwsContextAndStage,
-
-  /** Configures a context with custom settings and/or custom options */
-  configureCustomSettings: configureCustomSettings
-};
+exports.configureStandardContext = configureStandardContext;
+exports.configureEventAwsContextAndStage = configureEventAwsContextAndStage;
+exports.configureCustomSettings = configureCustomSettings;
 
 /**
  * Configures the given context as a standard context (for API Gateway exposed and other types of Lambdas) with stage

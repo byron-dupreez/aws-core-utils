@@ -13,13 +13,12 @@ const mergeOpts = {deep: true, replace: false};
  * @module aws-core-utils/dynamodb-doc-client-utils
  * @author Byron du Preez
  */
+exports._ = '_'; //IDE workaround
 
-module.exports = {
-  getItem: getItem,
-  updateProjectionExpression: updateProjectionExpression,
-  updateExpressionAttributeNames: updateExpressionAttributeNames,
-  updateExpressionAttributeValues: updateExpressionAttributeValues
-};
+exports.getItem = getItem;
+exports.updateProjectionExpression = updateProjectionExpression;
+exports.updateExpressionAttributeNames = updateExpressionAttributeNames;
+exports.updateExpressionAttributeValues = updateExpressionAttributeValues;
 
 /**
  * Gets the item with the given key from the named DynamoDB table.

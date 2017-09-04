@@ -1,12 +1,5 @@
 'use strict';
 
-let AWS = require('aws-sdk');
-
-// Module-scope cache of AWS.Kinesis instances by region key
-let kinesisByRegionKey = new WeakMap();
-// Module-scope cache of the Kinesis options used to construct the AWS.Kinesis instances by region key
-let kinesisOptionsByRegionKey = new WeakMap();
-
 const regions = require('./regions');
 const getRegion = regions.getRegion;
 const getRegionKey = regions.getRegionKey;
@@ -21,18 +14,26 @@ const stringify = Strings.stringify;
 const deepEqual = require('deep-equal');
 const strict = {strict:true};
 
+let AWS = require('aws-sdk');
+
+// Module-scope cache of AWS.Kinesis instances by region key
+let kinesisByRegionKey = new WeakMap();
+
+// Module-scope cache of the Kinesis options used to construct the AWS.Kinesis instances by region key
+let kinesisOptionsByRegionKey = new WeakMap();
+
 /**
  * A module-scope cache of AWS.Kinesis instances by region for Lambda.
  * @module aws-core-utils/kinesis-cache
  * @author Byron du Preez
  */
-module.exports = {
-  setKinesis: setKinesis,
-  getKinesis: getKinesis,
-  getKinesisOptionsUsed: getKinesisOptionsUsed,
-  deleteKinesis: deleteKinesis,
-  configureKinesis: configureKinesis
-};
+exports._ = '_'; //IDE workaround
+
+exports.setKinesis = setKinesis;
+exports.getKinesis = getKinesis;
+exports.getKinesisOptionsUsed = getKinesisOptionsUsed;
+exports.deleteKinesis = deleteKinesis;
+exports.configureKinesis = configureKinesis;
 
 /**
  * Creates and caches a new AWS Kinesis instance with the given Kinesis constructor options for either the region
@@ -65,15 +66,15 @@ function setKinesis(kinesisOptions, context) {
   // Check if there is already a Kinesis instance cached for this region
   let kinesis = kinesisByRegionKey.get(regionKey);
   if (kinesis) {
-    const logInfo = context && context.info ? context.info : console.log;
+    const debug = (context && context.debug) || console.log;
     // If caller specified no options, then accept the cached instance for the current region (regardless of its options)
     if (!kinesisOptions || Object.getOwnPropertyNames(kinesisOptions).length === 0) {
-      logInfo(`Reusing cached Kinesis instance for region (${region}) with ANY options, since no options were specified`);
+      debug(`Reusing cached Kinesis instance for region (${region}) with ANY options, since no options were specified`);
       return kinesis;
     }
     // If caller ONLY specified a region, then accept the cached instance for the region (regardless of its options)
     if (Object.getOwnPropertyNames(options).length === 1) {
-      logInfo(`Reusing cached Kinesis instance for region (${region}) with ANY options, since only region was specified`);
+      debug(`Reusing cached Kinesis instance for region (${region}) with ANY options, since only region was specified`);
       return kinesis;
     }
     // If the given options match the options used to construct the cached instance, then returns the cached instance
@@ -81,11 +82,11 @@ function setKinesis(kinesisOptions, context) {
 
     if (deepEqual(optionsUsed, options, strict)) {
       // Use the cached instance if its config is identical to the modified options
-      logInfo(`Reusing cached Kinesis instance for region (${region}) with identical options`);
+      debug(`Reusing cached Kinesis instance for region (${region}) with identical options`);
       return kinesis;
     } else {
-      const logWarn = context && context.warn ? context.warn : console.warn;
-      logWarn(`Replacing cached Kinesis instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
+      const warn = (context && context.warn) || console.warn;
+      warn(`Replacing cached Kinesis instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
     }
   }
   // Create a new kinesis instance with the modified options

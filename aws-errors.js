@@ -1,6 +1,5 @@
 "use strict";
 
-// noinspection JSUnusedGlobalSymbols
 /**
  * Utilities for working with and interpreting AWS errors.
  *
@@ -10,27 +9,32 @@
  * @module aws-core-utils/aws-errors.js
  * @author Byron du Preez
  */
-module.exports = {
-  // General error checks
-  isUnavailable: isUnavailable,
-  // Specific error checks
-  isConditionalCheckFailed: isConditionalCheckFailed,
-  isProvisionedThroughputExceeded: isProvisionedThroughputExceeded,
-  isThrottlingException: isThrottlingException,
-  isLimitExceededException: isLimitExceededException,
-  isItemCollectionSizeLimitExceededException: isItemCollectionSizeLimitExceededException,
-  // Summarized multiple error checks
-  isThrottled: isThrottled,
-  isLimitExceeded: isLimitExceeded,
-  isRetryable: isRetryable,
-  // Other specific error checks
-  isExpiredCredentialsError: isExpiredCredentialsError,
-  isNetworkingError: isNetworkingError,
-  // S3 not found
-  wasS3ObjectNotFound: wasS3ObjectNotFound,
-  // DynamoDB resource not found
-  isResourceNotFoundException: isResourceNotFoundException
-};
+exports._ = '_'; //IDE workaround
+
+// General error checks
+exports.isUnavailable = isUnavailable;
+
+// Specific error checks
+exports.isConditionalCheckFailed = isConditionalCheckFailed;
+exports.isProvisionedThroughputExceeded = isProvisionedThroughputExceeded;
+exports.isThrottlingException = isThrottlingException;
+exports.isLimitExceededException = isLimitExceededException;
+exports.isItemCollectionSizeLimitExceededException = isItemCollectionSizeLimitExceededException;
+
+// Summarized multiple error checks
+exports.isThrottled = isThrottled;
+exports.isLimitExceeded = isLimitExceeded;
+exports.isRetryable = isRetryable;
+
+// Other specific error checks
+exports.isExpiredCredentialsError = isExpiredCredentialsError;
+exports.isNetworkingError = isNetworkingError;
+
+// S3 not found
+exports.wasS3ObjectNotFound = wasS3ObjectNotFound;
+
+// DynamoDB resource not found
+exports.isResourceNotFoundException = isResourceNotFoundException;
 
 function isUnavailable(err) {
   return err.statusCode >= 500;

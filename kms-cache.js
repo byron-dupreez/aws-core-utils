@@ -1,12 +1,5 @@
 'use strict';
 
-let AWS = require('aws-sdk');
-
-// Module-scope cache of AWS.KMS instances by region key
-let kmsByRegionKey = new WeakMap();
-// Module-scope cache of the KMS options used to construct the AWS.KMS instances by region key
-let kmsOptionsByRegionKey = new WeakMap();
-
 const regions = require('./regions');
 const getRegion = regions.getRegion;
 const getRegionKey = regions.getRegionKey;
@@ -21,18 +14,26 @@ const stringify = Strings.stringify;
 const deepEqual = require('deep-equal');
 const strict = {strict:true};
 
+let AWS = require('aws-sdk');
+
+// Module-scope cache of AWS.KMS instances by region key
+let kmsByRegionKey = new WeakMap();
+
+// Module-scope cache of the KMS options used to construct the AWS.KMS instances by region key
+let kmsOptionsByRegionKey = new WeakMap();
+
 /**
  * A module-scope cache of AWS.KMS instances by region.
  * @module aws-core-utils/kms-cache
  * @author Byron du Preez
  */
-module.exports = {
-  setKMS: setKMS,
-  getKMS: getKMS,
-  getKMSOptionsUsed: getKMSOptionsUsed,
-  deleteKMS: deleteKMS,
-  configureKMS: configureKMS
-};
+exports._ = '_'; //IDE workaround
+
+exports.setKMS = setKMS;
+exports.getKMS = getKMS;
+exports.getKMSOptionsUsed = getKMSOptionsUsed;
+exports.deleteKMS = deleteKMS;
+exports.configureKMS = configureKMS;
 
 /**
  * Creates and caches a new AWS KMS instance with the given KMS constructor options for either the region
@@ -65,15 +66,15 @@ function setKMS(kmsOptions, context) {
   // Check if there is already a KMS instance cached for this region
   let kms = kmsByRegionKey.get(regionKey);
   if (kms) {
-    const logInfo = context && context.info ? context.info : console.log;
+    const debug = (context && context.debug) || console.log;
     // If caller specified no options, then accept the cached instance for the current region (regardless of its options)
     if (!kmsOptions || Object.getOwnPropertyNames(kmsOptions).length === 0) {
-      logInfo(`Reusing cached KMS instance for region (${region}) with ANY options, since no options were specified`);
+      debug(`Reusing cached KMS instance for region (${region}) with ANY options, since no options were specified`);
       return kms;
     }
     // If caller ONLY specified a region, then accept the cached instance for the region (regardless of its options)
     if (Object.getOwnPropertyNames(options).length === 1) {
-      logInfo(`Reusing cached KMS instance for region (${region}) with ANY options, since only region was specified`);
+      debug(`Reusing cached KMS instance for region (${region}) with ANY options, since only region was specified`);
       return kms;
     }
     // If the given options match the options used to construct the cached instance, then returns the cached instance
@@ -81,11 +82,11 @@ function setKMS(kmsOptions, context) {
 
     if (deepEqual(optionsUsed, options, strict)) {
       // Use the cached instance if its config is identical to the modified options
-      logInfo(`Reusing cached KMS instance for region (${region}) with identical options`);
+      debug(`Reusing cached KMS instance for region (${region}) with identical options`);
       return kms;
     } else {
-      const logWarn = context && context.warn ? context.warn : console.warn;
-      logWarn(`Replacing cached KMS instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
+      const warn = (context && context.warn) || console.warn;
+      warn(`Replacing cached KMS instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
     }
   }
   // Create a new kms instance with the modified options

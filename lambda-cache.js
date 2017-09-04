@@ -1,12 +1,5 @@
 'use strict';
 
-let AWS = require('aws-sdk');
-
-// Module-scope cache of AWS.Lambda instances by region key
-let lambdaByRegionKey = new WeakMap();
-// Module-scope cache of the Lambda options used to construct the AWS.Lambda instances by region key
-let lambdaOptionsByRegionKey = new WeakMap();
-
 const regions = require('./regions');
 const getRegion = regions.getRegion;
 const getRegionKey = regions.getRegionKey;
@@ -21,18 +14,26 @@ const stringify = Strings.stringify;
 const deepEqual = require('deep-equal');
 const strict = {strict:true};
 
+let AWS = require('aws-sdk');
+
+// Module-scope cache of AWS.Lambda instances by region key
+let lambdaByRegionKey = new WeakMap();
+
+// Module-scope cache of the Lambda options used to construct the AWS.Lambda instances by region key
+let lambdaOptionsByRegionKey = new WeakMap();
+
 /**
  * A module-scope cache of AWS.Lambda instances by region.
  * @module aws-core-utils/lambda-cache
  * @author Byron du Preez
  */
-module.exports = {
-  setLambda: setLambda,
-  getLambda: getLambda,
-  getLambdaOptionsUsed: getLambdaOptionsUsed,
-  deleteLambda: deleteLambda,
-  configureLambda: configureLambda
-};
+exports._ = '_'; //IDE workaround
+
+exports.setLambda = setLambda;
+exports.getLambda = getLambda;
+exports.getLambdaOptionsUsed = getLambdaOptionsUsed;
+exports.deleteLambda = deleteLambda;
+exports.configureLambda = configureLambda;
 
 /**
  * Creates and caches a new AWS Lambda instance with the given Lambda constructor options for either the region
@@ -65,15 +66,15 @@ function setLambda(lambdaOptions, context) {
   // Check if there is already a Lambda instance cached for this region
   let lambda = lambdaByRegionKey.get(regionKey);
   if (lambda) {
-    const logInfo = context && context.info ? context.info : console.log;
+    const debug = (context && context.debug) || console.log;
     // If caller specified no options, then accept the cached instance for the current region (regardless of its options)
     if (!lambdaOptions || Object.getOwnPropertyNames(lambdaOptions).length === 0) {
-      logInfo(`Reusing cached Lambda instance for region (${region}) with ANY options, since no options were specified`);
+      debug(`Reusing cached Lambda instance for region (${region}) with ANY options, since no options were specified`);
       return lambda;
     }
     // If caller ONLY specified a region, then accept the cached instance for the region (regardless of its options)
     if (Object.getOwnPropertyNames(options).length === 1) {
-      logInfo(`Reusing cached Lambda instance for region (${region}) with ANY options, since only region was specified`);
+      debug(`Reusing cached Lambda instance for region (${region}) with ANY options, since only region was specified`);
       return lambda;
     }
     // If the given options match the options used to construct the cached instance, then returns the cached instance
@@ -81,11 +82,11 @@ function setLambda(lambdaOptions, context) {
 
     if (deepEqual(optionsUsed, options, strict)) {
       // Use the cached instance if its config is identical to the modified options
-      logInfo(`Reusing cached Lambda instance for region (${region}) with identical options`);
+      debug(`Reusing cached Lambda instance for region (${region}) with identical options`);
       return lambda;
     } else {
-      const logWarn = context && context.warn ? context.warn : console.warn;
-      logWarn(`Replacing cached Lambda instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
+      const warn = (context && context.warn) || console.warn;
+      warn(`Replacing cached Lambda instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
     }
   }
   // Create a new lambda instance with the modified options

@@ -1,5 +1,26 @@
 'use strict';
 
+const Strings = require('core-functions/strings');
+const stringify = Strings.stringify;
+
+const Numbers = require('core-functions/numbers');
+const toNumberOrIntegerLike = Numbers.toNumberOrIntegerLike;
+
+/**
+ * Utilities for working with AWS DynamoDB.
+ * @module aws-core-utils/dynamodb-utils
+ * @author Byron du Preez
+ */
+exports._ = '_'; //IDE workaround
+
+exports.toObjectFromDynamoDBMap = toObjectFromDynamoDBMap;
+exports.toValueFromAttributeValue = toValueFromAttributeValue;
+exports.toValueFromAttributeTypeAndValue = toValueFromAttributeTypeAndValue;
+exports.toKeyValueStrings = toKeyValueStrings;
+exports.toKeyValuePairs = toKeyValuePairs;
+exports.toStorableObject = toStorableObject;
+exports.simplifyKeysNewImageAndOldImage = simplifyKeysNewImageAndOldImage;
+
 /**
  * Defaults used by this module, which can be overridden to alter the default behaviour.
  * @namespace {DynamoDBUtilsDefaults} defaults
@@ -7,28 +28,7 @@
 const defaults = {
   emptyStringReplacement: ' '
 };
-
-/**
- * Utilities for working with AWS DynamoDB.
- * @module aws-core-utils/dynamodb-utils
- * @author Byron du Preez
- */
-module.exports = {
-  toObjectFromDynamoDBMap: toObjectFromDynamoDBMap,
-  toValueFromAttributeValue: toValueFromAttributeValue,
-  toValueFromAttributeTypeAndValue: toValueFromAttributeTypeAndValue,
-  toKeyValueStrings: toKeyValueStrings,
-  toKeyValuePairs: toKeyValuePairs,
-  toStorableObject: toStorableObject,
-  simplifyKeysNewImageAndOldImage: simplifyKeysNewImageAndOldImage,
-  defaults: defaults
-};
-
-const Strings = require('core-functions/strings');
-const stringify = Strings.stringify;
-
-const Numbers = require('core-functions/numbers');
-const toNumberOrIntegerLike = Numbers.toNumberOrIntegerLike;
+exports.defaults = defaults;
 
 /**
  * Attempts to convert the given DynamoDB map object containing keys and Attribute values into a JavaScript object.

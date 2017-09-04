@@ -1,12 +1,5 @@
 'use strict';
 
-let AWS = require('aws-sdk');
-
-// Module-scope cache of AWS.DynamoDB.DocumentClient instances by region key
-let dynamoDBDocClientByRegionKey = new WeakMap();
-// Module-scope cache of the DynamoDB.DocumentClient options used to construct the AWS.DynamoDB.DocumentClient instances by region key
-let dynamoDBDocClientOptionsByRegionKey = new WeakMap();
-
 const regions = require('./regions');
 const getRegion = regions.getRegion;
 const getRegionKey = regions.getRegionKey;
@@ -20,19 +13,27 @@ const stringify = Strings.stringify;
 const deepEqual = require('deep-equal');
 const strict = {strict: true};
 
+let AWS = require('aws-sdk');
+
+// Module-scope cache of AWS.DynamoDB.DocumentClient instances by region key
+let dynamoDBDocClientByRegionKey = new WeakMap();
+
+// Module-scope cache of the DynamoDB.DocumentClient options used to construct the AWS.DynamoDB.DocumentClient instances by region key
+let dynamoDBDocClientOptionsByRegionKey = new WeakMap();
+
 /**
  * Utilities for working with AWS.DynamoDB.DocumentClients and a module-scope cache of AWS.DynamoDB.DocumentClient
  * instances by region for Lambda.
  * @module aws-core-utils/dynamodb-doc-client-cache
  * @author Byron du Preez
  */
-module.exports = {
-  setDynamoDBDocClient: setDynamoDBDocClient,
-  getDynamoDBDocClient: getDynamoDBDocClient,
-  getDynamoDBDocClientOptionsUsed: getDynamoDBDocClientOptionsUsed,
-  deleteDynamoDBDocClient: deleteDynamoDBDocClient,
-  configureDynamoDBDocClient: configureDynamoDBDocClient
-};
+exports._ = '_'; //IDE workaround
+
+exports.setDynamoDBDocClient = setDynamoDBDocClient;
+exports.deleteDynamoDBDocClient = deleteDynamoDBDocClient;
+exports.getDynamoDBDocClient = getDynamoDBDocClient;
+exports.getDynamoDBDocClientOptionsUsed = getDynamoDBDocClientOptionsUsed;
+exports.configureDynamoDBDocClient = configureDynamoDBDocClient;
 
 /**
  * Creates and caches a new AWS DynamoDB.DocumentClient instance with the given DynamoDB.DocumentClient constructor
@@ -67,15 +68,15 @@ function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
   // Check if there is already a DynamoDB.DocumentClient instance cached for this region
   let dynamoDBDocClient = dynamoDBDocClientByRegionKey.get(regionKey);
   if (dynamoDBDocClient) {
-    const logInfo = context && context.info ? context.info : console.log;
+    const debug = (context && context.debug) || console.log;
     // If caller specified no options, then accept the cached instance for the current region (regardless of its options)
     if (!dynamoDBDocClientOptions || Object.getOwnPropertyNames(dynamoDBDocClientOptions).length === 0) {
-      logInfo(`Reusing cached DynamoDB.DocumentClient instance for region (${region}) with ANY options, since no options were specified`);
+      debug(`Reusing cached DynamoDB.DocumentClient instance for region (${region}) with ANY options, since no options were specified`);
       return dynamoDBDocClient;
     }
     // If caller ONLY specified a region, then accept the cached instance for the region (regardless of its options)
     if (Object.getOwnPropertyNames(options).length === 1) {
-      logInfo(`Reusing cached DynamoDB.DocumentClient instance for region (${region}) with ANY options, since only region was specified`);
+      debug(`Reusing cached DynamoDB.DocumentClient instance for region (${region}) with ANY options, since only region was specified`);
       return dynamoDBDocClient;
     }
     // If the given options match the options used to construct the cached instance, then returns the cached instance
@@ -83,11 +84,11 @@ function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
 
     if (deepEqual(optionsUsed, options, strict)) {
       // Use the cached instance if its config is identical to the modified options
-      logInfo(`Reusing cached DynamoDB.DocumentClient instance for region (${region}) with identical options`);
+      debug(`Reusing cached DynamoDB.DocumentClient instance for region (${region}) with identical options`);
       return dynamoDBDocClient;
     } else {
-      const logWarn = context && context.warn ? context.warn : console.warn;
-      logWarn(`Replacing cached DynamoDB.DocumentClient instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
+      const warn = (context && context.warn) || console.warn;
+      warn(`Replacing cached DynamoDB.DocumentClient instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
     }
   }
   // Create a new DynamoDB.DocumentClient instance with a COPY of the resolved options (COPY avoids subsequent cache

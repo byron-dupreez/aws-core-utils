@@ -1,4 +1,4 @@
-# aws-core-utils v7.0.3
+# aws-core-utils v7.0.4
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 

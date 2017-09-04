@@ -5,10 +5,12 @@
  * @module aws-core-utils/kms-utils
  * @author Byron du Preez
  */
-module.exports.encrypt = encrypt;
-module.exports.decrypt = decrypt;
-module.exports.encryptKey = encryptKey;
-module.exports.decryptKey = decryptKey;
+exports._ = '_'; //IDE workaround
+
+exports.encrypt = encrypt;
+exports.decrypt = decrypt;
+exports.encryptKey = encryptKey;
+exports.decryptKey = decryptKey;
 
 /**
  * Encrypts the plaintext within the given KMS parameters using the given AWS.KMS instance & returns the KMS result.

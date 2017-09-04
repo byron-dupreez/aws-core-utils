@@ -1,80 +1,58 @@
 'use strict';
 
-// Constants
-const MAX_PARTITION_KEY_SIZE = 256;
-
 const arns = require('./arns');
 
-/**
- * Valid event names for a DynamoDB stream event.
- * @enum {string}
- * @readonly
- */
-const DynamoDBEventName  = {
-  INSERT: 'INSERT',
-  MODIFY: 'MODIFY',
-  REMOVE: 'REMOVE'
-};
+// Constants
+const MAX_PARTITION_KEY_SIZE = 256;
 
 /**
  * Utilities for validating and extracting information from AWS Kinesis and AWS DynamoDB stream events.
  * @module aws-core-utils/stream-events
  * @author Byron du Preez
  */
-module.exports = {
-  MAX_PARTITION_KEY_SIZE: MAX_PARTITION_KEY_SIZE,
+exports._ = '_'; //IDE workaround
 
-  /** Valid event names for a DynamoDB stream event */
-  DynamoDBEventName: DynamoDBEventName,
+exports.MAX_PARTITION_KEY_SIZE = MAX_PARTITION_KEY_SIZE;
 
-  /** Returns the event id from the given stream event record */
-  getEventID: getEventID,
-  /** Returns the event name from the given stream event record */
-  getEventName: getEventName,
-  /** Returns the event source from the given stream event record */
-  getEventSource: getEventSource,
-  /** Returns the event source ARN from the given stream event record */
-  getEventSourceARN: getEventSourceARN,
+exports.getEventID = getEventID;
+exports.getEventName = getEventName;
+exports.getEventSource = getEventSource;
+exports.getEventSourceARN = getEventSourceARN;
 
-  /** Returns the event source ARNs of the given stream event's records */
-  getEventSourceARNs: getEventSourceARNs,
-  /** Returns the event sources of the given stream event's records */
-  getEventSources: getEventSources,
+exports.getEventSourceARNs = getEventSourceARNs;
+exports.getEventSources = getEventSources;
 
-  /** Extracts and returns the stream names from the given Kinesis stream event's records' eventSourceARNs */
-  getKinesisEventSourceStreamNames: getKinesisEventSourceStreamNames,
-  /** Extracts and returns the stream name from the given Kinesis stream event record's eventSourceARN */
-  getKinesisEventSourceStreamName: getKinesisEventSourceStreamName,
-  /** Extracts and returns the shard id from the given Kinesis stream event record */
-  getKinesisShardId: getKinesisShardId,
-  /** Extracts and returns the shard id from the given Kinesis eventID */
-  getKinesisShardIdFromEventID: getKinesisShardIdFromEventID,
-  /** Extracts and returns the shard id and event number from the given Kinesis eventID */
-  getKinesisShardIdAndEventNoFromEventID: getKinesisShardIdAndEventNoFromEventID,
+exports.getKinesisEventSourceStreamNames = getKinesisEventSourceStreamNames;
+exports.getKinesisEventSourceStreamName = getKinesisEventSourceStreamName;
+exports.getKinesisShardId = getKinesisShardId;
+exports.getKinesisShardIdFromEventID = getKinesisShardIdFromEventID;
+exports.getKinesisShardIdAndEventNoFromEventID = getKinesisShardIdAndEventNoFromEventID;
 
-  /** Returns the sequence number from the given Kinesis stream event record */
-  getKinesisSequenceNumber: getKinesisSequenceNumber,
+exports.getKinesisSequenceNumber = getKinesisSequenceNumber;
 
-  /** Extracts and returns the table names from the given DynamoDB stream event records' eventSourceARNs */
-  getDynamoDBEventSourceTableNames: getDynamoDBEventSourceTableNames,
-  /** Extracts and returns the table name from the given DynamoDB stream event record's eventSourceARN */
-  getDynamoDBEventSourceTableName: getDynamoDBEventSourceTableName,
-  /** Extracts and returns the table name from the given DynamoDB stream event record's eventSourceARN */
-  getDynamoDBEventSourceTableNameAndStreamTimestamp: getDynamoDBEventSourceTableNameAndStreamTimestamp,
+exports.getDynamoDBEventSourceTableNames = getDynamoDBEventSourceTableNames;
+exports.getDynamoDBEventSourceTableName = getDynamoDBEventSourceTableName;
+exports.getDynamoDBEventSourceTableNameAndStreamTimestamp = getDynamoDBEventSourceTableNameAndStreamTimestamp;
 
-  /** Returns the sequence number from the given DynamoDB stream event record */
-  getDynamoDBSequenceNumber: getDynamoDBSequenceNumber,
+exports.getDynamoDBSequenceNumber = getDynamoDBSequenceNumber;
 
-  /** Validates the given stream event record and raises an error if the record is invalid or not a Kinesis or DynamoDB stream event record */
-  validateStreamEventRecord: validateStreamEventRecord,
-  /** Validates the given Kinesis stream event record and raises an error if the record is invalid or not a Kinesis stream event record */
-  validateKinesisStreamEventRecord: validateKinesisStreamEventRecord,
-  /** Validates the given DynamoDB stream event record and raises an error if the record is invalid or not a DynamoDB stream event record */
-  validateDynamoDBStreamEventRecord: validateDynamoDBStreamEventRecord
+exports.validateStreamEventRecord = validateStreamEventRecord;
+exports.validateKinesisStreamEventRecord = validateKinesisStreamEventRecord;
+exports.validateDynamoDBStreamEventRecord = validateDynamoDBStreamEventRecord;
 
-  // /* * Returns a truncated version of the partition key and sequence number of the given stream event record for logging purposes */
-  // toStreamEventRecordTruncatedKeyInfo: toStreamEventRecordTruncatedKeyInfo,
+// exports.toStreamEventRecordTruncatedKeyInfo = toStreamEventRecordTruncatedKeyInfo;
+
+/**
+ * Valid event names for a DynamoDB stream event.
+ * @enum {string}
+ * @readonly
+ */
+const DynamoDBEventName = {
+  INSERT: 'INSERT',
+  MODIFY: 'MODIFY',
+  REMOVE: 'REMOVE'
 };
+exports.DynamoDBEventName = DynamoDBEventName;
 
 /**
  * Returns the event id from the given stream event record.
@@ -182,7 +160,7 @@ function getKinesisShardIdAndEventNoFromEventID(eventID) {
   if (eventID) {
     const sepPos = eventID.indexOf(':');
     return sepPos !== -1 ?
-      [eventID.substring(0, sepPos), eventID.substring(sepPos + 1), ] : ['', ''];
+      [eventID.substring(0, sepPos), eventID.substring(sepPos + 1),] : ['', ''];
   }
   return ['', ''];
 }
@@ -213,7 +191,7 @@ function getDynamoDBEventSourceTableNameAndStreamTimestamp(record) {
     const resources = arns.getArnResources(record.eventSourceARN);
     return [resources.resource, resources.subResource];
   }
-  return  ['', ''];
+  return ['', ''];
 }
 
 /**

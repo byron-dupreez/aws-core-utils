@@ -1,5 +1,11 @@
 ## Changes
 
+### 7.0.4
+- Changed almost all modules' exports to modifications of the default `exports` object instead of replacing the default `module.exports` object
+- Added dummy first exports (`exports._ = '_'; //IDE workaround`) to most modules as a temporary workaround for IDE issue
+- Updated `core-functions` dependency to version 3.0.14
+- Updated `logging-utils` dependency to version 4.0.13
+
 ### 7.0.3
 - Updated `core-functions` dependency to version 3.0.11
 - Updated `logging-utils` dependency to version 4.0.11

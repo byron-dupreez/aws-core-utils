@@ -1,89 +1,5 @@
 'use strict';
 
-/**
- * The names of all of the standard stage handling settings.
- * @namespace
- */
-const settingNames = {
-  envStageName: 'envStageName',
-  customToStage: 'customToStage',
-  convertAliasToStage: 'convertAliasToStage',
-  streamNameStageSeparator: 'streamNameStageSeparator',
-  injectStageIntoStreamName: 'injectStageIntoStreamName',
-  extractStageFromStreamName: 'extractStageFromStreamName',
-  extractNameAndStageFromStreamName: 'extractNameAndStageFromStreamName',
-  resourceNameStageSeparator: 'resourceNameStageSeparator',
-  injectStageIntoResourceName: 'injectStageIntoResourceName',
-  extractStageFromResourceName: 'extractStageFromResourceName',
-  extractNameAndStageFromResourceName: 'extractNameAndStageFromResourceName',
-  injectInCase: 'injectInCase',
-  extractInCase: 'extractInCase'
-};
-
-// noinspection JSUnusedGlobalSymbols
-/**
- * Stage handling utilities (primarily for AWS Lambda usage), which include the following:
- * - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources.
- * - Utilities for configuration of stage handling.
- * - Configurable and default functions for generating stage-qualified stream and resource names.
- * - Configurable and default functions for extracting stages from stage-qualified stream and resource names.
- *
- * @module aws-core-utils/stages
- * @author Byron du Preez
- */
-module.exports = {
-  settingNames: settingNames,
-  // Stage handling configuration
-  isStageHandlingConfigured: isStageHandlingConfigured,
-  configureStageHandling: configureStageHandling,
-  configureDefaultStageHandling: configureDefaultStageHandling,
-  getDefaultStageHandlingSettings: getDefaultStageHandlingSettings,
-
-  // Functions providing access to configured stage handling settings & functions by name
-  getStageHandlingSetting: getStageHandlingSetting,
-  getStageHandlingFunction: getStageHandlingFunction,
-
-  // Stage resolution
-  resolveStage: resolveStage,
-
-  // Stage resolution and configuration
-  configureStage: configureStage,
-
-  // Stream name qualification
-  toStageQualifiedStreamName: toStageQualifiedStreamName,
-  extractStageFromQualifiedStreamName: extractStageFromQualifiedStreamName,
-  extractNameAndStageFromQualifiedStreamName: extractNameAndStageFromQualifiedStreamName,
-
-  // Resource name qualification
-  toStageQualifiedResourceName: toStageQualifiedResourceName,
-  extractStageFromQualifiedResourceName: extractStageFromQualifiedResourceName,
-  extractNameAndStageFromQualifiedResourceName: extractNameAndStageFromQualifiedResourceName,
-
-  /**
-   * Default implementations of specialized versions of some of the above functions, which are NOT meant to be used
-   * directly and are ONLY exposed to facilitate re-using some of these functions if needed in a customised stage
-   * handling configuration.
-   */
-  DEFAULTS: {
-    // Alias conversion
-    convertAliasToStage: convertAliasToStage,
-    // Stage-suffixed stream name qualification
-    toStageSuffixedStreamName: toStageSuffixedStreamName,
-    extractStageFromSuffixedStreamName: extractStageFromSuffixedStreamName,
-    extractNameAndStageFromSuffixedStreamName: extractNameAndStageFromSuffixedStreamName,
-    // Stage-suffixed resource name qualification
-    toStageSuffixedResourceName: toStageSuffixedResourceName,
-    extractStageFromSuffixedResourceName: extractStageFromSuffixedResourceName,
-    extractNameAndStageFromSuffixedResourceName: extractNameAndStageFromSuffixedResourceName,
-    // Generic utils
-    toStageSuffixedName: toStageSuffixedName,
-    toCase: toCase
-  },
-  FOR_TESTING_ONLY: {
-    configureStageHandlingWithSettings: configureStageHandlingWithSettings
-  }
-};
-
 const Strings = require('core-functions/strings');
 const trim = Strings.trim;
 const trimOrEmpty = Strings.trimOrEmpty;
@@ -104,6 +20,91 @@ const lambdas = require('./lambdas');
 const Arrays = require('core-functions/arrays');
 
 const logging = require('logging-utils');
+
+/**
+ * Stage handling utilities (primarily for AWS Lambda usage), which include the following:
+ * - Utilities for resolving or deriving the current stage (e.g. dev, qa, prod) from various sources.
+ * - Utilities for configuration of stage handling.
+ * - Configurable and default functions for generating stage-qualified stream and resource names.
+ * - Configurable and default functions for extracting stages from stage-qualified stream and resource names.
+ *
+ * @module aws-core-utils/stages
+ * @author Byron du Preez
+ */
+exports._ = '_'; //IDE workaround
+
+// Stage handling configuration
+exports.isStageHandlingConfigured = isStageHandlingConfigured;
+exports.configureStageHandling = configureStageHandling;
+exports.configureDefaultStageHandling = configureDefaultStageHandling;
+exports.getDefaultStageHandlingSettings = getDefaultStageHandlingSettings;
+
+// Functions providing access to configured stage handling settings & functions by name
+exports.getStageHandlingSetting = getStageHandlingSetting;
+exports.getStageHandlingFunction = getStageHandlingFunction;
+
+// Stage resolution
+exports.resolveStage = resolveStage;
+
+// Stage resolution and configuration
+exports.configureStage = configureStage;
+
+// Stream name qualification
+exports.toStageQualifiedStreamName = toStageQualifiedStreamName;
+exports.extractStageFromQualifiedStreamName = extractStageFromQualifiedStreamName;
+exports.extractNameAndStageFromQualifiedStreamName = extractNameAndStageFromQualifiedStreamName;
+
+// Resource name qualification
+exports.toStageQualifiedResourceName = toStageQualifiedResourceName;
+exports.extractStageFromQualifiedResourceName = extractStageFromQualifiedResourceName;
+exports.extractNameAndStageFromQualifiedResourceName = extractNameAndStageFromQualifiedResourceName;
+
+// noinspection JSUnusedGlobalSymbols
+/**
+ * Default implementations of specialized versions of some of the above functions, which are NOT meant to be used
+ * directly and are ONLY exposed to facilitate re-using some of these functions if needed in a customised stage
+ * handling configuration.
+ */
+exports.DEFAULTS = {
+  // Alias conversion
+  convertAliasToStage: convertAliasToStage,
+  // Stage-suffixed stream name qualification
+  toStageSuffixedStreamName: toStageSuffixedStreamName,
+  extractStageFromSuffixedStreamName: extractStageFromSuffixedStreamName,
+  extractNameAndStageFromSuffixedStreamName: extractNameAndStageFromSuffixedStreamName,
+  // Stage-suffixed resource name qualification
+  toStageSuffixedResourceName: toStageSuffixedResourceName,
+  extractStageFromSuffixedResourceName: extractStageFromSuffixedResourceName,
+  extractNameAndStageFromSuffixedResourceName: extractNameAndStageFromSuffixedResourceName,
+  // Generic utils
+  toStageSuffixedName: toStageSuffixedName,
+  toCase: toCase
+};
+
+exports.FOR_TESTING_ONLY = {
+  configureStageHandlingWithSettings: configureStageHandlingWithSettings
+};
+
+/**
+ * The names of all of the standard stage handling settings.
+ * @namespace
+ */
+const settingNames = {
+  envStageName: 'envStageName',
+  customToStage: 'customToStage',
+  convertAliasToStage: 'convertAliasToStage',
+  streamNameStageSeparator: 'streamNameStageSeparator',
+  injectStageIntoStreamName: 'injectStageIntoStreamName',
+  extractStageFromStreamName: 'extractStageFromStreamName',
+  extractNameAndStageFromStreamName: 'extractNameAndStageFromStreamName',
+  resourceNameStageSeparator: 'resourceNameStageSeparator',
+  injectStageIntoResourceName: 'injectStageIntoResourceName',
+  extractStageFromResourceName: 'extractStageFromResourceName',
+  extractNameAndStageFromResourceName: 'extractNameAndStageFromResourceName',
+  injectInCase: 'injectInCase',
+  extractInCase: 'extractInCase'
+};
+exports.settingNames = settingNames;
 
 /**
  * Returns true if stage handling is already configured on the given context; false otherwise.
@@ -293,9 +294,8 @@ function configureStageHandling(context, settings, options, otherSettings, other
   // Configure stage handling with the given or derived stage handling settings
   configureStageHandlingWithSettings(context, stageHandlingSettings, otherSettings, otherOptions, forceConfiguration);
 
-  // Log a warning if no settings and no options were provided and the default settings were applied
   if (!settingsAvailable && !optionsAvailable && (forceConfiguration || !stageHandlingWasConfigured)) {
-    context.warn(`Stage handling was configured without settings or options - used default configuration`);
+    context.debug(`Stage handling was configured without settings or options - used default configuration`);
   }
   return context;
 }

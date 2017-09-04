@@ -1,29 +1,5 @@
 'use strict';
 
-// A map of region key objects by region, which is only needed, because WeakMaps can ONLY have object keys
-const regionKeysByRegion = new Map();
-
-// noinspection JSUnusedGlobalSymbols
-/**
- * Utilities for resolving the AWS region from various sources (primarily for AWS Lambda usage).
- * @module aws-core-utils/regions
- * @author Byron du Preez
- */
-module.exports = {
-  getRegion: getRegion,
-  setRegion: setRegion,
-  getDefaultRegion: getDefaultRegion,
-  getInvokedFunctionArnRegion: getInvokedFunctionArnRegion,
-  getEventAwsRegions: getEventAwsRegions,
-  getEventSourceArnRegions: getEventSourceArnRegions,
-  configureRegion: configureRegion,
-
-  getRegionKey: getRegionKey,
-
-  getRegionRaw: getRegionRaw,
-  getDefaultRegionRaw: getDefaultRegionRaw
-};
-
 const Strings = require('core-functions/strings');
 const isNotBlank = Strings.isNotBlank;
 const trim = Strings.trim;
@@ -31,6 +7,29 @@ const trimOrEmpty = Strings.trimOrEmpty;
 
 const arns = require('./arns');
 const getArnRegion = arns.getArnRegion;
+
+// A map of region key objects by region, which is only needed, because WeakMaps can ONLY have object keys
+const regionKeysByRegion = new Map();
+
+/**
+ * Utilities for resolving the AWS region from various sources (primarily for AWS Lambda usage).
+ * @module aws-core-utils/regions
+ * @author Byron du Preez
+ */
+exports._ = '_'; //IDE workaround
+
+exports.getRegion = getRegion;
+exports.setRegion = setRegion;
+exports.getDefaultRegion = getDefaultRegion;
+exports.getInvokedFunctionArnRegion = getInvokedFunctionArnRegion;
+exports.getEventAwsRegions = getEventAwsRegions;
+exports.getEventSourceArnRegions = getEventSourceArnRegions;
+exports.configureRegion = configureRegion;
+
+exports.getRegionKey = getRegionKey;
+
+exports.getRegionRaw = getRegionRaw;
+exports.getDefaultRegionRaw = getDefaultRegionRaw;
 
 /**
  * Gets the region in which this function is running from the `AWS_REGION` environment variable and returns it as is if

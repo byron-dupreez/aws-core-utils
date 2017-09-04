@@ -5,9 +5,7 @@
  * @author Byron du Preez
  */
 
-const test = require("tape");
-
-const uuid = require("uuid");
+const test = require('tape');
 
 // The test subject
 const apiLambdas = require('../api-lambdas');
@@ -23,7 +21,6 @@ const stringify = Strings.stringify;
 const logging = require('logging-utils');
 const LogLevel = logging.LogLevel;
 
-const stages = require("../stages");
 const kinesisCache = require("../kinesis-cache");
 const dynamoDBDocClientCache = require("../dynamodb-doc-client-cache");
 

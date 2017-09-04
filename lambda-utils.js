@@ -3,6 +3,17 @@
 const Promises = require('core-functions/promises');
 
 /**
+ * Utilities to simplify working with an AWS.Lambda instance.
+ * @module aws-core-utils/lambda-utils
+ * @author Byron du Preez
+ */
+exports._ = '_'; //IDE workaround
+
+exports.listEventSourceMappings = listEventSourceMappings;
+exports.updateEventSourceMapping = updateEventSourceMapping;
+exports.disableEventSourceMapping = disableEventSourceMapping;
+
+/**
  * The various states of an event source mapping
  * @enum string
  */
@@ -15,18 +26,7 @@ const EventSourceMappingState = {
   Updating: "Updating",
   Deleting: "Deleting"
 };
-
-/**
- * Utilities to simplify working with an AWS.Lambda instance.
- * @module aws-core-utils/lambda-utils
- * @author Byron du Preez
- */
-module.exports = {
-  EventSourceMappingState: EventSourceMappingState,
-  listEventSourceMappings: listEventSourceMappings,
-  updateEventSourceMapping: updateEventSourceMapping,
-  disableEventSourceMapping: disableEventSourceMapping
-};
+exports.EventSourceMappingState = EventSourceMappingState;
 
 /**
  * Lists the event source mappings for the given function name.

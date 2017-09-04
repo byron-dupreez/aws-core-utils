@@ -1,5 +1,13 @@
 'use strict';
 
+const arns = require('./arns');
+const getArnResources = arns.getArnResources;
+
+const Strings = require('core-functions/strings');
+const isNotBlank = Strings.isNotBlank;
+
+const appErrors = require('core-functions/app-errors');
+
 /**
  * Utilities for working with AWS Lambda:
  * - Enables extraction of function names, versions and, most importantly, aliases from AWS contexts and their invoked
@@ -10,26 +18,18 @@
  * @see core-functions/app-errors.js
  * @author Byron du Preez
  */
-module.exports = {
-  // Functions to extract Lambda-related information from an AWS context
-  getFunctionName: getFunctionName,
-  getFunctionVersion: getFunctionVersion,
-  getFunctionNameVersionAndAlias: getFunctionNameVersionAndAlias,
-  getAlias: getAlias,
-  getInvokedFunctionArn: getInvokedFunctionArn,
-  getInvokedFunctionArnFunctionName: getInvokedFunctionArnFunctionName,
+exports._ = '_'; //IDE workaround
 
-  // Function to assist with failing the callback of an AWS Lambda (not exposed via API Gateway) and preserve the information of the error thrown
-  failCallback: failCallback
-};
+// Functions to extract Lambda-related information from an AWS context
+exports.getFunctionName = getFunctionName;
+exports.getFunctionVersion = getFunctionVersion;
+exports.getFunctionNameVersionAndAlias = getFunctionNameVersionAndAlias;
+exports.getAlias = getAlias;
+exports.getInvokedFunctionArn = getInvokedFunctionArn;
+exports.getInvokedFunctionArnFunctionName = getInvokedFunctionArnFunctionName;
 
-const arns = require('./arns');
-const getArnResources = arns.getArnResources;
-
-const Strings = require('core-functions/strings');
-const isNotBlank = Strings.isNotBlank;
-
-const appErrors = require('core-functions/app-errors');
+// Function to assist with failing the callback of an AWS Lambda (not exposed via API Gateway) and preserve the information of the error thrown
+exports.failCallback = failCallback;
 
 /**
  * Returns the function name from the given AWS context

@@ -1,5 +1,11 @@
 'use strict';
 
+const Strings = require('core-functions/strings');
+const trim = Strings.trim;
+const trimOrEmpty = Strings.trimOrEmpty;
+const isBlank = Strings.isBlank;
+const isNotBlank = Strings.isNotBlank;
+
 /**
  * Utilities for working with Amazon Resource Names (ARNs), which typically take the following general format:
  * - arn:partition:service:region:account-id:resource
@@ -11,20 +17,14 @@
  * @module aws-core-utils/arns
  * @author Byron du Preez
  */
-module.exports = {
-  getArnComponent: getArnComponent,
-  getArnPartition: getArnPartition,
-  getArnService: getArnService,
-  getArnRegion: getArnRegion,
-  getArnAccountId: getArnAccountId,
-  getArnResources: getArnResources,
-};
+exports._ = '_'; //IDE workaround
 
-const Strings = require('core-functions/strings');
-const trim = Strings.trim;
-const trimOrEmpty = Strings.trimOrEmpty;
-const isBlank = Strings.isBlank;
-const isNotBlank = Strings.isNotBlank;
+exports.getArnComponent = getArnComponent;
+exports.getArnPartition = getArnPartition;
+exports.getArnService = getArnService;
+exports.getArnRegion = getArnRegion;
+exports.getArnAccountId = getArnAccountId;
+exports.getArnResources = getArnResources;
 
 // ARN indexes
 const PARTITION_INDEX = 1;
