@@ -49,12 +49,12 @@ function getItem(tableName, key, opts, desc, context) {
         throw new TypeError(`Unexpected result from get ${desc} from ${tableName} - result (${JSON.stringify(result)})`);
       })
       .catch(err => {
-        context.error(`Failed to load ${desc} from ${tableName}`, err.stack);
+        context.error(`Failed to load ${desc} from ${tableName}`, err);
         throw err;
       });
 
   } catch (err) {
-    context.error(`Failed to load ${desc} from ${tableName}`, err.stack);
+    context.error(`Failed to load ${desc} from ${tableName}`, err);
     return Promise.reject(err);
   }
 }

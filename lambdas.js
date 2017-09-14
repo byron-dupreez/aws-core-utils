@@ -3,9 +3,6 @@
 const arns = require('./arns');
 const getArnResources = arns.getArnResources;
 
-const Strings = require('core-functions/strings');
-const isNotBlank = Strings.isNotBlank;
-
 const appErrors = require('core-functions/app-errors');
 
 /**
@@ -27,6 +24,7 @@ exports.getFunctionNameVersionAndAlias = getFunctionNameVersionAndAlias;
 exports.getAlias = getAlias;
 exports.getInvokedFunctionArn = getInvokedFunctionArn;
 exports.getInvokedFunctionArnFunctionName = getInvokedFunctionArnFunctionName;
+exports.getInvokedFunctionNameWithAliasOrVersion = getInvokedFunctionNameWithAliasOrVersion;
 
 // Function to assist with failing the callback of an AWS Lambda (not exposed via API Gateway) and preserve the information of the error thrown
 exports.failCallback = failCallback;
@@ -70,6 +68,20 @@ function getInvokedFunctionArnFunctionName(awsContext) {
 }
 
 /**
+ * Extracts and returns a concatenation of the invoked function name and the invoked alias or version (if any) separated
+ * by a colon from the given AWS Lambda context's invokedFunctionArn.
+ * @param {AWSContext} awsContext - the AWS context
+ * @returns {string} the invoked function name with the invoked alias or version (if any); otherwise an empty string
+ */
+function getInvokedFunctionNameWithAliasOrVersion(awsContext) {
+  const invokedFunctionArn = awsContext && awsContext.invokedFunctionArn;
+  const resources = getArnResources(invokedFunctionArn);
+  const functionName = resources.resource;
+  const aliasOrVersion = resources.aliasOrVersion;
+  return functionName ? aliasOrVersion ? `${functionName}:${aliasOrVersion}` : functionName : '';
+}
+
+/**
  * Returns the function name, version and alias (if any) from the given AWS context, which was passed to your Lambda
  * function.
  *
@@ -91,15 +103,24 @@ function getFunctionNameVersionAndAlias(awsContext) {
   const invokedFunctionArn = awsContext && awsContext.invokedFunctionArn;
   const resources = getArnResources(invokedFunctionArn);
   const nameFromArn = resources.resource;
-  if (nameFromArn !== nameFromContext) {
+
+  if (nameFromContext && nameFromArn && nameFromArn !== nameFromContext) {
     console.warn(`Lambda context with function name (${nameFromContext}) has different name (${nameFromArn}) in invoked function ARN`);
   }
 
   const aliasOrVersion = resources.aliasOrVersion;
-  const alias = isNotBlank(aliasOrVersion) && aliasOrVersion !== versionFromContext ? //&& aliasOrVersion !== version ?
+  const alias = aliasOrVersion && aliasOrVersion !== versionFromContext ? //&& aliasOrVersion !== version ?
     aliasOrVersion : '';
 
-  return {functionName: name || nameFromContext || '', version: version || versionFromContext || '', alias: alias};
+  const invokedFunctionNameWithAliasOrVersion = nameFromArn ? aliasOrVersion ?
+    `${nameFromArn}:${aliasOrVersion}` : nameFromArn : '';
+
+  return {
+    functionName: name || nameFromContext || '',
+    version: version || versionFromContext || '',
+    alias: alias,
+    invoked: invokedFunctionNameWithAliasOrVersion
+  };
 }
 
 /**
@@ -114,7 +135,14 @@ function getFunctionNameVersionAndAlias(awsContext) {
  * @returns {string} the alias (if any); otherwise an empty string
  */
 function getAlias(awsContext) {
-  return getFunctionNameVersionAndAlias(awsContext).alias;
+  const invokedFunctionArn = awsContext && awsContext.invokedFunctionArn;
+  const resources = getArnResources(invokedFunctionArn);
+
+  const versionFromContext = awsContext && awsContext.functionVersion;
+
+  const aliasOrVersion = resources.aliasOrVersion;
+  return aliasOrVersion && aliasOrVersion !== versionFromContext ? //&& aliasOrVersion !== version ?
+    aliasOrVersion : '';
 }
 
 /**
@@ -140,4 +168,3 @@ function failCallback(lambdaCallback, error, awsContext, message, code) {
   if (awsContext && !appError.awsRequestId) appError.awsRequestId = awsContext.awsRequestId;
   lambdaCallback(JSON.stringify(appError));
 }
-

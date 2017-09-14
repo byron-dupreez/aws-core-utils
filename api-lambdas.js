@@ -131,13 +131,13 @@ function generateHandlerFunction(generateContext, generateSettings, generateOpti
             failCallback(callback, err, awsContext, undefined, undefined, allowedHttpStatusCodes);
           } else {
             // Log the error encountered
-            context.error(isNotBlank(failureMsg) ? failureMsg : 'Failed to execute Lambda', err.stack);
+            context.error(isNotBlank(failureMsg) ? failureMsg : 'Failed to execute Lambda', err);
             failCallback(callback, err, awsContext, undefined, undefined, allowedHttpStatusCodes);
           }
         });
 
     } catch (err) {
-      log(context, LogLevel.ERROR, isNotBlank(failureMsg) ? failureMsg : 'Failed to execute Lambda', err.stack);
+      log(context, LogLevel.ERROR, isNotBlank(failureMsg) ? failureMsg : 'Failed to execute Lambda', err);
       // Fail the Lambda callback
       failCallback(callback, err, awsContext, undefined, undefined, allowedHttpStatusCodes);
     }

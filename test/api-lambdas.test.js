@@ -94,12 +94,12 @@ test('generateHandlerFunction simulating successful response (with legacy parame
         t.end();
       })
       .catch(err => {
-        t.fail(`handler should not have failed - ${err.stack}`);
+        t.fail(`handler should not have failed - ${err}`);
         t.end();
       });
 
   } catch (err) {
-    t.fail(`handler should not have failed in try-catch - ${err.stack}`);
+    t.fail(`handler should not have failed in try-catch - ${err}`);
     t.end();
 
   } finally {
@@ -156,7 +156,7 @@ test('generateHandlerFunction simulating invalid request (with legacy parameters
       });
 
   } catch (err) {
-    t.fail(`handler should not have failed in try-catch - ${err.stack}`);
+    t.fail(`handler should not have failed in try-catch - ${err}`);
     t.end();
 
   } finally {
@@ -214,7 +214,7 @@ test('generateHandlerFunction simulating failure (with legacy parameters)', t =>
       });
 
   } catch (err) {
-    t.fail(`handler should not have failed in try-catch - ${err.stack}`);
+    t.fail(`handler should not have failed in try-catch - ${err}`);
     t.end();
 
   } finally {
@@ -260,12 +260,12 @@ test('generateHandlerFunction simulating successful response (with NON-legacy pa
         t.end();
       })
       .catch(err => {
-        t.fail(`handler should not have failed - ${err.stack}`);
+        t.fail(`handler should not have failed - ${err}`);
         t.end();
       });
 
   } catch (err) {
-    t.fail(`handler should not have failed in try-catch - ${err.stack}`);
+    t.fail(`handler should not have failed in try-catch - ${err}`);
     t.end();
 
   } finally {

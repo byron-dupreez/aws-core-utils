@@ -84,7 +84,8 @@
  * @typedef {Object} LambdaFunctionNameVersionAndAlias - the name, version & alias of the invoked Lambda function
  * @property {string} functionName - the name of the Lambda function
  * @property {string} version - the version of the Lambda function
- * @property {string|undefined} [alias] - the alias of the Lambda function
+ * @property {string} alias - the alias of the Lambda function (if any); otherwise an empty string
+ * @property {string} invoked - a concatenation of the invoked function name and the invoked alias or version (if any) separated by a colon, which were extracted from the AWS Lambda's context's invoked function ARN
  */
 
 /**
@@ -92,7 +93,7 @@
  * which implies pre-configured stage handling settings and logging functionality
  * @property {AWSEvent} event - the AWS event passed to your Lambda function on invocation
  * @property {AWSContext} awsContext - the AWS context passed to your Lambda function on invocation
- * @property {LambdaFunctionNameVersionAndAlias|undefined} invokedLambda - the name, version & alias of the invoked Lambda function
+ * @property {LambdaFunctionNameVersionAndAlias|undefined} [invokedLambda] - the name, version & alias of the invoked Lambda function
  */
 
 /**

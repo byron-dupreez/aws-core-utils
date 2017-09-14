@@ -1,4 +1,4 @@
-# aws-core-utils v7.0.4
+# aws-core-utils v7.0.5
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -93,7 +93,7 @@ module.exports.handler = (event, awsContext, callback) => {
         if (err instanceof BadRequest || appErrors.getHttpStatus(err) === 400) {
           context.warn('Invalid request ...' + err.message);
         } else {
-          context.error('Failed to ...', err.stack);
+          context.error('Failed to ...', err);
         }
         apiLambdas.failCallback(callback, err, awsContext);
       });
@@ -101,7 +101,7 @@ module.exports.handler = (event, awsContext, callback) => {
   } catch (err) {
     // Fail your Lambda callback and map the error to one of the default set of HTTP status codes:
     // i.e. [400, 401, 403, 404, 408, 429, 500, 502, 503, 504]
-    context.error('Failed to ...', err.stack);
+    context.error('Failed to ...', err);
     apiLambdas.failCallback(callback, err, awsContext);
   }
 };

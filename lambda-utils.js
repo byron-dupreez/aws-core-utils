@@ -38,9 +38,9 @@ exports.EventSourceMappingState = EventSourceMappingState;
 function listEventSourceMappings(lambda, params, logger) {
   logger = logger || console;
   const functionName = params.FunctionName;
-  const listEventSourceMappingsAsync = Promises.wrapMethod(lambda, lambda.listEventSourceMappings);
+  const listEventSourceMappingsAsync = Promises.wrap(lambda.listEventSourceMappings);
   const startMs = Date.now();
-  return listEventSourceMappingsAsync(params).then(
+  return listEventSourceMappingsAsync.call(lambda, params).then(
     result => {
       if (logger.traceEnabled) {
         const mappings = Array.isArray(result.EventSourceMappings) ? result.EventSourceMappings : [];
@@ -67,9 +67,9 @@ function updateEventSourceMapping(lambda, params, logger) {
   logger = logger || console;
   const functionName = params.FunctionName;
   const uuid = params.UUID;
-  const updateEventSourceMappingAsync = Promises.wrapMethod(lambda, lambda.updateEventSourceMapping);
+  const updateEventSourceMappingAsync = Promises.wrap(lambda.updateEventSourceMapping);
   const startMs = Date.now();
-  return updateEventSourceMappingAsync(params).then(
+  return updateEventSourceMappingAsync.call(lambda, params).then(
     result => {
       logger.info(`Updated event source mapping (${uuid}) for function (${functionName}) - took ${Date.now() - startMs} ms - result (${JSON.stringify(result)})`);
       return result;
@@ -92,9 +92,9 @@ function updateEventSourceMapping(lambda, params, logger) {
 function disableEventSourceMapping(lambda, functionName, uuid, logger) {
   logger = logger || console;
   const params = {FunctionName: functionName, UUID: uuid, Enabled: false};
-  const updateEventSourceMappingAsync = Promises.wrapMethod(lambda, lambda.updateEventSourceMapping);
+  const updateEventSourceMappingAsync = Promises.wrap(lambda.updateEventSourceMapping);
   const startMs = Date.now();
-  return updateEventSourceMappingAsync(params).then(
+  return updateEventSourceMappingAsync.call(lambda, params).then(
     result => {
       logger.info(`Disabled event source mapping (${uuid}) for function (${functionName}) - took ${Date.now() - startMs} ms - result (${JSON.stringify(result)})`);
       return result;

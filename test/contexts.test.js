@@ -62,7 +62,7 @@ function sampleAwsEvent(streamName, partitionKey, data, omitEventSourceARN) {
 
 function sampleAwsContext(functionVersion, functionAlias) {
   const region = process.env.AWS_REGION;
-  const functionName = 'sampleFunctionName';
+  const functionName = 'sample-function-name';
   const invokedFunctionArn = samples.sampleInvokedFunctionArn(region, functionName, functionAlias);
   return samples.sampleAwsContext(functionName, functionVersion, invokedFunctionArn);
 }
@@ -385,7 +385,10 @@ test('configureStandardContext with settings, options, event & awsContext', t =>
 
     // Generate a sample AWS context
     const awsContext = sampleAwsContext('1.0.1', 'dev1');
-    const invokedLambda = {functionName: 'sampleFunctionName', version: '1.0.1', alias: 'dev1'};
+
+    const functionName = 'sample-function-name';
+    const invoked = `${functionName}:dev1`;
+    const invokedLambda = {functionName: functionName, version: '1.0.1', alias: 'dev1', invoked: invoked};
 
     contexts.configureStandardContext(context, standardSettings, standardOptions, event, awsContext, false);
 
@@ -414,8 +417,11 @@ test('configureStandardContext with settings, options, event & awsContext', t =>
     t.equal(context.event, event, 'context.event must be event');
     t.ok(context.awsContext, 'context.awsContext must be defined');
     t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+
     t.ok(context.invokedLambda, 'context.invokedLambda must be defined');
     t.deepEqual(context.invokedLambda, invokedLambda, `context.invokedLambda must be ${JSON.stringify(invokedLambda)}`);
+    t.ok(context.invokedLambda.invoked, 'context.invokedLambda.invoked must be defined');
+    t.equal(context.invokedLambda.invoked, invoked, `context.invokedLambda.invoked must be ${JSON.stringify(invoked)}`);
 
     t.ok(context.stage, 'context.stage must be defined');
     t.equal(context.stage, expectedStage, `context.stage must be ${expectedStage}`);
@@ -451,7 +457,8 @@ test('configureEventAwsContextAndStage', t => {
     const functionVersion = '1.0.23';
     process.env.AWS_LAMBDA_FUNCTION_VERSION = functionVersion;
 
-    const invokedLambda = {functionName: functionName, version: functionVersion, alias: functionAlias};
+    const invoked = 'sample-function-name:dev1';
+    const invokedLambda = {functionName: functionName, version: functionVersion, alias: 'dev1', invoked: invoked};
 
     // Initial configuration WITHOUT event & AWS context
     contexts.configureStandardContext(context, standardSettings, standardOptions, undefined, undefined, false);
@@ -468,8 +475,11 @@ test('configureEventAwsContextAndStage', t => {
     t.equal(context.event, event, 'context.event must be event');
     t.ok(context.awsContext, 'context.awsContext must be defined');
     t.equal(context.awsContext, awsContext, 'context.awsContext must be awsContext');
+
     t.ok(context.invokedLambda, 'context.invokedLambda must be defined');
     t.deepEqual(context.invokedLambda, invokedLambda, `context.invokedLambda must be ${JSON.stringify(invokedLambda)}`);
+    t.ok(context.invokedLambda.invoked, 'context.invokedLambda.invoked must be defined');
+    t.equal(context.invokedLambda.invoked, invoked, `context.invokedLambda.invoked must be ${JSON.stringify(invoked)}`);
 
     t.equal(context.stage, expectedStage, `context.stage must be ${expectedStage}`);
 

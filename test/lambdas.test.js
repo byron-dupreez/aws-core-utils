@@ -15,6 +15,7 @@ const getFunctionNameVersionAndAlias = lambdas.getFunctionNameVersionAndAlias;
 const getAlias = lambdas.getAlias;
 //const getInvokedFunctionArn = lambdas.getInvokedFunctionArn;
 const getInvokedFunctionArnFunctionName = lambdas.getInvokedFunctionArnFunctionName;
+const getInvokedFunctionNameWithAlias = lambdas.getInvokedFunctionNameWithAliasOrVersion;
 
 const samples = require('./samples');
 //const sampleInvokedFunctionArn = samples.sampleInvokedFunctionArn;
@@ -47,6 +48,12 @@ function checkGetFunctionNameVersionAndAlias(functionName, functionVersion, invo
   const awsContext = sampleAwsContext(functionName, functionVersion, invokedFunctionArn);
   //console.log(`Generated AWS context = ${JSON.stringify(awsContext)}`);
   t.deepEqual(getFunctionNameVersionAndAlias(awsContext), expected, `${shorten(invokedFunctionArn)} must give ${JSON.stringify(expected)}`);
+}
+
+function checkGetInvokedFunctionNameWithAliasOrVersion(functionName, functionVersion, invokedFunctionArn, expected, t) {
+  const awsContext = sampleAwsContext(functionName, functionVersion, invokedFunctionArn);
+  //console.log(`Generated AWS context = ${JSON.stringify(awsContext)}`);
+  t.deepEqual(getInvokedFunctionNameWithAlias(awsContext), expected, `${shorten(invokedFunctionArn)} must give ${JSON.stringify(expected)}`);
 }
 
 function checkGetAlias(functionName, functionVersion, invokedFunctionArn, expected, t) {
@@ -184,19 +191,19 @@ test('getFunctionNameVersionAndAlias WITHOUT process.env.AWS_LAMBDA_FUNCTION_NAM
   delete process.env.AWS_LAMBDA_FUNCTION_NAME;
   delete process.env.AWS_LAMBDA_FUNCTION_VERSION;
 
-  const expected = {functionName: '', version: '', alias: ''};
+  const expected = {functionName: '', version: '', alias: '', invoked: ''};
   t.deepEqual(getFunctionNameVersionAndAlias(undefined), expected, `undefined context must give ${JSON.stringify(expected)}`);
   t.deepEqual(getFunctionNameVersionAndAlias(null), expected, `null context must give ${JSON.stringify(expected)}`);
   t.deepEqual(getFunctionNameVersionAndAlias({}), expected, `{} context must give ${JSON.stringify(expected)}`);
 
-  const expected0 = {functionName: 'test0', version: '$LATEST', alias: ''};
-  const expected1 = {functionName: 'test1', version: '$LATEST', alias: ''};
-  const expected2 = {functionName: 'test2', version: '1', alias: ''};
-  const expected3 = {functionName: 'test3', version: '1.0.1', alias: ''};
-  const expected4 = {functionName: 'test4', version: '4.0', alias: 'DEV'};
-  const expected5 = {functionName: 'test5', version: '5.0', alias: 'qa'};
-  const expected6 = {functionName: 'test6', version: '6.0', alias: 'prod'};
-  const expected7 = {functionName: 'test7', version: '7.0', alias: 'BETA'};
+  const expected0 = {functionName: 'test0', version: '$LATEST', alias: '', invoked: 'helloworld'};
+  const expected1 = {functionName: 'test1', version: '$LATEST', alias: '', invoked: 'helloworld:$LATEST'};
+  const expected2 = {functionName: 'test2', version: '1', alias: '', invoked: 'helloworld:1'};
+  const expected3 = {functionName: 'test3', version: '1.0.1', alias: '', invoked: 'helloworld:1.0.1'};
+  const expected4 = {functionName: 'test4', version: '4.0', alias: 'DEV', invoked: 'helloworld:DEV'};
+  const expected5 = {functionName: 'test5', version: '5.0', alias: 'qa', invoked: 'helloworld:qa'};
+  const expected6 = {functionName: 'test6', version: '6.0', alias: 'prod', invoked: 'helloworld:prod'};
+  const expected7 = {functionName: 'test7', version: '7.0', alias: 'BETA', invoked: 'helloworld:BETA'};
 
   checkGetFunctionNameVersionAndAlias('test0', '$LATEST', arn0, expected0, t);
   checkGetFunctionNameVersionAndAlias('test1', '$LATEST', arn1, expected1, t);
@@ -216,19 +223,19 @@ test('getFunctionNameVersionAndAlias WITH process.env.AWS_LAMBDA_FUNCTION_NAME/_
     process.env.AWS_LAMBDA_FUNCTION_NAME = name;
     process.env.AWS_LAMBDA_FUNCTION_VERSION = version;
 
-    const expected = {functionName: name, version: version, alias: ''};
+    const expected = {functionName: name, version: version, alias: '', invoked: ''};
     t.deepEqual(getFunctionNameVersionAndAlias(undefined), expected, `undefined context must give ${JSON.stringify(expected)}`);
     t.deepEqual(getFunctionNameVersionAndAlias(null), expected, `null context must give ${JSON.stringify(expected)}`);
     t.deepEqual(getFunctionNameVersionAndAlias({}), expected, `{} context must give ${JSON.stringify(expected)}`);
 
-    const expected0 = {functionName: name, version: version, alias: ''};
-    const expected1 = {functionName: name, version: version, alias: ''};
-    const expected2 = {functionName: name, version: version, alias: ''};
-    const expected3 = {functionName: name, version: version, alias: ''};
-    const expected4 = {functionName: name, version: version, alias: 'DEV'};
-    const expected5 = {functionName: name, version: version, alias: 'qa'};
-    const expected6 = {functionName: name, version: version, alias: 'prod'};
-    const expected7 = {functionName: name, version: version, alias: 'BETA'};
+    const expected0 = {functionName: name, version: version, alias: '', invoked: 'helloworld'};
+    const expected1 = {functionName: name, version: version, alias: '', invoked: 'helloworld:$LATEST'};
+    const expected2 = {functionName: name, version: version, alias: '', invoked: 'helloworld:1'};
+    const expected3 = {functionName: name, version: version, alias: '', invoked: 'helloworld:1.0.1'};
+    const expected4 = {functionName: name, version: version, alias: 'DEV', invoked: 'helloworld:DEV'};
+    const expected5 = {functionName: name, version: version, alias: 'qa', invoked: 'helloworld:qa'};
+    const expected6 = {functionName: name, version: version, alias: 'prod', invoked: 'helloworld:prod'};
+    const expected7 = {functionName: name, version: version, alias: 'BETA', invoked: 'helloworld:BETA'};
 
     checkGetFunctionNameVersionAndAlias('test0', '$LATEST', arn0, expected0, t);
     checkGetFunctionNameVersionAndAlias('test1', '$LATEST', arn1, expected1, t);
@@ -265,3 +272,56 @@ test('getAlias', t => {
   checkGetAlias('test7', '7.0', arn7, 'BETA', t);
   t.end();
 });
+
+// =====================================================================================================================
+// Tests for getInvokedFunctionNameWithAliasOrVersion
+// =====================================================================================================================
+
+test('getInvokedFunctionNameWithAliasOrVersion WITHOUT process.env.AWS_LAMBDA_FUNCTION_NAME/_VERSION', t => {
+  delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+  delete process.env.AWS_LAMBDA_FUNCTION_VERSION;
+
+  const expected = '';
+  t.deepEqual(getInvokedFunctionNameWithAlias(undefined), expected, `undefined context must give ${JSON.stringify(expected)}`);
+  t.deepEqual(getInvokedFunctionNameWithAlias(null), expected, `null context must give ${JSON.stringify(expected)}`);
+  t.deepEqual(getInvokedFunctionNameWithAlias({}), expected, `{} context must give ${JSON.stringify(expected)}`);
+
+  checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '$LATEST', arn0, 'helloworld', t);
+  checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '$LATEST', arn1, 'helloworld:$LATEST', t);
+  checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '1', arn2, 'helloworld:1', t);
+  checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '1.0.1', arn3, 'helloworld:1.0.1', t);
+  checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '4.0', arn4, 'helloworld:DEV', t);
+  checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '5.0', arn5, 'helloworld:qa', t);
+  checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '6.0', arn6, 'helloworld:prod', t);
+  checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '7.0', arn7, 'helloworld:BETA', t);
+  t.end();
+});
+
+test('getInvokedFunctionNameWithAliasOrVersion WITH process.env.AWS_LAMBDA_FUNCTION_NAME/_VERSION', t => {
+  try {
+    const name = 'test9999';
+    const version = '123.456.789';
+    process.env.AWS_LAMBDA_FUNCTION_NAME = name;
+    process.env.AWS_LAMBDA_FUNCTION_VERSION = version;
+
+    const expected = '';
+    t.deepEqual(getInvokedFunctionNameWithAlias(undefined), expected, `undefined context must give ${JSON.stringify(expected)}`);
+    t.deepEqual(getInvokedFunctionNameWithAlias(null), expected, `null context must give ${JSON.stringify(expected)}`);
+    t.deepEqual(getInvokedFunctionNameWithAlias({}), expected, `{} context must give ${JSON.stringify(expected)}`);
+
+    checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '$LATEST', arn0, 'helloworld', t);
+    checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '$LATEST', arn1, 'helloworld:$LATEST', t);
+    checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '1', arn2, 'helloworld:1', t);
+    checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '1.0.1', arn3, 'helloworld:1.0.1', t);
+    checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '4.0', arn4, 'helloworld:DEV', t);
+    checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '5.0', arn5, 'helloworld:qa', t);
+    checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '6.0', arn6, 'helloworld:prod', t);
+    checkGetInvokedFunctionNameWithAliasOrVersion('helloworld', '7.0', arn7, 'helloworld:BETA', t);
+    t.end();
+
+  } finally {
+    delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+    delete process.env.AWS_LAMBDA_FUNCTION_VERSION;
+  }
+});
+
