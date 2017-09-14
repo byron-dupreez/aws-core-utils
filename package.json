@@ -11,8 +11,8 @@
     "test": "tape ./test/*.test.js"
   },
   "dependencies": {
-    "core-functions": "3.0.14",
-    "logging-utils": "4.0.13",
+    "core-functions": "3.0.15",
+    "logging-utils": "4.0.14",
     "deep-equal": "1.0.1"
   },
   "devDependencies": {

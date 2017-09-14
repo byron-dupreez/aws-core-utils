@@ -10,6 +10,8 @@
 - Changes to `lambda-utils` module:
   - Replaced uses of deprecated `Promises.wrapMethod` with `Promises.wrap`
 - Replaced all logging of `error.stack` with logging of just the error
+- Updated `core-functions` dependency to version 3.0.15
+- Updated `logging-utils` dependency to version 4.0.14
 
 ### 7.0.4
 - Changed almost all modules' exports to modifications of the default `exports` object instead of replacing the default `module.exports` object
