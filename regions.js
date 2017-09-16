@@ -27,6 +27,8 @@ exports.getEventSourceArnRegions = getEventSourceArnRegions;
 exports.configureRegion = configureRegion;
 
 exports.getRegionKey = getRegionKey;
+exports.getOrSetRegionKey = getOrSetRegionKey;
+exports.listRegionKeys = listRegionKeys;
 
 exports.getRegionRaw = getRegionRaw;
 exports.getDefaultRegionRaw = getDefaultRegionRaw;
@@ -148,11 +150,21 @@ function configureRegion(context) {
 }
 
 /**
- * Returns the region key object for the given region name.
+ * Returns the existing region key object for the given region name (if any) or undefined (if none).
+ * @param {string|undefined} [region] - the name of the region (defaults to current region if not defined)
+ * @returns {{region: string}|undefined} a region key object (if one exists); otherwise undefined
+ */
+function getRegionKey(region) {
+  const regionName = region ? region : getRegion();
+  return regionKeysByRegion.get(regionName);
+}
+
+/**
+ * Returns the existing region key object or sets & returns a new region key object for the given region name.
  * @param {string|undefined} [region] - the name of the region (defaults to current region if not defined)
  * @returns {{region: string}} a region key object
  */
-function getRegionKey(region) {
+function getOrSetRegionKey(region) {
   const regionName = region ? region : getRegion();
   let regionKey = regionKeysByRegion.get(regionName);
   if (!regionKey) {
@@ -160,4 +172,20 @@ function getRegionKey(region) {
     regionKeysByRegion.set(regionName, regionKey);
   }
   return regionKey;
+}
+
+/**
+ * Lists the currently cached region keys (if any).
+ * @return {Array.<{region: string}>} a list of region keys
+ */
+function listRegionKeys() {
+  const regionKeys = new Array(regionKeysByRegion.size);
+  const iter = regionKeysByRegion.values();
+  let v = iter.next();
+  let i = -1;
+  while (!v.done) {
+    regionKeys[++i] = v.value;
+    v = iter.next();
+  }
+  return regionKeys;
 }

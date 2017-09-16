@@ -12,7 +12,7 @@ const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
 
 const deepEqual = require('deep-equal');
-const strict = {strict:true};
+const strict = {strict: true};
 
 let AWS = require('aws-sdk');
 
@@ -34,6 +34,7 @@ exports.getKMS = getKMS;
 exports.getKMSOptionsUsed = getKMSOptionsUsed;
 exports.deleteKMS = deleteKMS;
 exports.configureKMS = configureKMS;
+exports.clearCache = clearCache;
 
 /**
  * Creates and caches a new AWS KMS instance with the given KMS constructor options for either the region
@@ -61,7 +62,7 @@ function setKMS(kmsOptions, context) {
     options.region = currentRegion;
     region = currentRegion;
   }
-  const regionKey = getRegionKey(region);
+  const regionKey = regions.getOrSetRegionKey(region);
 
   // Check if there is already a KMS instance cached for this region
   let kms = kmsByRegionKey.get(regionKey);
@@ -106,8 +107,11 @@ function setKMS(kmsOptions, context) {
  */
 function deleteKMS(region) {
   const regionKey = getRegionKey(region);
-  kmsOptionsByRegionKey.delete(regionKey);
-  return kmsByRegionKey.delete(regionKey);
+  if (regionKey) {
+    kmsOptionsByRegionKey.delete(regionKey);
+    return kmsByRegionKey.delete(regionKey);
+  }
+  return false;
 }
 
 /**
@@ -119,7 +123,7 @@ function deleteKMS(region) {
  */
 function getKMS(region) {
   const regionKey = getRegionKey(region);
-  return kmsByRegionKey.get(regionKey);
+  return regionKey ? kmsByRegionKey.get(regionKey) : undefined;
 }
 
 /**
@@ -131,7 +135,7 @@ function getKMS(region) {
  */
 function getKMSOptionsUsed(region) {
   const regionKey = getRegionKey(region);
-  return kmsOptionsByRegionKey.get(regionKey);
+  return regionKey ? kmsOptionsByRegionKey.get(regionKey) : undefined;
 }
 
 /**
@@ -165,4 +169,14 @@ function configureKMS(context, kmsOptions) {
     context.kms = setKMS(kmsOptions, context);
   }
   return context;
+}
+
+/**
+ * Clears the AWS.KMS instance and options caches according to the currently cached region keys.
+ */
+function clearCache() {
+  regions.listRegionKeys().forEach(regionKey => {
+    kmsByRegionKey.delete(regionKey);
+    kmsOptionsByRegionKey.delete(regionKey);
+  });
 }

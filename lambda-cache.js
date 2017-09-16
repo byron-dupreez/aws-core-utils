@@ -34,6 +34,7 @@ exports.getLambda = getLambda;
 exports.getLambdaOptionsUsed = getLambdaOptionsUsed;
 exports.deleteLambda = deleteLambda;
 exports.configureLambda = configureLambda;
+exports.clearCache = clearCache;
 
 /**
  * Creates and caches a new AWS Lambda instance with the given Lambda constructor options for either the region
@@ -61,7 +62,7 @@ function setLambda(lambdaOptions, context) {
     options.region = currentRegion;
     region = currentRegion;
   }
-  const regionKey = getRegionKey(region);
+  const regionKey = regions.getOrSetRegionKey(region);
 
   // Check if there is already a Lambda instance cached for this region
   let lambda = lambdaByRegionKey.get(regionKey);
@@ -106,8 +107,11 @@ function setLambda(lambdaOptions, context) {
  */
 function deleteLambda(region) {
   const regionKey = getRegionKey(region);
-  lambdaOptionsByRegionKey.delete(regionKey);
-  return lambdaByRegionKey.delete(regionKey);
+  if (regionKey) {
+    lambdaOptionsByRegionKey.delete(regionKey);
+    return lambdaByRegionKey.delete(regionKey);
+  }
+  return false;
 }
 
 /**
@@ -119,7 +123,7 @@ function deleteLambda(region) {
  */
 function getLambda(region) {
   const regionKey = getRegionKey(region);
-  return lambdaByRegionKey.get(regionKey);
+  return regionKey ? lambdaByRegionKey.get(regionKey) : undefined;
 }
 
 /**
@@ -131,7 +135,7 @@ function getLambda(region) {
  */
 function getLambdaOptionsUsed(region) {
   const regionKey = getRegionKey(region);
-  return lambdaOptionsByRegionKey.get(regionKey);
+  return regionKey ? lambdaOptionsByRegionKey.get(regionKey) : undefined;
 }
 
 /**
@@ -165,4 +169,14 @@ function configureLambda(context, lambdaOptions) {
     context.lambda = setLambda(lambdaOptions, context);
   }
   return context;
+}
+
+/**
+ * Clears the AWS.Lambda instance and options caches according to the currently cached region keys.
+ */
+function clearCache() {
+  regions.listRegionKeys().forEach(regionKey => {
+    lambdaByRegionKey.delete(regionKey);
+    lambdaOptionsByRegionKey.delete(regionKey);
+  });
 }

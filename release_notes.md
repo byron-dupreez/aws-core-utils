@@ -1,5 +1,15 @@
 ## Changes
 
+### 7.0.6
+- Changes to `regions` module:
+  - Changed behaviour of `getRegionKey` function to EITHER get the existing region key (if any) OR return undefined and 
+    NOT set a new region key (if none)
+  - Added new `getOrSetRegionKey` function that gets the existing region key (if any) or sets a new region key (if none)
+  - Added new `listRegionKeys` function to list the currently cached region keys
+- Changes to `dynamodb-doc-client-cache`, `kinesis-cache`, `kms-cache` & `lambda-cache`:
+  - Synchronised code to handle changes in `regions.getRegionKey` behaviour and to use new `regions.getOrSetRegionKey`
+  - Added new `clearCache` function to clear the instance & options caches according to the currently cached region keys
+
 ### 7.0.5
 - Changes to `lambdas` module:
   - Added new `getInvokedFunctionNameWithAliasOrVersion` function

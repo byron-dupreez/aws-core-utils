@@ -34,6 +34,7 @@ exports.deleteDynamoDBDocClient = deleteDynamoDBDocClient;
 exports.getDynamoDBDocClient = getDynamoDBDocClient;
 exports.getDynamoDBDocClientOptionsUsed = getDynamoDBDocClientOptionsUsed;
 exports.configureDynamoDBDocClient = configureDynamoDBDocClient;
+exports.clearCache = clearCache;
 
 /**
  * Creates and caches a new AWS DynamoDB.DocumentClient instance with the given DynamoDB.DocumentClient constructor
@@ -63,7 +64,7 @@ function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
     options.region = currentRegion;
     region = currentRegion;
   }
-  const regionKey = getRegionKey(region);
+  const regionKey = regions.getOrSetRegionKey(region);
 
   // Check if there is already a DynamoDB.DocumentClient instance cached for this region
   let dynamoDBDocClient = dynamoDBDocClientByRegionKey.get(regionKey);
@@ -112,8 +113,11 @@ function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
  */
 function deleteDynamoDBDocClient(region) {
   const regionKey = getRegionKey(region);
-  dynamoDBDocClientOptionsByRegionKey.delete(regionKey);
-  return dynamoDBDocClientByRegionKey.delete(regionKey);
+  if (regionKey) {
+    dynamoDBDocClientOptionsByRegionKey.delete(regionKey);
+    return dynamoDBDocClientByRegionKey.delete(regionKey);
+  }
+  return false;
 }
 
 /**
@@ -125,7 +129,7 @@ function deleteDynamoDBDocClient(region) {
  */
 function getDynamoDBDocClient(region) {
   const regionKey = getRegionKey(region);
-  return dynamoDBDocClientByRegionKey.get(regionKey);
+  return regionKey ? dynamoDBDocClientByRegionKey.get(regionKey) : undefined;
 }
 
 /**
@@ -138,7 +142,7 @@ function getDynamoDBDocClient(region) {
  */
 function getDynamoDBDocClientOptionsUsed(region) {
   const regionKey = getRegionKey(region);
-  return dynamoDBDocClientOptionsByRegionKey.get(regionKey);
+  return regionKey ? dynamoDBDocClientOptionsByRegionKey.get(regionKey) : undefined;
 }
 
 /**
@@ -174,4 +178,14 @@ function configureDynamoDBDocClient(context, dynamoDBDocClientOptions) {
     context.dynamoDBDocClient = setDynamoDBDocClient(dynamoDBDocClientOptions, context);
   }
   return context;
+}
+
+/**
+ * Clears the AWS.DynamoDB.DocumentClient instance and options caches according to the currently cached region keys.
+ */
+function clearCache() {
+  regions.listRegionKeys().forEach(regionKey => {
+    dynamoDBDocClientByRegionKey.delete(regionKey);
+    dynamoDBDocClientOptionsByRegionKey.delete(regionKey);
+  });
 }

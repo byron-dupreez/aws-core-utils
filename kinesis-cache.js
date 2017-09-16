@@ -12,7 +12,7 @@ const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
 
 const deepEqual = require('deep-equal');
-const strict = {strict:true};
+const strict = {strict: true};
 
 let AWS = require('aws-sdk');
 
@@ -23,7 +23,7 @@ let kinesisByRegionKey = new WeakMap();
 let kinesisOptionsByRegionKey = new WeakMap();
 
 /**
- * A module-scope cache of AWS.Kinesis instances by region for Lambda.
+ * A module-scope cache of AWS.Kinesis instances by region.
  * @module aws-core-utils/kinesis-cache
  * @author Byron du Preez
  */
@@ -34,6 +34,7 @@ exports.getKinesis = getKinesis;
 exports.getKinesisOptionsUsed = getKinesisOptionsUsed;
 exports.deleteKinesis = deleteKinesis;
 exports.configureKinesis = configureKinesis;
+exports.clearCache = clearCache;
 
 /**
  * Creates and caches a new AWS Kinesis instance with the given Kinesis constructor options for either the region
@@ -61,7 +62,7 @@ function setKinesis(kinesisOptions, context) {
     options.region = currentRegion;
     region = currentRegion;
   }
-  const regionKey = getRegionKey(region);
+  const regionKey = regions.getOrSetRegionKey(region);
 
   // Check if there is already a Kinesis instance cached for this region
   let kinesis = kinesisByRegionKey.get(regionKey);
@@ -106,8 +107,11 @@ function setKinesis(kinesisOptions, context) {
  */
 function deleteKinesis(region) {
   const regionKey = getRegionKey(region);
-  kinesisOptionsByRegionKey.delete(regionKey);
-  return kinesisByRegionKey.delete(regionKey);
+  if (regionKey) {
+    kinesisOptionsByRegionKey.delete(regionKey);
+    return kinesisByRegionKey.delete(regionKey);
+  }
+  return false;
 }
 
 /**
@@ -119,7 +123,7 @@ function deleteKinesis(region) {
  */
 function getKinesis(region) {
   const regionKey = getRegionKey(region);
-  return kinesisByRegionKey.get(regionKey);
+  return regionKey ? kinesisByRegionKey.get(regionKey) : undefined;
 }
 
 /**
@@ -131,7 +135,7 @@ function getKinesis(region) {
  */
 function getKinesisOptionsUsed(region) {
   const regionKey = getRegionKey(region);
-  return kinesisOptionsByRegionKey.get(regionKey);
+  return regionKey ? kinesisOptionsByRegionKey.get(regionKey) : undefined;
 }
 
 /**
@@ -165,4 +169,14 @@ function configureKinesis(context, kinesisOptions) {
     context.kinesis = setKinesis(kinesisOptions, context);
   }
   return context;
+}
+
+/**
+ * Clears the AWS.Kinesis instance and options caches according to the currently cached region keys.
+ */
+function clearCache() {
+  regions.listRegionKeys().forEach(regionKey => {
+    kinesisByRegionKey.delete(regionKey);
+    kinesisOptionsByRegionKey.delete(regionKey);
+  });
 }
