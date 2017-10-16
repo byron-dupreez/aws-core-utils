@@ -67,7 +67,7 @@ function setKinesis(kinesisOptions, context) {
   // Check if there is already a Kinesis instance cached for this region
   let kinesis = kinesisByRegionKey.get(regionKey);
   if (kinesis) {
-    const debug = (context && context.debug) || console.log;
+    const debug = (context && context.debug) || console.log.bind(console);
     // If caller specified no options, then accept the cached instance for the current region (regardless of its options)
     if (!kinesisOptions || Object.getOwnPropertyNames(kinesisOptions).length === 0) {
       debug(`Reusing cached Kinesis instance for region (${region}) with ANY options, since no options were specified`);
@@ -86,8 +86,8 @@ function setKinesis(kinesisOptions, context) {
       debug(`Reusing cached Kinesis instance for region (${region}) with identical options`);
       return kinesis;
     } else {
-      const warn = (context && context.warn) || console.warn;
-      warn(`Replacing cached Kinesis instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
+      const logger = context && context.warn ? context : console;
+      logger.warn(`Replacing cached Kinesis instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
     }
   }
   // Create a new kinesis instance with the modified options

@@ -69,7 +69,7 @@ function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
   // Check if there is already a DynamoDB.DocumentClient instance cached for this region
   let dynamoDBDocClient = dynamoDBDocClientByRegionKey.get(regionKey);
   if (dynamoDBDocClient) {
-    const debug = (context && context.debug) || console.log;
+    const debug = (context && context.debug) || console.log.bind(console);
     // If caller specified no options, then accept the cached instance for the current region (regardless of its options)
     if (!dynamoDBDocClientOptions || Object.getOwnPropertyNames(dynamoDBDocClientOptions).length === 0) {
       debug(`Reusing cached DynamoDB.DocumentClient instance for region (${region}) with ANY options, since no options were specified`);
@@ -88,8 +88,8 @@ function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
       debug(`Reusing cached DynamoDB.DocumentClient instance for region (${region}) with identical options`);
       return dynamoDBDocClient;
     } else {
-      const warn = (context && context.warn) || console.warn;
-      warn(`Replacing cached DynamoDB.DocumentClient instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
+      const logger = context && context.warn ? context : console;
+      logger.warn(`Replacing cached DynamoDB.DocumentClient instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
     }
   }
   // Create a new DynamoDB.DocumentClient instance with a COPY of the resolved options (COPY avoids subsequent cache

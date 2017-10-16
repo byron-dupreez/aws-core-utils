@@ -1,4 +1,4 @@
-# aws-core-utils v7.0.6
+# aws-core-utils v7.0.7
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -62,20 +62,39 @@ const apiLambdas = require('aws-core-utils/api-lambdas');
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
 const context = {}; // or your own pre-configured context
-const standardOptions = require('my-options.json'); // or whatever options you want to use to configure stage handling, logging, custom settings, ...
+const standardOptions = require('./test/context-options.json'); // with whatever options you want to use to configure stage handling, logging, custom settings, ...
 const standardSettings = undefined; // or whatever settings object you want to use to configure stage handling, logging, custom settings, ...
 function exampleFunction(event, context) { /* ... */ } // implement and name your own function that does the actual work
 
 // Simplest approach - generate your API Gateway exposed Lambda's handler function
 module.exports.handler = apiLambdas.generateHandlerFunction(context, standardSettings, standardOptions, exampleFunction);
   
-// OR ... using all optional arguments to change the allowed HTTP status codes and customise logging in the handler function
-module.exports.handler = apiLambdas.generateHandlerFunction(context, standardSettings, standardOptions, exampleFunction, 'info', 
-  [400, 404, 500], 'Invalid request ...', 'Failed to ...', 'Finished ...');
+// OR ... using all optional arguments to use Lambda Proxy integration with a custom default response header and to 
+// change the allowed HTTP status codes and customise logging in the handler function
+const opts = {
+  useLambdaProxy: true,
+  defaultHeaders: {myCustomHeader: 'myCustomHeaderValue'},
+  allowedHttpStatusCodes: [400, 404, 500],
+  logRequestResponseAtLogLevel: 'info', 
+  invalidRequestMsg: 'Invalid request ...', 
+  failureMsg: 'Failed to ...', 
+  successMsg: 'Finished ...'
+};
+module.exports.handler = apiLambdas.generateHandlerFunction(context, standardSettings, standardOptions, exampleFunction, opts); 
 
 
 // OR ... develop your own Lambda handler function (e.g. simplistic example below - see apiLamdas.generateHandlerFunction for a better version)
 module.exports.handler = (event, awsContext, callback) => {
+  const opts = {
+    // useLambdaProxy: false,
+    // defaultHeaders: undefined
+    // allowedHttpStatusCodes: undefined,
+    // logRequestResponseAtLogLevel: 'info', 
+    // invalidRequestMsg: 'Invalid request ...', 
+    // failureMsg: 'Failed to ...', 
+    // successMsg: 'Finished ...'
+  };
+  
   // Configure a standard context
   const context = {};
   try {
@@ -84,31 +103,41 @@ module.exports.handler = (event, awsContext, callback) => {
     // ... execute Lambda specific code passing the context to your functions as needed
     exampleFunction(event, context)
       .then(response => {
-        context.info('Finished ...');
-        callback(null, response);
+        context.info(opts.successMsg || 'Finished ...');
+        apiLambdas.succeedCallback(callback, response, opts);
       })
       .catch(err => {
         // Fail your Lambda callback and map the error to one of the default set of HTTP status codes:
         // i.e. [400, 401, 403, 404, 408, 429, 500, 502, 503, 504]
         if (err instanceof BadRequest || appErrors.getHttpStatus(err) === 400) {
-          context.warn('Invalid request ...' + err.message);
+          context.warn(opts.invalidRequestMsg || 'Invalid request ...', err.message);
         } else {
-          context.error('Failed to ...', err);
+          context.error(opts.failureMsg || 'Failed to ...', err);
         }
-        apiLambdas.failCallback(callback, err, awsContext);
+        apiLambdas.failCallback(callback, err, awsContext, undefined, undefined, opts);
       });
   
   } catch (err) {
     // Fail your Lambda callback and map the error to one of the default set of HTTP status codes:
     // i.e. [400, 401, 403, 404, 408, 429, 500, 502, 503, 504]
     context.error('Failed to ...', err);
-    apiLambdas.failCallback(callback, err, awsContext);
+    apiLambdas.failCallback(callback, err, awsContext, undefined, undefined, opts);
   }
 };
+```
+ALTERNATIVE opts for `succeedCallback` & `failCallback`: 
+```js
+const apiLambdas = require('aws-core-utils/api-lambdas');
+// ...
 
-// ALTERNATIVES for failCallback: 
-// Fail your Lambda callback and map the error to one of a specified set of HTTP status codes
-apiLambdas.failCallback(callback, err, awsContext, 'My error msg', 'MyErrorCode', [400, 404, 418, 500, 508]);
+// Fail your Lambda callback: using Lambda Proxy integration; using a custom response header; and map the error to one of a specified set of HTTP status codes
+const opts = {
+  useLambdaProxy: true,
+  defaultHeaders: {MyCustomHeader: 'MyCustomHeaderValue'},
+  allowedHttpStatusCodes: [400, 404, 418, 500, 508]
+};
+
+apiLambdas.failCallback(callback, err, awsContext, 'My error msg', 'MyErrorCode', opts);
 ```
 
 * To use the AWS ARN utilities

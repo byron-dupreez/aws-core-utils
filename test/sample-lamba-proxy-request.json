@@ -1,0 +1,63 @@
+{
+  "resource": "/sample/{country}/data",
+  "path": "/sample/ZA/data",
+  "httpMethod": "GET",
+  "headers": {
+    "Accept": "*/*",
+    "Accept-Encoding": "gzip, deflate",
+    "cache-control": "no-cache",
+    "CloudFront-Forwarded-Proto": "https",
+    "CloudFront-Is-Desktop-Viewer": "true",
+    "CloudFront-Is-Mobile-Viewer": "false",
+    "CloudFront-Is-SmartTV-Viewer": "false",
+    "CloudFront-Is-Tablet-Viewer": "false",
+    "CloudFront-Viewer-Country": "ZA",
+    "Host": "xxxxxxxxxx.execute-api.eu-west-1.amazonaws.com",
+    "Postman-Token": "01234567-89ab-cdef-0123-456789abcdef",
+    "token": "INSERT_TOKEN_HERE",
+    "User-Agent": "PostmanRuntime/6.2.5",
+    "Via": "1.1 00000000000000000000000000000000.cloudfront.net (CloudFront)",
+    "X-Amz-Cf-Id": "...",
+    "X-Amzn-Trace-Id": "Root=1-00000000-000000000000000000000000",
+    "X-Forwarded-For": "1.2.3.4, 5.6.7.8",
+    "X-Forwarded-Port": "443",
+    "X-Forwarded-Proto": "https"
+  },
+  "queryStringParameters": null,
+  "pathParameters": {
+    "country": "ZA"
+  },
+  "stageVariables": {
+    "lambdaAlias": "uat"
+  },
+  "requestContext": {
+    "path": "/uat/sample/ZA/data",
+    "accountId": "XXXXXXXXXXXX",
+    "resourceId": "xxxxxx",
+    "stage": "uat",
+    "authorizer": {
+      "principal": "{\"username\":\"UserX\",\"email\":\"userx@email.com\",\"roles\":[\"Role1\",\"Role2\",\"Role3\"]}",
+      "principalId": "UserX"
+    },
+    "requestId": "00000000-0000-0000-0000-000000000000",
+    "identity": {
+      "cognitoIdentityPoolId": null,
+      "accountId": null,
+      "cognitoIdentityId": null,
+      "caller": null,
+      "apiKey": "",
+      "sourceIp": "1.2.3.4",
+      "accessKey": null,
+      "cognitoAuthenticationType": null,
+      "cognitoAuthenticationProvider": null,
+      "userArn": null,
+      "userAgent": "PostmanRuntime/6.2.5",
+      "user": null
+    },
+    "resourcePath": "/sample/{country}/data",
+    "httpMethod": "GET",
+    "apiId": "xxxxxxxxxx"
+  },
+  "body": null,
+  "isBase64Encoded": false
+}

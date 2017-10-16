@@ -67,7 +67,7 @@ function setKMS(kmsOptions, context) {
   // Check if there is already a KMS instance cached for this region
   let kms = kmsByRegionKey.get(regionKey);
   if (kms) {
-    const debug = (context && context.debug) || console.log;
+    const debug = (context && context.debug) || console.log.bind(console);
     // If caller specified no options, then accept the cached instance for the current region (regardless of its options)
     if (!kmsOptions || Object.getOwnPropertyNames(kmsOptions).length === 0) {
       debug(`Reusing cached KMS instance for region (${region}) with ANY options, since no options were specified`);
@@ -86,8 +86,8 @@ function setKMS(kmsOptions, context) {
       debug(`Reusing cached KMS instance for region (${region}) with identical options`);
       return kms;
     } else {
-      const warn = (context && context.warn) || console.warn;
-      warn(`Replacing cached KMS instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
+      const logger = context && context.warn ? context : console;
+      logger.warn(`Replacing cached KMS instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
     }
   }
   // Create a new kms instance with the modified options

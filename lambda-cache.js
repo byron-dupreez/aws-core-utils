@@ -67,7 +67,7 @@ function setLambda(lambdaOptions, context) {
   // Check if there is already a Lambda instance cached for this region
   let lambda = lambdaByRegionKey.get(regionKey);
   if (lambda) {
-    const debug = (context && context.debug) || console.log;
+    const debug = (context && context.debug) || console.log.bind(console);
     // If caller specified no options, then accept the cached instance for the current region (regardless of its options)
     if (!lambdaOptions || Object.getOwnPropertyNames(lambdaOptions).length === 0) {
       debug(`Reusing cached Lambda instance for region (${region}) with ANY options, since no options were specified`);
@@ -86,8 +86,8 @@ function setLambda(lambdaOptions, context) {
       debug(`Reusing cached Lambda instance for region (${region}) with identical options`);
       return lambda;
     } else {
-      const warn = (context && context.warn) || console.warn;
-      warn(`Replacing cached Lambda instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
+      const logger = context && context.warn ? context : console;
+      logger.warn(`Replacing cached Lambda instance (${stringify(optionsUsed)}) for region (${region}) with new instance (${stringify(options)})`);
     }
   }
   // Create a new lambda instance with the modified options

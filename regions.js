@@ -145,7 +145,8 @@ function configureRegion(context) {
   if (!context.region) {
     context.region = getRegion();
   }
-  (context.debug || console.log)(`Using region (${process.env.AWS_REGION}) & context.region (${context.region})`);
+  const msg = `Using region (${process.env.AWS_REGION}) & context.region (${context.region})`;
+  context.debug ? context.debug(msg) : console.log(msg);
   return context;
 }
 

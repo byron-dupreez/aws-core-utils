@@ -1,5 +1,29 @@
 ## Changes
 
+### 7.0.7
+- Changes to `api-lambdas` module to support API Gateway Lambda Proxy integration:
+  - Replaced legacy 5th to 9th parameters of `generateHandlerFunction` function with a preferred single optional `opts` 
+    5th parameter, which includes the 5 legacy parameters (`logRequestResponseAtLogLevel`, `allowedHttpStatusCodes`, 
+    `invalidRequestMsg`, `failureMsg` & `successMsg`) and also includes 2 new parameters (`useLambdaProxy` & `defaultHeaders`)
+    - Note that the `generateHandlerFunction` function still supports invoking it with its legacy 5th to 9th parameters
+  - Replaced legacy 6th parameter of `failCallback` function with a preferred optional `opts` 6th parameter, which 
+    includes the legacy parameter (`allowedHttpStatusCodes`) and also includes 2 new parameters (`useLambdaProxy` & 
+    `defaultHeaders`)
+    - Note that the `failCallback` function still supports invoking it with its legacy 6th parameter
+  - Changed `failCallback` function to also support Lambda Proxy integration
+  - Added a new `succeedCallback` function to support both default integration & Lambda Proxy integration
+  - Changed inner `handler` function to use new `succeedCallback` function & to pass the `generateHandlerFunction` 
+    function's new `opts` parameter on all `failCallback` & `succeedCallback` calls
+  - Setting the new `useLambdaProxy` parameter to `true`: 
+    - Enables your Lambda to be called from API Gateway using its Lambda Proxy integration mode
+    - Changes the `failCallback` & new `succeedCallback` functions to invoke your Lambda's callback function with ONLY a
+      null "error" parameter and a non-null "data" parameter, which is compatible with Lambda Proxy integration
+- Fixed unbound logger issues in logging in `dynamodb-doc-client-cache`, `kinesis-cache`, `kms-cache`, `lambda-cache` & `regions` modules
+- Updated `core-functions` dependency to version 3.0.17 
+- Updated `logging-utils` dependency to version 4.0.17
+- Updated `aws-core-test-utils` dev dependency to version 3.0.5
+- Updated `aws-sdk` dev dependency to version 2.128.0
+
 ### 7.0.6
 - Changes to `regions` module:
   - Changed behaviour of `getRegionKey` function to EITHER get the existing region key (if any) OR return undefined and 

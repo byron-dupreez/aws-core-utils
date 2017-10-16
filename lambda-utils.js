@@ -15,7 +15,8 @@ exports.disableEventSourceMapping = disableEventSourceMapping;
 
 /**
  * The various states of an event source mapping
- * @enum string
+ * @enum {string}
+ * @readonly
  */
 const EventSourceMappingState = {
   Creating: "Creating",
