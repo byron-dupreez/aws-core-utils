@@ -1,5 +1,9 @@
 ## Changes
 
+### 7.0.8
+- Updated `core-functions` dependency to version 3.0.18
+- Updated `logging-utils` dependency to version 4.0.18
+
 ### 7.0.7
 - Changes to `api-lambdas` module to support API Gateway Lambda Proxy integration:
   - Replaced legacy 5th to 9th parameters of `generateHandlerFunction` function with a preferred single optional `opts` 
