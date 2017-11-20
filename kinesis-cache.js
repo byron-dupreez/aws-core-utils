@@ -49,6 +49,7 @@ exports.clearCache = clearCache;
  * @param {Object|undefined} [kinesisOptions] - the optional Kinesis constructor options to use
  * @param {string|undefined} [kinesisOptions.region] - an optional region to use instead of the current region
  * @param {Object|undefined} [context] - the context, which is just used for logging
+ * @param {AWS|undefined} [context.AWS] - an optional, alternative AWS constructor to use (if unspecified, uses the standard AWS-SDK AWS constructor) - e.g. enables use of an AWS XRay-captured AWS constructor
  * @returns {AWS.Kinesis} a cached or new AWS Kinesis instance created and cached for the specified or current region
  */
 function setKinesis(kinesisOptions, context) {
@@ -91,7 +92,8 @@ function setKinesis(kinesisOptions, context) {
     }
   }
   // Create a new kinesis instance with the modified options
-  kinesis = new AWS.Kinesis(options);
+  const Aws = context.AWS ? context.AWS : AWS;
+  kinesis = new Aws.Kinesis(options);
   // Cache the new instance and the options used to create it
   kinesisByRegionKey.set(regionKey, kinesis);
   kinesisOptionsByRegionKey.set(regionKey, options);

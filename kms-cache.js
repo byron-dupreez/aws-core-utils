@@ -49,6 +49,7 @@ exports.clearCache = clearCache;
  * @param {Object|undefined} [kmsOptions] - the optional KMS constructor options to use
  * @param {string|undefined} [kmsOptions.region] - an optional region to use instead of the current region
  * @param {Object|undefined} [context] - the context, which is just used for logging
+ * @param {AWS|undefined} [context.AWS] - an optional, alternative AWS constructor to use (if unspecified, uses the standard AWS-SDK AWS constructor) - e.g. enables use of an AWS XRay-captured AWS constructor
  * @returns {AWS.KMS} a cached or new AWS KMS instance created and cached for the specified or current region
  */
 function setKMS(kmsOptions, context) {
@@ -91,7 +92,8 @@ function setKMS(kmsOptions, context) {
     }
   }
   // Create a new kms instance with the modified options
-  kms = new AWS.KMS(options);
+  const Aws = context.AWS ? context.AWS : AWS;
+  kms = new Aws.KMS(options);
   // Cache the new instance and the options used to create it
   kmsByRegionKey.set(regionKey, kms);
   kmsOptionsByRegionKey.set(regionKey, options);

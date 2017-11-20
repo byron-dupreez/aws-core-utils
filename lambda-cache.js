@@ -12,7 +12,7 @@ const Strings = require('core-functions/strings');
 const stringify = Strings.stringify;
 
 const deepEqual = require('deep-equal');
-const strict = {strict:true};
+const strict = {strict: true};
 
 let AWS = require('aws-sdk');
 
@@ -49,6 +49,7 @@ exports.clearCache = clearCache;
  * @param {Object|undefined} [lambdaOptions] - the optional Lambda constructor options to use
  * @param {string|undefined} [lambdaOptions.region] - an optional region to use instead of the current region
  * @param {Object|undefined} [context] - the context, which is just used for logging
+ * @param {AWS|undefined} [context.AWS] - an optional, alternative AWS constructor to use (if unspecified, uses the standard AWS-SDK AWS constructor) - e.g. enables use of an AWS XRay-captured AWS constructor
  * @returns {AWS.Lambda} a cached or new AWS Lambda instance created and cached for the specified or current region
  */
 function setLambda(lambdaOptions, context) {
@@ -91,7 +92,8 @@ function setLambda(lambdaOptions, context) {
     }
   }
   // Create a new lambda instance with the modified options
-  lambda = new AWS.Lambda(options);
+  const Aws = context.AWS ? context.AWS : AWS;
+  lambda = new Aws.Lambda(options);
   // Cache the new instance and the options used to create it
   lambdaByRegionKey.set(regionKey, lambda);
   lambdaOptionsByRegionKey.set(regionKey, options);

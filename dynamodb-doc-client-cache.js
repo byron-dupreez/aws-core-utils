@@ -50,6 +50,7 @@ exports.clearCache = clearCache;
  * @param {Object|undefined} [dynamoDBDocClientOptions] - the optional DynamoDB.DocumentClient constructor options to use
  * @param {string|undefined} [dynamoDBDocClientOptions.region] - an optional region to use instead of the current region
  * @param {Object|undefined} [context] - the context, which is just used for logging
+ * @param {AWS|undefined} [context.AWS] - an optional, alternative AWS constructor to use (if unspecified, uses the standard AWS-SDK AWS constructor) - e.g. enables use of an AWS XRay-captured AWS constructor
  * @returns {AWS.DynamoDB.DocumentClient} a cached or new AWS DynamoDB.DocumentClient instance created and cached for
  * the specified or current region
  */
@@ -95,7 +96,8 @@ function setDynamoDBDocClient(dynamoDBDocClientOptions, context) {
   // Create a new DynamoDB.DocumentClient instance with a COPY of the resolved options (COPY avoids subsequent cache
   // comparison failures failures due to later versions of AWS SDK (e.g. 2.45.0) mutating the options passed to the
   // constructor, e.g. by adding "attrValue" with value "S8"
-  dynamoDBDocClient = new AWS.DynamoDB.DocumentClient(options ? copy(options) : options);
+  const Aws = context.AWS ? context.AWS : AWS;
+  dynamoDBDocClient = new Aws.DynamoDB.DocumentClient(options ? copy(options) : options);
 
   // Cache the new instance ...
   dynamoDBDocClientByRegionKey.set(regionKey, dynamoDBDocClient);

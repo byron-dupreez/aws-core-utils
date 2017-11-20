@@ -28,6 +28,7 @@
  * custom settings, an optional Kinesis instance and an optional DynamoDB DocumentClient instance and OPTIONALLY also
  * with the current region, the resolved stage and the AWS context
  * @property {CustomSettings|undefined} [custom] - an object configured with optional custom settings to use
+ * @property {AWS|undefined} [AWS] - an optional, alternative AWS constructor to use (if unspecified, uses the standard AWS-SDK AWS constructor) - e.g. enables use of an AWS XRay-captured AWS constructor
  * @property {AWS.Kinesis|undefined} [kinesis] - an optional AWS.Kinesis instance to use
  * @property {AWS.DynamoDB.DocumentClient|undefined} [dynamoDBDocClient] - an optional AWS.DynamoDB.DocumentClient instance to use
  * @property {string|undefined} [region] - the name of the AWS region to use

@@ -1,5 +1,11 @@
 ## Changes
 
+### 7.0.9
+- Changed `dynamodb-doc-client-cache`, `kinesis-cache`, `kms-cache` & `lambda-cache` modules to use an optional, 
+  alternative AWS constructor passed via a new optional `context.AWS` property to enable use of an AWS XRay-captured 
+  AWS constructor
+- Updated `aws-sdk` dependency to version 2.143.0  
+
 ### 7.0.8
 - Updated `core-functions` dependency to version 3.0.18
 - Updated `logging-utils` dependency to version 4.0.18
