@@ -27,7 +27,7 @@ let kinesisOptionsByRegionKey = new WeakMap();
  * @module aws-core-utils/kinesis-cache
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.setKinesis = setKinesis;
 exports.getKinesis = getKinesis;

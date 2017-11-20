@@ -32,7 +32,7 @@ let nextSequenceNumber = 1;
  * Utilities for generating samples of various AWS artifacts for testing.
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.sampleAwsAccountId = sampleAwsAccountId;
 exports.sampleIdentityArn = sampleIdentityArn;

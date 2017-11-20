@@ -28,7 +28,7 @@ const log = logging.log;
  * @see core-functions/app-errors.js#toAppErrorForApiGateway
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 // Configures a standard context for an API Gateway exposed Lambda (re-exported from contexts module for convenience)
 exports.configureStandardContext = contexts.configureStandardContext;

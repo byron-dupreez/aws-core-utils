@@ -31,7 +31,7 @@ const logging = require('logging-utils');
  * @module aws-core-utils/stages
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 // Stage handling configuration
 exports.isStageHandlingConfigured = isStageHandlingConfigured;

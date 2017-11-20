@@ -27,7 +27,7 @@ let kmsOptionsByRegionKey = new WeakMap();
  * @module aws-core-utils/kms-cache
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.setKMS = setKMS;
 exports.getKMS = getKMS;

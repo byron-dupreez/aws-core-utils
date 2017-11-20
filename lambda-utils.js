@@ -7,7 +7,7 @@ const Promises = require('core-functions/promises');
  * @module aws-core-utils/lambda-utils
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.listEventSourceMappings = listEventSourceMappings;
 exports.updateEventSourceMapping = updateEventSourceMapping;

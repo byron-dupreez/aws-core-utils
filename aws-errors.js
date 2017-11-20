@@ -9,7 +9,7 @@
  * @module aws-core-utils/aws-errors.js
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 // General error checks
 exports.isUnavailable = isUnavailable;

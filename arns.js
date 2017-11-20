@@ -17,7 +17,7 @@ const isNotBlank = Strings.isNotBlank;
  * @module aws-core-utils/arns
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.getArnComponent = getArnComponent;
 exports.getArnPartition = getArnPartition;

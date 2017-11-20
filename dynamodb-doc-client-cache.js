@@ -27,7 +27,7 @@ let dynamoDBDocClientOptionsByRegionKey = new WeakMap();
  * @module aws-core-utils/dynamodb-doc-client-cache
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.setDynamoDBDocClient = setDynamoDBDocClient;
 exports.deleteDynamoDBDocClient = deleteDynamoDBDocClient;

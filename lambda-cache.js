@@ -27,7 +27,7 @@ let lambdaOptionsByRegionKey = new WeakMap();
  * @module aws-core-utils/lambda-cache
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.setLambda = setLambda;
 exports.getLambda = getLambda;

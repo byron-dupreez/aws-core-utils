@@ -10,7 +10,7 @@ const MAX_PARTITION_KEY_SIZE = 256;
  * @module aws-core-utils/stream-events
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.MAX_PARTITION_KEY_SIZE = MAX_PARTITION_KEY_SIZE;
 

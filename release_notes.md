@@ -1,5 +1,12 @@
 ## Changes
 
+### 7.0.10
+- Renamed dummy first exports (`exports._ = '_'; //IDE workaround`) of most modules to (`exports._$_ = '_$_';`) to avoid 
+  potential future collisions with `lodash` & `underscore`
+- Updated `core-functions` dependency to version 3.0.19
+- Updated `logging-utils` dependency to version 4.0.19
+- Updated `aws-core-test-utils` dev dependency to version 3.0.6
+
 ### 7.0.9
 - Changed `dynamodb-doc-client-cache`, `kinesis-cache`, `kms-cache` & `lambda-cache` modules to use an optional, 
   alternative AWS constructor passed via a new optional `context.AWS` property to enable use of an AWS XRay-captured 

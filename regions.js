@@ -16,7 +16,7 @@ const regionKeysByRegion = new Map();
  * @module aws-core-utils/regions
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.getRegion = getRegion;
 exports.setRegion = setRegion;

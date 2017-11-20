@@ -15,7 +15,7 @@ const appErrors = require('core-functions/app-errors');
  * @see core-functions/app-errors.js
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 // Functions to extract Lambda-related information from an AWS context
 exports.getFunctionName = getFunctionName;

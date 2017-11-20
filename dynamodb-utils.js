@@ -11,7 +11,7 @@ const toNumberOrIntegerLike = Numbers.toNumberOrIntegerLike;
  * @module aws-core-utils/dynamodb-utils
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.toObjectFromDynamoDBMap = toObjectFromDynamoDBMap;
 exports.toValueFromAttributeValue = toValueFromAttributeValue;

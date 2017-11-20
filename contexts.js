@@ -29,7 +29,7 @@ const deep = {deep: true};
  * @module aws-core-utils/contexts.js
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.configureStandardContext = configureStandardContext;
 exports.configureEventAwsContextAndStage = configureEventAwsContextAndStage;

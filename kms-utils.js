@@ -5,7 +5,7 @@
  * @module aws-core-utils/kms-utils
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.encrypt = encrypt;
 exports.decrypt = decrypt;

@@ -13,7 +13,7 @@ const mergeOpts = {deep: true, replace: false};
  * @module aws-core-utils/dynamodb-doc-client-utils
  * @author Byron du Preez
  */
-exports._ = '_'; //IDE workaround
+exports._$_ = '_$_'; //IDE workaround
 
 exports.getItem = getItem;
 exports.updateProjectionExpression = updateProjectionExpression;
