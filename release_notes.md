@@ -1,5 +1,11 @@
 ## Changes
 
+### 7.0.11
+- Updated `core-functions` dependency to version 3.0.20
+- Updated `logging-utils` dependency to version 4.0.20
+- Updated `aws-sdk` dev dependency to version 2.161.0
+- Updated `aws-core-test-utils` dev dependency to version 3.0.7
+
 ### 7.0.10
 - Renamed dummy first exports (`exports._ = '_'; //IDE workaround`) of most modules to (`exports._$_ = '_$_';`) to avoid 
   potential future collisions with `lodash` & `underscore`

@@ -1,4 +1,4 @@
-# aws-core-utils v7.0.10
+# aws-core-utils v7.0.11
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -44,7 +44,7 @@ Currently includes:
 - stream-events.js
   - Utilities for extracting information from AWS Kinesis and AWS DynamoDB stream events.
 
-This module is exported as a [Node.js](https://nodejs.org/) module.
+This module is exported as a [Node.js](https://nodejs.org) module.
 
 ## Installation
 
@@ -540,7 +540,7 @@ try {
 ```
 
 ## Unit tests
-This module's unit tests were developed with and must be run with [tape](https://www.npmjs.com/package/tape). The unit tests have been tested on [Node.js v4.3.2](https://nodejs.org/en/blog/release/v4.3.2/).  
+This module's unit tests were developed with and must be run with [tape](https://www.npmjs.com/package/tape). The unit tests have been tested on [Node.js v6.10.3](https://nodejs.org/en/blog/release/v6.10.3).  
 
 Install tape globally if you want to run multiple tests at once:
 ```bash
