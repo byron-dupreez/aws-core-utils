@@ -29,6 +29,8 @@ const samples = require('./samples');
 const sampleInvokedFunctionArn = samples.sampleInvokedFunctionArn;
 const sampleAwsContext = samples.sampleAwsContext;
 
+const uuid = require('uuid');
+
 function sampleFunction(resolvedResponse, rejectedError, ms) {
   if (!ms) ms = 1;
 
@@ -440,6 +442,7 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
 
     const error = new BadRequest('Invalid request');
     error.headers = {hdr1: 'h1', hdr3: 'h3'};
+    error.auditRef = uuid();
 
     // Create a sample function to be executed within the Lambda handler function
     const fn = sampleFunction(undefined, error);
@@ -475,7 +478,7 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
         const expectedResponse = {
           statusCode: error.httpStatus,
           headers: {hdr1: 'h1', hdr3: 'h3', hdr2: 'dh2'}, // merged headers
-          body: JSON.stringify({code: error.code, message: error.message, auditRef: awsContext.awsRequestId})
+          body: JSON.stringify({code: error.code, message: error.message, auditRef: error.auditRef, awsRequestId: awsContext.awsRequestId})
         };
         t.deepEqual(response, expectedResponse, `response must be ${JSON.stringify(expectedResponse)}`);
         t.end();

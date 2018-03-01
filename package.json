@@ -1,6 +1,6 @@
 {
   "name": "aws-core-utils",
-  "version": "7.0.11",
+  "version": "7.0.12",
   "description": "Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.",
   "author": "Byron du Preez",
   "license": "Apache-2.0",
@@ -11,12 +11,12 @@
     "test": "tape ./test/*.test.js"
   },
   "dependencies": {
-    "core-functions": "3.0.20",
+    "core-functions": "3.0.22",
     "deep-equal": "1.0.1",
-    "logging-utils": "4.0.20"
+    "logging-utils": "4.0.22"
   },
   "devDependencies": {
-    "aws-sdk": "2.161.0",
+    "aws-sdk": "2.190.0",
     "aws-core-test-utils": "3.0.7",
     "tape": "^4.8.0",
     "uuid": "3.1.0"

@@ -1,4 +1,4 @@
-# aws-core-utils v7.0.11
+# aws-core-utils v7.0.12
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -59,6 +59,7 @@ In Node.js:
 * To use the `api-lambdas` module within your API Gateway exposed Lambda:
 ```js
 const apiLambdas = require('aws-core-utils/api-lambdas');
+const isInstanceOf = require('core-functions/objects').isInstanceOf;
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
 const context = {}; // or your own pre-configured context
@@ -109,7 +110,7 @@ module.exports.handler = (event, awsContext, callback) => {
       .catch(err => {
         // Fail your Lambda callback and map the error to one of the default set of HTTP status codes:
         // i.e. [400, 401, 403, 404, 408, 429, 500, 502, 503, 504]
-        if (err instanceof BadRequest || appErrors.getHttpStatus(err) === 400) {
+        if (isInstanceOf(err, BadRequest) || appErrors.getHttpStatus(err) === 400) {
           context.warn(opts.invalidRequestMsg || 'Invalid request ...', err.message);
         } else {
           context.error(opts.failureMsg || 'Failed to ...', err);

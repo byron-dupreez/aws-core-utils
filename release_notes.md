@@ -1,5 +1,13 @@
 ## Changes
 
+### 7.0.12
+- Added an optional `toErrorResponse` function to the `opts` arguments of `failLambdaCallback` and 
+  `generateHandlerFunction` functions of the `api-lambdas` module to enable callers to customise the error response 
+  object or Lambda Proxy error response body returned
+- Updated `core-functions` dependency to version 3.0.22
+- Updated `logging-utils` dependency to version 4.0.22
+- Updated `aws-sdk` dev dependency to version 2.190.0
+
 ### 7.0.11
 - Updated `core-functions` dependency to version 3.0.20
 - Updated `logging-utils` dependency to version 4.0.20
