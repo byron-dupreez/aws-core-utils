@@ -1,5 +1,8 @@
 ## Changes
 
+### 7.1.1
+- Committed updated `package-lock.json`
+
 ### 7.1.0
 - Changes to `api-lambdas` module:
   - Added error response configuration options & settings to the context
