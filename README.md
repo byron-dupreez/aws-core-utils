@@ -1,12 +1,17 @@
-# aws-core-utils v7.0.12
+# aws-core-utils v7.1.0
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
 Currently includes:
 - api-lambdas.js
-  - Utilities for working with Lambdas exposed to AWS API Gateway, including functions to:
-    - Configure a standard context for AWS Gateway exposed Lambdas (re-exported from contexts.js module)
-    - Fail Lambda callbacks with standard AppError errors to facilitate mapping of errors to HTTP status codes on API Gateway.
+  - Utilities for generating `handler` functions for and for working with AWS Lambdas that are exposed via API Gateway
+    - For other AWS Lambdas that are NOT exposed via API Gateway, instead use the `aws-core-utils/other-lambdas` module
+- other-lambdas.js
+  - Utilities for generating `handler` functions for and for working with "other" AWS Lambdas that are NOT exposed via
+    API Gateway and IDEALLY NOT triggered by a Kinesis or DynamoDB stream event source mapping
+    - For API Gateway exposed AWS Lambdas, instead use the `aws-core-utils/api-lambdas` module
+    - For Kinesis triggered AWS Lambdas, instead consider using the `kinesis-stream-consumer` module
+    - For DynamoDB triggered AWS Lambdas, instead consider using the `dynamodb-stream-consumer` module
 - arns.js 
   - Utilities for working with Amazon Resource Names (ARNs)
 - aws-errors.js

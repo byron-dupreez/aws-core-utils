@@ -69,11 +69,20 @@ function sampleAwsContext(functionVersion, functionAlias) {
 
 function setRegionStageAndDeleteCachedInstances(region, stage) {
   // Set up region
-  process.env.AWS_REGION = region;
+  if (region)
+    process.env.AWS_REGION = region;
+  else
+    delete process.env.AWS_REGION;
+
   // Set up stage
-  process.env.STAGE = stage;
+  if (stage)
+    process.env.STAGE = stage;
+  else
+    delete process.env.STAGE;
+
   // Remove any cached entries before configuring
   deleteCachedInstances();
+  return region;
 }
 
 function deleteCachedInstances() {

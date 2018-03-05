@@ -1,0 +1,35 @@
+{
+  "loggingOptions": {
+    "logLevel": "TRACE",
+    "useLevelPrefixes": true,
+    "envLogLevelName": "LOG_LEVEL",
+    "useConsoleTrace": false
+  },
+
+  "stageHandlingOptions": {
+    "envStageName": "STAGE",
+    "streamNameStageSeparator": "_",
+    "resourceNameStageSeparator": "_",
+    "extractInCase": "lower",
+    "injectInCase": "upper"
+  },
+
+  "customOptions": {
+    "myCustomSetting1": "myCustomOption1",
+    "myCustomSetting2": "myCustomOption2"
+  },
+
+  "kinesisOptions": {
+    "maxRetries": 0
+  },
+
+  "dynamoDBDocClientOptions": {
+    "maxRetries": 1
+  },
+
+  "handler": {
+    "useLambdaProxy": false,
+    "defaultHeaders": null,
+    "allowedHttpStatusCodes": null
+  }
+}

@@ -1,5 +1,15 @@
 ## Changes
 
+### 7.1.0
+- Changes to `api-lambdas` module:
+  - Added error response configuration options & settings to the context
+  - Added new `succeedLambdaCallback` and `failLambdaCallback` functions with cleaner parameters needed by custom 
+    `toErrorResponse` functions
+  - Deprecated & removed internal usage of old `succeedCallback` and `failCallback` functions
+  - Changed `generateHandlerFunction` to use new `succeedLambdaCallback` and `failLambdaCallback` functions instead
+- Added a new `other-lambdas` module, which is a simplified version of `api-lambdas`, for generating handler functions 
+  for "other" AWS Lambdas that are NOT exposed via API Gateway
+
 ### 7.0.12
 - Added an optional `toErrorResponse` function to the `opts` arguments of `failLambdaCallback` and 
   `generateHandlerFunction` functions of the `api-lambdas` module to enable callers to customise the error response 

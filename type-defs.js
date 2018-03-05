@@ -24,36 +24,47 @@
  */
 
 /**
- * @typedef {StageHandling|EventAWSContextAndStageAware} StandardContext - an object configured as a standard context with stage handling, logging,
- * custom settings, an optional Kinesis instance and an optional DynamoDB DocumentClient instance and OPTIONALLY also
- * with the current region, the resolved stage and the AWS context
+ * @typedef {StageHandling|EventAWSContextAndStageAware} StandardContext - an object configured as a standard context
+ *          with stage handling, logging, custom settings, an optional Kinesis instance and an optional DynamoDB
+ *          DocumentClient instance and OPTIONALLY also with the current region, the resolved stage and the AWS context
  * @property {CustomSettings|undefined} [custom] - an object configured with optional custom settings to use
- * @property {AWS|undefined} [AWS] - an optional, alternative AWS constructor to use (if unspecified, uses the standard AWS-SDK AWS constructor) - e.g. enables use of an AWS XRay-captured AWS constructor
+ * @property {AWS|undefined} [AWS] - an optional, alternative AWS constructor to use (if unspecified, uses the standard
+ *           AWS-SDK AWS constructor) - e.g. enables use of an AWS XRay-captured AWS constructor
  * @property {AWS.Kinesis|undefined} [kinesis] - an optional AWS.Kinesis instance to use
- * @property {AWS.DynamoDB.DocumentClient|undefined} [dynamoDBDocClient] - an optional AWS.DynamoDB.DocumentClient instance to use
+ * @property {AWS.DynamoDB.DocumentClient|undefined} [dynamoDBDocClient] - an optional AWS.DynamoDB.DocumentClient
+ *           instance to use
  * @property {string|undefined} [region] - the name of the AWS region to use
  * @property {string|undefined} [stage] - the resolved or configured stage to use
  * @property {AWSEvent|undefined} [event] - the AWS event passed to your Lambda function on invocation
  * @property {AWSContext|undefined} [awsContext] - the AWS context passed to your Lambda function on invocation
- * @property {LambdaFunctionNameVersionAndAlias|undefined} [invokedLambda] - the name, version & alias of the invoked Lambda function
+ * @property {LambdaFunctionNameVersionAndAlias|undefined} [invokedLambda] - the name, version & alias of the invoked
+ *           Lambda function
  */
 
 /**
  * @typedef {Object} StandardSettings - settings to be used to configure a standard context (see StandardContext)
  * @property {LoggingSettings|undefined} [loggingSettings] - optional logging settings to use to configure logging
- * @property {StageHandlingSettings|undefined} [stageHandlingSettings] - optional stage handling settings to use to configure stage handling
- * @property {CustomSettings|undefined} [customSettings] - custom settings to be merged into an existing or new context.custom object
- * @property {Object|undefined} [kinesisOptions] - optional Kinesis constructor options to use to configure an AWS.Kinesis instance
- * @property {Object|undefined} [dynamoDBDocClientOptions] - optional DynamoDB.DocumentClient constructor options to use to configure an AWS.DynamoDB.DocumentClient instance
+ * @property {StageHandlingSettings|undefined} [stageHandlingSettings] - optional stage handling settings to use to
+ *           configure stage handling
+ * @property {CustomSettings|undefined} [customSettings] - custom settings to be merged into an existing or new
+ *           context.custom object
+ * @property {Object|undefined} [kinesisOptions] - optional Kinesis constructor options to use to configure an
+ *           AWS.Kinesis instance
+ * @property {Object|undefined} [dynamoDBDocClientOptions] - optional DynamoDB.DocumentClient constructor options to use
+ *           to configure an AWS.DynamoDB.DocumentClient instance
  */
 
 /**
  * @typedef {Object} StandardOptions - options to be used to configure a standard context (see StandardContext)
  * @property {LoggingOptions|undefined} [loggingOptions] - optional logging options to use to configure logging
- * @property {StageHandlingOptions|undefined} [stageHandlingOptions] - optional stage handling options to use to configure stage handling
- * @property {CustomOptions|undefined} [customOptions] - custom options to be merged into an existing or new context.custom object
- * @property {Object|undefined} [kinesisOptions] - optional Kinesis constructor options to use to configure an AWS.Kinesis instance
- * @property {Object|undefined} [dynamoDBDocClientOptions] - optional DynamoDB.DocumentClient constructor options to use to configure an AWS.DynamoDB.DocumentClient instance
+ * @property {StageHandlingOptions|undefined} [stageHandlingOptions] - optional stage handling options to use to
+ *           configure stage handling
+ * @property {CustomOptions|undefined} [customOptions] - custom options to be merged into an existing or new
+ *           context.custom object
+ * @property {Object|undefined} [kinesisOptions] - optional Kinesis constructor options to use to configure an
+ *           AWS.Kinesis instance
+ * @property {Object|undefined} [dynamoDBDocClientOptions] - optional DynamoDB.DocumentClient constructor options to use
+ *           to configure an AWS.DynamoDB.DocumentClient instance
  */
 
 /**
@@ -552,4 +563,50 @@
  * @typedef {Object} ListEventSourceMappingsResult - the result returned by a call to AWS.Lambda listEventSourceMappings
  * @property {string} NextMarker
  * @property {EventSourceMapping[]} EventSourceMappings
+ */
+
+/**
+ * @typedef {StandardContext} StandardHandlerContext - an object configured as a standard handler context for an AWS
+ *          Lambda `handler` function with stage handling, logging, custom settings, an optional Kinesis instance and an
+ *          optional DynamoDB DocumentClient instance and OPTIONALLY also with the current region, the resolved stage
+ *          and the AWS context
+ * @property {HandlerSettings|HandlerOptions|undefined} [handler] - a map of configured handler properties
+ */
+
+/**
+ * @typedef {StandardSettings} StandardHandlerSettings - settings to be used to configure a standard handler context for
+ *          an AWS Lambda `handler` function
+ * @property {HandlerSettings|undefined} [handler] - an optional map of handler settings
+ */
+
+/**
+ * @typedef {StandardOptions} StandardHandlerOptions - options to be used to configure a standard handler context for
+ *          an AWS Lambda `handler` function
+ * @property {HandlerOptions|undefined} [handler] - an optional map of handler options
+ */
+
+/**
+ * @typedef {Object} HandlerOptions - options to be used to configure a standard handler context for an AWS Lambda
+ *          `handler` function
+ * @property {boolean|undefined} [useLambdaProxy] - whether your Lambda is using Lambda Proxy Integration or not
+ *           (defaults to false for backward compatibility) (ONLY applicable for API Gateway exposed Lambdas)
+ * @property {Object|undefined} [defaultHeaders] - default custom headers (if any) to be included in a Lambda Proxy
+ *           response (ONLY applicable for API Gateway exposed Lambdas)
+ * @property {number[]|undefined} [allowedHttpStatusCodes] - an optional array of HTTP status codes that are
+ *           allowed to be returned directly to API Gateway (without conversion to either 400 or 500). NB: 400 and 500
+ *           CANNOT be excluded and are assumed to be present if omitted! If not defined, the app-errors module's list
+ *           of supported HTTP status codes will be used as the allowed HTTP status codes (ONLY applicable for API
+ *           Gateway exposed Lambdas)
+ */
+
+/**
+ * @typedef {HandlerOptions} HandlerSettings - settings to be used to configure a standard handler context for an AWS
+ *          Lambda `handler` function
+ * @property {ToErrorResponse|undefined} [toErrorResponse] - an optional function to be used by an AWS Lambda `handler`
+ *           function to convert an AppError into an appropriate error response object
+ */
+
+/**
+ * @typedef {function(error: AppError, event: AwsEvent, context: StandardHandlerContext): Object} ToErrorResponse - a
+ *          function to use to generate an error response (or an error response body for a Lambda Proxy response)
  */

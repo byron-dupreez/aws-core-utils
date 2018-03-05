@@ -9,21 +9,31 @@ const merge = merging.merge;
 const isInstanceOf = require('core-functions/objects').isInstanceOf;
 
 const appErrors = require('core-functions/app-errors');
+const AppError = appErrors.AppError;
 const BadRequest = appErrors.BadRequest;
 const strings = require('core-functions/strings');
 const isString = strings.isString;
-const isBlank = strings.isBlank;
 const isNotBlank = strings.isNotBlank;
+const trim = strings.trim;
 
 const logging = require('logging-utils');
 const LogLevel = logging.LogLevel;
 const log = logging.log;
 
+const deep = {deep: true};
+const noReplace = {deep: false, replace: false};
+
 /**
- * Utilities for working with Lambdas exposed to AWS API Gateway, including functions to:
+ * Utilities for generating `handler` functions for and for working with AWS Lambdas that are exposed via API Gateway.
+ * - For Kinesis stream triggered AWS Lambdas, instead consider using the `kinesis-stream-consumer` module.
+ * - For DynamoDB stream triggered AWS Lambdas, instead consider using the `dynamodb-stream-consumer` module.
+ * - For other AWS Lambdas that are NOT exposed via API Gateway, instead use the `aws-core-utils/other-lambdas` module.
+ *
+ * These utilities include functions to:
  * - Configure a standard context for AWS Gateway exposed Lambdas (re-exported from contexts.js module)
- * - Fail Lambda callbacks with standard AppError errors to facilitate mapping of errors to HTTP status
+ * - Fail Lambda callbacks with standard `AppError` errors to facilitate mapping of errors to HTTP status
  *   codes on API Gateway.
+ *
  * @module aws-core-utils/api-lambdas.js
  * @see aws-core-utils/contexts#configureStandardContext
  * @see core-functions/app-errors.js#toAppErrorForApiGateway
@@ -31,140 +41,250 @@ const log = logging.log;
  */
 exports._$_ = '_$_'; //IDE workaround
 
-// Configures a standard context for an API Gateway exposed Lambda (re-exported from contexts module for convenience)
-exports.configureStandardContext = contexts.configureStandardContext;
+// Configures a handler context for an API Gateway exposed AWS Lambda
+exports.configureHandlerContext = configureHandlerContext;
 
-// Functions to assist with failing an AWS Gateway exposed Lambda callback and preserve the information of the error thrown
-exports.failCallback = failCallback;
-exports.succeedCallback = succeedCallback;
-exports.failCallbackForApiGateway = failCallback; // Synonym for failCallback
+// Configures a standard context (re-exported from contexts module for convenience)
+exports.configureStandardContext = contexts.configureStandardContext;
 
 exports.generateHandlerFunction = generateHandlerFunction;
 
+exports.succeedLambdaCallback = succeedLambdaCallback;
+exports.failLambdaCallback = failLambdaCallback;
+
+/** Deprecated - use `succeedLambdaCallback` instead */
+exports.succeedCallback = succeedCallback;
+/** Deprecated - use `failLambdaCallback` instead */
+exports.failCallback = failCallback;
+/** Deprecated - use `failLambdaCallback` instead */
+exports.failCallbackForApiGateway = failCallback; // Synonym for failCallback
+
 /**
- * Fails the given callback of an AWS Lambda, which is exposed via API Gateway, with the given error, by first
- * attempting to convert the given error into one of the standard app errors (see {@linkcode core-functions/app-errors})
- * that will be mappable on API Gateway, and then invoking the given lambdaCallback with a JSON stringified version of
- * the converted app error. The given AWS context is used to add your Lambda's AWS request ID to the error.
+ * Generates a handler function for your API Gateway exposed Lambda. This function still supports the legacy 5th to 9th
+ * parameters (logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg & successMsg) by
+ * adding them to an `opts` object.
  *
- * @see module:core-functions/app-errors#toAppErrorForApiGateway
- *
- * @param {Function} lambdaCallback - the callback function passed as the last argument to your Lambda function on invocation.
- * @param {Error} error - the error with which you need to fail your Lambda
- * @param {Object|undefined} [error.headers] - optional headers to include in a Lambda Proxy integration error response
- * @param {string|undefined} [error.auditRef] - an optional audit reference
- * @param {string|undefined} [error.awsRequestId] - an optional AWS request ID
- * @param {Object|undefined} [awsContext] - the AWS context passed as the second argument to your Lambda function on invocation
- * @param {string|undefined} [awsContext.awsRequestId] - the AWS context's request ID
- * @param {string|undefined} [message] - an optional message (will use error's message if not specified)
- * @param {string|undefined} [code] - an optional code (will use error's code if not specified)
- * @param {Object|number[]|undefined} [opts] - optional opts to use (OR a legacy array of numeric `allowedHttpStatusCodes` parameter)
- * @param {number[]|undefined} [opts.allowedHttpStatusCodes] - an optional array of HTTP status codes that are allowed to be returned directly to API Gateway (without conversion to either 400 or 500). NB: 400 and 500 CANNOT be excluded and are assumed to be present if omitted! If not defined, the app-errors module's list of supported HTTP status codes will be used as the allowed HTTP status codes
- * @param {boolean|undefined} [opts.useLambdaProxy] - whether your Lambda is using Lambda Proxy Integration or not (defaults to false for backward compatibility)
- * @param {Object|undefined} [opts.defaultHeaders] - default custom headers to be included (if any) in a Lambda Proxy response
- * @param {undefined|function(error: AppError, auditRef: string|undefined): Object} [opts.toErrorResponse] - an optional function to use to convert the given error into an appropriate error response object to stringify & return or body to include in a Lambda Proxy response to return
+ * @param {(function(): (Object|StandardHandlerContext))|undefined|Object|StandardHandlerContext} [createContext] - an
+ *        optional function that will be used to create the initial context to be configured & used (OR or an optional
+ *        LEGACY module-scope context from which to copy an initial standard context)
+ * @param {(function(): (Object|StandardHandlerSettings))|undefined|Object|StandardHandlerSettings} [createSettings] - an optional
+ *        function that will be used to create the initial standard handler settings to use (OR optional LEGACY module-scoped
+ *        settings from which to copy initial settings to use)
+ * @param {(function(): (Object|StandardHandlerOptions))|undefined|Object|StandardHandlerOptions} [createOptions] -  an optional
+ *        function that will be used to create the initial standard options to use (OR optional LEGACY module-scoped
+ *        options from which to copy initial options to use)
+ * @param {function(event: AWSEvent, context: StandardHandlerContext)} fn - your function that must accept the AWS event and a
+ *        standard context and ideally return a Promise
+ * @param {Object|LogLevel|string|undefined} [opts] - optional opts to use (or legacy LogLevel/string
+ *        `logRequestResponseAtLogLevel` parameter)
+ * @param {boolean|undefined} [opts.useLambdaProxy] - whether your Lambda is using Lambda Proxy Integration or not
+ *        (defaults to false for backward compatibility)
+ * @param {Object|undefined} [opts.defaultHeaders] - default custom headers (if any) to be included in a Lambda Proxy
+ *        response
+ * @param {number[]|undefined} [opts.allowedHttpStatusCodes] - an optional array of HTTP status codes that are allowed
+ *        to be returned directly to API Gateway (without conversion to either 400 or 500). NB: 400 and 500 CANNOT be
+ *        excluded and are assumed to be present if omitted! If not defined, the app-errors module's list of supported
+ *        HTTP status codes will be used as the allowed HTTP status codes
+ * @param {LogLevel|string|undefined} [opts.logRequestResponseAtLogLevel] - an optional log level at which to log the
+ *        request (i.e. AWS event) and response; if log level is undefined or invalid, then logs neither
+ * @param {string|undefined} [opts.invalidRequestMsg] - an optional message to log at warn level if your given function
+ *        (fn) throws a BadRequest
+ * @param {string|undefined} [opts.failureMsg] - an optional message to log at error level on failure
+ * @param {string|undefined} [opts.successMsg] an optional message to log at info level on success
+ * @param {ToErrorResponse|undefined} [opts.toErrorResponse] - an optional function to use to convert an AppError into
+ *        an appropriate error response object (to be subsequently stringified & returned) or error response body (to be
+ *        subsequently included in a Lambda Proxy error response to be returned)
+ * @returns {AwsLambdaHandlerFunction} a handler function for your API Gateway exposed Lambda
  */
-function failCallback(lambdaCallback, error, awsContext, message, code, opts) {
-  // Check if still using legacy `allowedHttpStatusCodes` as 6th parameter
+function generateHandlerFunction(createContext, createSettings, createOptions, fn, opts) {
+  // Check for Legacy 5th to 9th parameters: logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg
   if (!opts || typeof opts !== 'object') {
-    opts = {allowedHttpStatusCodes: Array.isArray(opts) ? opts : undefined};
+    const newOpts = {};
+    newOpts.logRequestResponseAtLogLevel = isString(opts) ? opts : undefined;
+    newOpts.allowedHttpStatusCodes = arguments[5];
+    newOpts.invalidRequestMsg = arguments[6];
+    newOpts.failureMsg = arguments[7];
+    newOpts.successMsg = arguments[8];
+    opts = newOpts;
   }
 
-  // Convert the error into an "API" error
-  const apiError = appErrors.toAppErrorForApiGateway(error, message, code, opts.allowedHttpStatusCodes);
+  /**
+   * An API-Gateway exposed AWS Lambda handler function.
+   * @param {Object} event - the AWS event passed to your handler
+   * @param {Object} awsContext - the AWS context passed to your handler
+   * @param {Callback} callback - the AWS Lambda callback function passed to your handler
+   */
+  function handler(event, awsContext, callback) {
+    let context;
+    try {
+      context = configureHandlerContext(createContext, createSettings, createOptions, event, awsContext, opts);
 
-  // Resolve the AWS request id (if available)
-  const awsRequestId = isNotBlank(error.awsRequestId) ? error.awsRequestId :
-    awsContext ? awsContext.awsRequestId : undefined;
-  if (awsRequestId && isBlank(apiError.awsRequestId)) apiError.awsRequestId = awsRequestId;
+      // Optionally log the request
+      const logLevel = opts.logRequestResponseAtLogLevel;
+      if (logLevel && logging.isValidLogLevel(logLevel)) {
+        context.log(logLevel, 'Request:', JSON.stringify(event));
+      }
 
-  // Resolve the audit reference (if available) - falling back to AWS request ID (if available)
-  const auditRef = isNotBlank(error.auditRef) ? error.auditRef : awsRequestId;
+      // Execute the given function
+      return Promises.try(() => fn(event, context))
+        .then(response => {
+          // Optionally log the response
+          if (logLevel && logging.isValidLogLevel(logLevel)) {
+            context.log(logLevel, 'Response:', JSON.stringify(response));
+          }
 
+          // Log the given success message (if any)
+          if (isNotBlank(opts.successMsg)) context.info(opts.successMsg);
 
-  if (opts.useLambdaProxy) {
-    const statusCode = apiError.httpStatus;
-    const body = resolveErrorResponseBody(apiError, auditRef, opts && opts.toErrorResponse);
-    const proxyResponse = toLambdaProxyResponse(statusCode, error.headers, body, opts.defaultHeaders);
-    lambdaCallback(null, proxyResponse);
-  } else {
-    const errorResponse = resolveErrorResponse(apiError, auditRef, opts && opts.toErrorResponse);
-    lambdaCallback(JSON.stringify(errorResponse), null);
+          succeedLambdaCallback(callback, response, context);
+        })
+        .catch(err => {
+          // Fail the Lambda callback
+          if (isInstanceOf(err, BadRequest) || appErrors.getHttpStatus(err) === 400) {
+            // Log the invalid request
+            context.warn(isNotBlank(opts.invalidRequestMsg) ? opts.invalidRequestMsg : 'Invalid request', '-', err.message);
+            failLambdaCallback(callback, err, event, context);
+          } else {
+            // Log the error encountered
+            context.error(isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
+            failLambdaCallback(callback, err, event, context);
+          }
+        });
+
+    } catch (err) {
+      log(context, LogLevel.ERROR, isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
+      // Fail the Lambda callback
+      failLambdaCallback(callback, err, event, context);
+    }
   }
+
+  return handler;
 }
 
 /**
- * Resolves the body of a Lambda Proxy error response to be returned, using the given `toErrorResponse` function (if any)
- * or the default `toErrorResponseBody` function (if none).
- * @param {AppError} apiError - the error with which your Lambda was failed
- * @param {string|undefined} auditRef - the audit reference to include
- * @param {undefined|function(error: AppError, auditRef: string|undefined): Object} [toErrorResponse] - an optional
- * function to use to convert the given error into an appropriate error response object to stringify & return or body to
- * include in a Lambda Proxy response to return
- * @return {Object} the body to include in the Lambda Proxy response
+ * Configures a standard handler context to use.
+ * @param {(function(): (Object|HandlerContext))|undefined|Object|HandlerContext} [createContext] - an optional function
+ *        that will be used to create the initial context to be configured & used (OR or an optional LEGACY module-scope
+ *        context from which to copy an initial standard context)
+ * @param {(function(): (Object|HandlerSettings))|undefined|Object|HandlerSettings} [createSettings] - an optional
+ *        function that will be used to create the initial standard settings to use (OR optional LEGACY module-scoped
+ *        settings from which to copy initial settings to use)
+ * @param {(function(): (Object|HandlerOptions))|undefined|Object|HandlerOptions} [createOptions] -  an optional
+ *        function that will be used to create the initial standard options to use (OR optional LEGACY module-scoped
+ *        options from which to copy initial options to use)
+ * @param {Object} event - the AWS event passed to your handler
+ * @param {Object} awsContext - the AWS context passed to your handler
+ * @param {HandlerSettings|HandlerOptions|undefined} [opts] - optional opts to use
+ * @return {StandardHandlerContext} the handler context to use
  */
-function resolveErrorResponseBody(apiError, auditRef, toErrorResponse) {
-  try {
-    return typeof toErrorResponse === 'function' ? toErrorResponse(apiError, auditRef) :
-      toErrorResponseBody(apiError, auditRef);
-  } catch (err) {
-    console.error('ERROR', err);
-    // fallback to default function if given function fails
-    return toErrorResponseBody(apiError, auditRef);
-  }
+function configureHandlerContext(createContext, createSettings, createOptions, event, awsContext, opts) {
+  // Configure the context as a standard context
+  let context = typeof createContext === 'function' ? createContext() :
+    createContext && typeof createContext === 'object' ? copy(createContext, deep) : {};
+  if (!context) context = {};
+
+  const settings = typeof createSettings === 'function' ? copy(createSettings(), deep) :
+    createSettings && typeof createSettings === 'object' ? copy(createSettings, deep) : undefined;
+
+  const options = typeof createOptions === 'function' ? copy(createOptions(), deep) :
+    createOptions && typeof createOptions === 'object' ? copy(createOptions, deep) : undefined;
+
+  // Configure the context as a standard context
+  contexts.configureStandardContext(context, settings, options, event, awsContext, false);
+
+  // Merge the relevant opts into handler options, then merge handler options into handler settings and finally merge
+  // the result into context.handler
+  const handlerOptions = mergeHandlerOpts(opts, (options && options.handler) || {});
+  const handlerSettings = settings && settings.handler ?
+    mergeHandlerOpts(handlerOptions, settings.handler) : handlerOptions;
+  context.handler = context.handler ? mergeHandlerOpts(handlerSettings, context.handler) : handlerSettings;
+
+  return context;
 }
 
 /**
- * Resolves the error response to be returned, using the given `toErrorResponse` function (if any) or the given
- * `apiError` (if none).
- * @param {AppError} apiError - the error with which your Lambda was failed
- * @param {string|undefined} auditRef - the audit reference to include
- * @param {undefined|function(error: AppError, auditRef: string|undefined): Object} [toErrorResponse] - an optional
- * function to use to convert the given error into an appropriate error response object to stringify & return or body to
- * include in a Lambda Proxy response to return
- * @return {Object} the body to include in the Lambda Proxy response
+ * Copies the relevant handler-related values from the given `from` handler opts to the given `to` handler opts, but
+ * ONLY if the same options or settings do NOT already exist in the `to` handler opts.
+ * @param {HandlerSettings|HandlerOptions|Object} from - the source handler configuration
+ * @param {HandlerSettings|HandlerOptions} to - the destination handler configuration
  */
-function resolveErrorResponse(apiError, auditRef, toErrorResponse) {
-  try {
-    return typeof toErrorResponse === 'function' ? toErrorResponse(apiError, auditRef) : apiError;
-  } catch (err) {
-    console.error('ERROR', err);
-    // fallback to apiError if given function fails
-    return apiError;
+function mergeHandlerOpts(from, to) {
+  if (from) {
+    if ((from.useLambdaProxy === true || from.useLambdaProxy === false) &&
+      to.useLambdaProxy !== true && to.useLambdaProxy !== false) {
+      to.useLambdaProxy = from.useLambdaProxy;
+    }
+    if (from.defaultHeaders) {
+      to.defaultHeaders = to.defaultHeaders ?
+        merge(from.defaultHeaders, to.defaultHeaders, noReplace) :
+        copy(from.defaultHeaders, deep);
+    }
+    if (from.allowedHttpStatusCodes && !to.allowedHttpStatusCodes) {
+      to.allowedHttpStatusCodes = from.allowedHttpStatusCodes;
+    }
+    if (from.toErrorResponse && !to.toErrorResponse) {
+      to.toErrorResponse = from.toErrorResponse;
+    }
   }
+  return to;
 }
 
 /**
- * Succeeds the given callback of an AWS Lambda, which is exposed via API Gateway, with the given response or body, by
- * invoking the given lambdaCallback with a JSON stringified version of the converted app error. The given AWS context
- * is used to add your Lambda's AWS request ID to the error.
- *
+ * Succeeds the given callback of an API Gateway exposed AWS Lambda, by invoking the given callback with the given
+ * response.
  * @param {Function} callback - the callback function passed as the last argument to your Lambda function on invocation.
  * @param {Object} response - a normal or Lambda Proxy integration response to be returned
- * @param {Object|undefined} [opts] - optional opts to use
- * @param {boolean|undefined} [opts.useLambdaProxy] - whether your Lambda is using Lambda Proxy Integration or not (defaults to false for backward compatibility)
- * @param {Object|undefined} [opts.defaultHeaders] - default custom headers to be included (if any) in a Lambda Proxy response
+ * @param {StandardHandlerContext} context - the context to use
  */
-function succeedCallback(callback, response, opts) {
-  if (!opts || typeof opts !== 'object') opts = {};
-
-  if (opts.useLambdaProxy) {
+function succeedLambdaCallback(callback, response, context) {
+  if (context.handler && context.handler.useLambdaProxy) {
     const statusCode = response && isNotBlank(response.statusCode) ? response.statusCode : 200;
     const body = (response && response.body) || response || {};
-    const proxyResponse = toLambdaProxyResponse(statusCode, response && response.headers, body, opts.defaultHeaders);
+    const proxyResponse = toLambdaProxyResponse(statusCode, response && response.headers, body, context.handler.defaultHeaders);
     callback(null, proxyResponse);
   } else {
     callback(null, response);
   }
 }
 
-function toErrorResponseBody(apiError, auditReference) {
-  const body = {code: apiError.code, message: apiError.message};
-  if (apiError.cause) body.cause = apiError.cause;
-  const auditRef = auditReference || apiError.auditRef;
-  if (auditRef) body.auditRef = auditRef;
-  if (apiError.awsRequestId) body.awsRequestId = apiError.awsRequestId;
-  return body;
+/**
+ * Fails the given callback of an AWS Lambda, which is exposed via API Gateway, with the given error, by first
+ * attempting to convert the given error into one of the standard app errors (see {@linkcode core-functions/app-errors})
+ * that will be mappable on API Gateway, and then invoking the given callback with a JSON stringified version of
+ * the converted app error.
+ *
+ * @see module:core-functions/app-errors#toAppErrorForApiGateway
+ *
+ * @param {Function} callback - the callback function passed as the last argument to your Lambda function on invocation.
+ * @param {Error} error - the error with which you need to fail your Lambda
+ * @param {Object|undefined} [error.headers] - optional headers to include in a Lambda Proxy integration error response
+ * @param {string|undefined} [error.auditRef] - an optional audit reference
+ * @param {string|undefined} [error.awsRequestId] - an optional AWS request ID
+ * @param {Object} event - the AWS event passed to your handler
+ * @param {StandardHandlerContext} context - the context being used
+ */
+function failLambdaCallback(callback, error, event, context) {
+  // Convert the error into an "API" error
+  const allowedHttpStatusCodes = context.handler && context.handler.allowedHttpStatusCodes;
+  const apiError = appErrors.toAppErrorForApiGateway(error, undefined, undefined, allowedHttpStatusCodes);
+
+  // Resolve the AWS request id (if available)
+  apiError.awsRequestId = trim(apiError.awsRequestId) || trim(error.awsRequestId) || trim(context.awsRequestId) ||
+    (context.awsContext && trim(context.awsContext.awsRequestId)) || undefined;
+
+  // Resolve the audit reference (if available)
+  apiError.auditRef = trim(apiError.auditRef) || trim(error.auditRef) || undefined;
+
+  if (context.handler && context.handler.useLambdaProxy) {
+    const statusCode = apiError.httpStatus;
+    const body = toCustomOrDefaultErrorResponseBody(apiError, event, context);
+    const defaultHeaders = context.handler && context.handler.defaultHeaders;
+    const proxyResponse = toLambdaProxyResponse(statusCode, error.headers, body, defaultHeaders);
+    callback(null, proxyResponse);
+  } else {
+    const errorResponse = toCustomOrDefaultErrorResponse(apiError, event, context);
+    callback(JSON.stringify(errorResponse), null);
+  }
 }
 
 /**
@@ -190,99 +310,133 @@ function toLambdaProxyResponse(statusCode, headers, body, defaultHeaders) {
 }
 
 /**
- * Generates a handler function for your API Gateway exposed Lambda. This function still supports the legacy 5th to 9th
- * parameters (logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg & successMsg) by
- * adding them to an `opts` object.
- *
- * @param {(function(): (Object|StandardContext))|undefined|Object|StandardContext} [createContext] - an optional function that will be used to create the initial context to be configured & used (OR or an optional LEGACY module-scope context from which to copy an initial standard context)
- * @param {(function(): (Object|StandardSettings))|undefined|Object|StandardSettings} [createSettings] - an optional function that will be used to create the initial standard settings to use (OR optional LEGACY module-scoped settings from which to copy initial settings to use)
- * @param {(function(): (Object|StandardOptions))|undefined|Object|StandardOptions} [createOptions] -  an optional function that will be used to create the initial standard options to use (OR optional LEGACY module-scoped options from which to copy initial options to use)
- * @param {function(event: AWSEvent, context: StandardContext)} fn - your function that must accept the AWS event and a standard context and ideally return a Promise
- * @param {Object|LogLevel|string|undefined} [opts] - optional opts to use (or legacy LogLevel/string `logRequestResponseAtLogLevel` parameter)
- * @param {boolean|undefined} [opts.useLambdaProxy] - whether your Lambda is using Lambda Proxy Integration or not (defaults to false for backward compatibility)
- * @param {Object|undefined} [opts.defaultHeaders] - default custom headers (if any) to be included in a Lambda Proxy response
- * @param {number[]|undefined} [opts.allowedHttpStatusCodes] - an optional array of HTTP status codes that are allowed to be returned directly to API Gateway (without conversion to either 400 or 500). NB: 400 and 500 CANNOT be excluded and are assumed to be present if omitted! If not defined, the app-errors module's list of supported HTTP status codes will be used as the allowed HTTP status codes
- * @param {LogLevel|string|undefined} [opts.logRequestResponseAtLogLevel] - an optional log level at which to log the request (i.e. AWS event) and response; if log level is undefined or invalid, then logs neither
- * @param {string|undefined} [opts.invalidRequestMsg] - an optional message to log at warn level if your given function (fn) throws a BadRequest
- * @param {string|undefined} [opts.failureMsg] - an optional message to log at error level on failure
- * @param {string|undefined} [opts.successMsg] an optional message to log at info level on success
- * @param {undefined|function(error: AppError, auditRef: string|undefined): Object} [opts.toErrorResponse] - an optional function to use to convert the given error into an appropriate error response object to stringify & return or body to include in a Lambda Proxy response to return
- * @returns {AwsLambdaHandlerFunction} a handler function for your API Gateway exposed Lambda
+ * Resolves the error response body of a Lambda Proxy error response to be returned for the given AppError and event and
+ * using the configured `toErrorResponse` function (if any); otherwise the `defaultToErrorResponse` function.
+ * @param {AppError} apiError - the error with which your Lambda was failed
+ * @param {Object} event - the AWS event passed to your handler
+ * @param {StandardHandlerContext} context - the context being used
+ * @return {Object} the error response (to be subsequently stringified & returned)
  */
-function generateHandlerFunction(createContext, createSettings, createOptions, fn, opts) {
-  // Check for Legacy 5th to 9th parameters: logRequestResponseAtLogLevel, allowedHttpStatusCodes, invalidRequestMsg, failureMsg, successMsg
+function toCustomOrDefaultErrorResponseBody(apiError, event, context) {
+  try {
+    const toErrorResponse = context.handler && context.handler.toErrorResponse;
+    return typeof toErrorResponse === 'function' ?
+      toErrorResponse(apiError, event, context) || toDefaultErrorResponseBody(apiError) :
+      toDefaultErrorResponseBody(apiError);
+  } catch (err) {
+    console.error('ERROR', err);
+    // fallback to default function if given function fails
+    return toDefaultErrorResponseBody(apiError);
+  }
+}
+
+/**
+ * Resolves the error response to be returned for the given AppError and event, using the configured `toErrorResponse`
+ * function (if any); otherwise using the `toDefaultErrorResponse` function.
+ * @param {AppError} apiError - the error with which your Lambda was failed
+ * @param {Object} event - the AWS event passed to your handler
+ * @param {StandardHandlerContext} context - the context being used
+ * @return {Object} the error response (to be subsequently stringified & returned)
+ */
+function toCustomOrDefaultErrorResponse(apiError, event, context) {
+  try {
+    const toErrorResponse = context.handler && context.handler.toErrorResponse;
+    return typeof toErrorResponse === 'function' ?
+      toErrorResponse(apiError, event, context) || toDefaultErrorResponse(apiError) :
+      toDefaultErrorResponse(apiError);
+  } catch (err) {
+    console.error('ERROR', err);
+    // fallback to default function if given function fails
+    return toDefaultErrorResponse(apiError);
+  }
+}
+
+function toDefaultErrorResponseBody(apiError) {
+  const json = apiError && apiError.toJSON();
+  if (json.httpStatus) {
+    delete json.httpStatus; // don't really need `httpStatus` inside `body` too, since have it in response as `statusCode`
+  }
+  if (json.headers) {
+    delete json.headers; // don't want error's `headers` inside `body`, since have more comprehensive `headers` in response
+  }
+  return json;
+}
+
+function toDefaultErrorResponse(apiError) {
+  return apiError && apiError.toJSON();
+}
+
+/**
+ * @deprecated Use `succeedLambdaCallback` instead
+ * Succeeds the given callback of an AWS Lambda, which is exposed via API Gateway, with the given response or body, by
+ * invoking the given lambdaCallback with a JSON stringified version of the converted app error. The given AWS context
+ * is used to add your Lambda's AWS request ID to the error.
+ *
+ * @param {Function} callback - the callback function passed as the last argument to your Lambda function on invocation.
+ * @param {Object} response - a normal or Lambda Proxy integration response to be returned
+ * @param {Object|undefined} [opts] - optional opts to use
+ * @param {boolean|undefined} [opts.useLambdaProxy] - whether your Lambda is using Lambda Proxy Integration or not (defaults to false for backward compatibility)
+ * @param {Object|undefined} [opts.defaultHeaders] - default custom headers to be included (if any) in a Lambda Proxy response
+ */
+function succeedCallback(callback, response, opts) {
+  if (!opts || typeof opts !== 'object') opts = {};
+
+  if (opts.useLambdaProxy) {
+    const statusCode = response && isNotBlank(response.statusCode) ? response.statusCode : 200;
+    const body = (response && response.body) || response || {};
+    const proxyResponse = toLambdaProxyResponse(statusCode, response && response.headers, body, opts.defaultHeaders);
+    callback(null, proxyResponse);
+  } else {
+    callback(null, response);
+  }
+}
+
+/**
+ * @deprecated Use `failLambdaCallback` instead
+ * Fails the given callback of an AWS Lambda, which is exposed via API Gateway, with the given error, by first
+ * attempting to convert the given error into one of the standard app errors (see {@linkcode core-functions/app-errors})
+ * that will be mappable on API Gateway, and then invoking the given lambdaCallback with a JSON stringified version of
+ * the converted app error. The given AWS context is used to add your Lambda's AWS request ID to the error.
+ *
+ * @see module:core-functions/app-errors#toAppErrorForApiGateway
+ *
+ * @param {Function} lambdaCallback - the callback function passed as the last argument to your Lambda function on invocation.
+ * @param {Error} error - the error with which you need to fail your Lambda
+ * @param {Object|undefined} [error.headers] - optional headers to include in a Lambda Proxy integration error response
+ * @param {string|undefined} [error.auditRef] - an optional audit reference
+ * @param {string|undefined} [error.awsRequestId] - an optional AWS request ID
+ * @param {Object|undefined} [awsContext] - the AWS context passed as the second argument to your Lambda function on invocation
+ * @param {string|undefined} [awsContext.awsRequestId] - the AWS context's request ID
+ * @param {string|undefined} [message] - an optional message (will use error's message if not specified)
+ * @param {string|undefined} [code] - an optional code (will use error's code if not specified)
+ * @param {Object|number[]|undefined} [opts] - optional opts to use (OR a legacy array of numeric `allowedHttpStatusCodes` parameter)
+ * @param {number[]|undefined} [opts.allowedHttpStatusCodes] - an optional array of HTTP status codes that are allowed to be returned directly to API Gateway (without conversion to either 400 or 500). NB: 400 and 500 CANNOT be excluded and are assumed to be present if omitted! If not defined, the app-errors module's list of supported HTTP status codes will be used as the allowed HTTP status codes
+ * @param {boolean|undefined} [opts.useLambdaProxy] - whether your Lambda is using Lambda Proxy Integration or not (defaults to false for backward compatibility)
+ * @param {Object|undefined} [opts.defaultHeaders] - default custom headers to be included (if any) in a Lambda Proxy response
+ */
+function failCallback(lambdaCallback, error, awsContext, message, code, opts) {
+  // Check if still using legacy `allowedHttpStatusCodes` as 6th parameter
   if (!opts || typeof opts !== 'object') {
-    const newOpts = {};
-    newOpts.logRequestResponseAtLogLevel = isString(opts) ? opts : undefined;
-    newOpts.allowedHttpStatusCodes = arguments[5];
-    newOpts.invalidRequestMsg = arguments[6];
-    newOpts.failureMsg = arguments[7];
-    newOpts.successMsg = arguments[8];
-    opts = newOpts;
+    opts = {allowedHttpStatusCodes: Array.isArray(opts) ? opts : undefined};
   }
 
-  /**
-   * An API-Gateway exposed Lambda handler function.
-   * @param {Object} event - the AWS event passed to your handler
-   * @param {Object} awsContext - the AWS context passed to your handler
-   * @param {Callback} callback - the AWS Lambda callback function passed to your handler
-   */
-  function handler(event, awsContext, callback) {
-    let context = undefined;
-    const deep = {deep: true};
-    try {
-      // Configure the context as a standard context
-      context = typeof createContext === 'function' ? createContext() :
-        createContext && typeof createContext === 'object' ? copy(createContext, deep) : {};
-      if (!context) context = {};
+  // Convert the error into an "API" error
+  const apiError = appErrors.toAppErrorForApiGateway(error, message, code, opts.allowedHttpStatusCodes);
 
-      const settings = typeof createSettings === 'function' ? copy(createSettings(), deep) :
-        createSettings && typeof createSettings === 'object' ? copy(createSettings, deep) : undefined;
+  // Resolve the AWS request id (if available)
+  apiError.awsRequestId = trim(apiError.awsRequestId) || trim(error.awsRequestId) ||
+    (awsContext && trim(awsContext.awsRequestId)) || undefined;
 
-      const options = typeof createOptions === 'function' ? copy(createOptions(), deep) :
-        createOptions && typeof createOptions === 'object' ? copy(createOptions, deep) : undefined;
+  // Resolve the audit reference (if available) - falling back to AWS request ID (if available)
+  apiError.auditRef = trim(apiError.auditRef) || trim(error.auditRef) || apiError.awsRequestId;
 
-      // Configure the context as a standard context
-      contexts.configureStandardContext(context, settings, options, event, awsContext, false);
-
-      // Optionally log the request
-      const logLevel = opts.logRequestResponseAtLogLevel;
-      if (logLevel && logging.isValidLogLevel(logLevel)) {
-        context.log(logLevel, 'Request:', JSON.stringify(event));
-      }
-
-      // Execute the given function
-      Promises.try(() => fn(event, context))
-        .then(response => {
-          // Optionally log the response
-          if (logLevel && logging.isValidLogLevel(logLevel)) {
-            context.log(logLevel, 'Response:', JSON.stringify(response));
-          }
-
-          // Log the given success message (if any)
-          if (isNotBlank(opts.successMsg)) context.info(opts.successMsg);
-
-          succeedCallback(callback, response, opts);
-        })
-        .catch(err => {
-          // Fail the Lambda callback
-          if (isInstanceOf(err, BadRequest) || appErrors.getHttpStatus(err) === 400) {
-            // Log the invalid request
-            context.warn(isNotBlank(opts.invalidRequestMsg) ? opts.invalidRequestMsg : 'Invalid request', '-', err.message);
-            failCallback(callback, err, awsContext, undefined, undefined, opts);
-          } else {
-            // Log the error encountered
-            context.error(isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
-            failCallback(callback, err, awsContext, undefined, undefined, opts);
-          }
-        });
-
-    } catch (err) {
-      log(context, LogLevel.ERROR, isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
-      // Fail the Lambda callback
-      failCallback(callback, err, awsContext, undefined, undefined, opts);
-    }
+  if (opts.useLambdaProxy) {
+    const statusCode = apiError.httpStatus;
+    const body = toDefaultErrorResponseBody(apiError);
+    const proxyResponse = toLambdaProxyResponse(statusCode, error.headers, body, opts.defaultHeaders);
+    lambdaCallback(null, proxyResponse);
+  } else {
+    const errorResponse = toDefaultErrorResponse(apiError);
+    lambdaCallback(JSON.stringify(errorResponse), null);
   }
-
-  return handler;
 }

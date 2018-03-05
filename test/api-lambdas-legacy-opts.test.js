@@ -88,7 +88,7 @@ function toCustomErrorResponse(error, event, context) {
 // generateHandlerFunction simulating successful response (with useLambdaProxy false & NON-legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating successful response (with useLambdaProxy false & NON-legacy parameters & NON-legacy opts)', t => {
+test('generateHandlerFunction simulating successful response (with useLambdaProxy false & NON-legacy parameters & LEGACY opts)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -106,9 +106,12 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = undefined;
-    const createOptions = () => require('./sample-api-handler-options-1.json');
+    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
 
     const opts = {
+      useLambdaProxy: false,
+      defaultHeaders: undefined,
+      allowedHttpStatusCodes: undefined,
       logRequestResponseAtLogLevel: LogLevel.INFO,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
@@ -146,7 +149,7 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
 // generateHandlerFunction simulating failure (with useLambdaProxy false & NON-legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating failure (with useLambdaProxy false & NON-legacy parameters & NON-legacy opts)', t => {
+test('generateHandlerFunction simulating failure (with useLambdaProxy false & NON-legacy parameters & LEGACY opts)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -163,9 +166,12 @@ test('generateHandlerFunction simulating failure (with useLambdaProxy false & NO
 
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
-    const createOptions = () => require('./sample-api-handler-options-1.json');
+    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
 
     const opts = {
+      useLambdaProxy: false,
+      defaultHeaders: undefined,
+      allowedHttpStatusCodes: undefined,
       logRequestResponseAtLogLevel: LogLevel.TRACE,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
@@ -211,7 +217,7 @@ test('generateHandlerFunction simulating failure (with useLambdaProxy false & NO
 // generateHandlerFunction simulating successful response (with useLambdaProxy true & NON-legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating successful response (with useLambdaProxy true & NON-legacy parameters & NON-legacy opts)', t => {
+test('generateHandlerFunction simulating successful response (with useLambdaProxy true & NON-legacy parameters & LEGACY opts)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -234,9 +240,12 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = () => undefined;
-    const createOptions = () => require('./sample-api-handler-options-2.json');
+    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
 
     const opts = {
+      useLambdaProxy: true,
+      defaultHeaders: {hdr1: 'dh1', hdr2: 'dh2'},
+      allowedHttpStatusCodes: undefined,
       logRequestResponseAtLogLevel: LogLevel.INFO,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
@@ -280,7 +289,7 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
 // generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters & NON-legacy opts)', t => {
+test('generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters & LEGACY opts)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -300,9 +309,12 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = () => undefined;
-    const createOptions = () => require('./sample-api-handler-options-2.json');
+    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
 
     const opts = {
+      useLambdaProxy: true,
+      defaultHeaders: {hdr1: 'dh1', hdr2: 'dh2'},
+      allowedHttpStatusCodes: undefined,
       logRequestResponseAtLogLevel: LogLevel.INFO,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
@@ -346,7 +358,7 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
 // generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters & custom settings)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters & NON-legacy opts & custom settings)', t => {
+test('generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters & LEGACY opts & custom settings)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -365,10 +377,14 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
 
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
-    const createSettings = () => ({handler: {toErrorResponse: toCustomErrorResponse}});
-    const createOptions = () => require('./sample-api-handler-options-2.json');
+    const createSettings = undefined;
+    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
 
     const opts = {
+      useLambdaProxy: true,
+      defaultHeaders: {hdr1: 'dh1', hdr2: 'dh2'},
+      allowedHttpStatusCodes: undefined,
+      toErrorResponse: toCustomErrorResponse,
       logRequestResponseAtLogLevel: LogLevel.INFO,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
@@ -413,3 +429,4 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
     setRegionStageAndDeleteCachedInstances(undefined, undefined);
   }
 });
+
