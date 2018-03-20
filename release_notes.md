@@ -1,5 +1,15 @@
 ## Changes
 
+### 7.2.0
+- Changes to `api-lambdas` module:
+  - Added support for configuring a custom `preSuccessCallback` function to be run before succeeding the Lambda callback
+  - Added support for configuring a custom `preFailureCallback` function to be run before failing the Lambda callback
+  - Minor breaking changes to API of "new" `failLambdaCallback` and `succeedLambdaCallback` functions added in 7.1.0
+- Changes to `other-lambdas` module:
+  - Added support for configuring a custom `preSuccessCallback` function to be run before succeeding the Lambda callback
+  - Added support for configuring a custom `preFailureCallback` function to be run before failing the Lambda callback
+  - Minor breaking changes to API of "new" `failLambdaCallback` and `succeedLambdaCallback` functions added in 7.1.0
+
 ### 7.1.1
 - Committed updated `package-lock.json`
 

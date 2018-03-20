@@ -227,13 +227,36 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
       headers: {hdr1: 'h1', hdr3: 'h3'},
       body: body
     };
+    const expectedResponse = {
+      statusCode: 200,
+      headers: {hdr1: 'h1', hdr3: 'h3', hdr2: 'dh2'}, // merged headers
+      body: JSON.stringify(body)
+    };
 
     // Create a sample function to be executed within the Lambda handler function
     const fn = sampleFunction(response, undefined);
 
+    const context = {};
+    const preSuccessCallback = function preSuccessCallback(response1, event1, context1) {
+      t.pass(`*** preSuccessCallback must be invoked`);
+      t.ok(response1, `preSuccessCallback response1 must exist`);
+      t.deepEqual(response1, expectedResponse, `preSuccessCallback response1 must be expectedResponse`);
+      t.equal(event1, event, `preSuccessCallback event1 must be event`);
+      t.equal(context1, context, `preSuccessCallback context1 must be context`);
+    };
+    // noinspection JSUnusedLocalSymbols
+    const preFailureCallback = function preFailureCallback(error1, errorResponse1, event1, context1) {
+      t.fail(`### preFailureCallback must NOT be invoked with error (${error1})`);
+    };
+
     // Create a sample AWS Lambda handler function
-    const createContext = () => ({});
-    const createSettings = () => undefined;
+    const createContext = () => context;
+    const handlerSettings = {
+      toErrorResponse: toCustomErrorResponse,
+      preSuccessCallback: preSuccessCallback,
+      preFailureCallback: preFailureCallback
+    };
+    const createSettings = () => ({handler: handlerSettings});
     const createOptions = () => require('./sample-api-handler-options-2.json');
 
     const opts = {
@@ -242,7 +265,6 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
       failedMsg: 'Failed to do something useful',
       successMsg: 'Did something useful'
     };
-
     const handler = apiLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, opts);
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
@@ -252,12 +274,6 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
     handlerWithPromise(event, awsContext)
       .then(response => {
         t.pass(`handler should have passed`);
-
-        const expectedResponse = {
-          statusCode: 200,
-          headers: {hdr1: 'h1', hdr3: 'h3', hdr2: 'dh2'}, // merged headers
-          body: JSON.stringify(body)
-        };
         t.deepEqual(response, expectedResponse, `response must be ${JSON.stringify(expectedResponse)}`);
         t.end();
       })
@@ -363,9 +379,27 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
     // Create a sample function to be executed within the Lambda handler function
     const fn = sampleFunction(undefined, error);
 
+    const context = {};
+    // noinspection JSUnusedLocalSymbols
+    const preSuccessCallback = function preSuccessCallback(response1, event1, context1) {
+      t.fail(`### preSuccessCallback must NOT be invoked with response (${JSON.stringify(response1)})`);
+    };
+    const preFailureCallback = function preFailureCallback(error1, errorResponse1, event1, context1) {
+      t.pass(`*** preFailureCallback must be invoked`);
+      t.equal(error1, error, `preFailureCallback error1 must be ${error}`);
+      t.ok(errorResponse1, `preFailureCallback errorResponse1 must exist`);
+      t.equal(event1, event, `preFailureCallback event1 must be event`);
+      t.equal(context1, context, `preFailureCallback context1 must be context`);
+    };
+
     // Create a sample AWS Lambda handler function
-    const createContext = () => ({});
-    const createSettings = () => ({handler: {toErrorResponse: toCustomErrorResponse}});
+    const createContext = () => context;
+    const handlerSettings = {
+      toErrorResponse: toCustomErrorResponse,
+      preSuccessCallback: preSuccessCallback,
+      preFailureCallback: preFailureCallback
+    };
+    const createSettings = () => ({handler: handlerSettings});
     const createOptions = () => require('./sample-api-handler-options-2.json');
 
     const opts = {
@@ -383,7 +417,7 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
     // Invoke the handler function
     handlerWithPromise(event, awsContext)
       .then(response => {
-        t.pass(`handler should have passed`);
+        t.pass(`handler should have ended "normally" with the error`);
 
         const expectedResponse = {
           statusCode: error.httpStatus,

@@ -604,9 +604,23 @@
  *          Lambda `handler` function
  * @property {ToErrorResponse|undefined} [toErrorResponse] - an optional function to be used by an AWS Lambda `handler`
  *           function to convert an AppError into an appropriate error response object
+ * @property {PreSuccessCallback|undefined} [preSuccessCallback] - an optional function to be used by an AWS Lambda
+ *           `handler` to run any needed shutdown logic immediately before succeeding the Lambda callback
+ * @property {PreFailureCallback|undefined} [preFailureCallback] - an optional function to be used by an AWS Lambda
+ *           `handler` to run any needed shutdown logic immediately before failing the Lambda callback
  */
 
 /**
- * @typedef {function(error: AppError, event: AwsEvent, context: StandardHandlerContext): Object} ToErrorResponse - a
- *          function to use to generate an error response (or an error response body for a Lambda Proxy response)
+ * @typedef {function(error: AppError, event: AWSEvent, context: StandardHandlerContext): Object} ToErrorResponse -
+ *          a function to use to generate an error response (or an error response body for a Lambda Proxy response)
+ */
+
+/**
+ * @typedef {function(response: Object, event: AWSEvent, context: StandardHandlerContext)} PreSuccessCallback -
+ *          a function to use to run any needed shutdown logic immediately before succeeding the Lambda callback
+ */
+
+/**
+ * @typedef {function(error: AppError, errorResponse: Object, event: AWSEvent, context: StandardHandlerContext)} PreFailureCallback -
+ *          a function to use to run any needed shutdown logic immediately before failing the Lambda callback
  */

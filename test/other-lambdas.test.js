@@ -224,9 +224,27 @@ test('generateHandlerFunction simulating successful response (with custom settin
     // Create a sample function to be executed within the Lambda handler function
     const fn = sampleFunction(expectedResponse, undefined);
 
+    const context = {};
+    const preSuccessCallback = function preSuccessCallback(response1, event1, context1) {
+      t.pass(`*** preSuccessCallback must be invoked`);
+      t.ok(response1, `preSuccessCallback response1 must exist`);
+      t.deepEqual(response1, expectedResponse, `preSuccessCallback response1 must be expectedResponse`);
+      t.equal(event1, event, `preSuccessCallback event1 must be event`);
+      t.equal(context1, context, `preSuccessCallback context1 must be context`);
+    };
+    // noinspection JSUnusedLocalSymbols
+    const preFailureCallback = function preFailureCallback(error1, errorResponse1, event1, context1) {
+      t.fail(`### preFailureCallback must NOT be invoked with error (${error1})`);
+    };
+
     // Create a sample AWS Lambda handler function
-    const createContext = () => ({});
-    const createSettings = () => ({handler: {toErrorResponse: toCustomErrorResponse}});
+    const createContext = () => context;
+    const handlerSettings = {
+      toErrorResponse: toCustomErrorResponse,
+      preSuccessCallback: preSuccessCallback,
+      preFailureCallback: preFailureCallback
+    };
+    const createSettings = () => ({handler: handlerSettings});
     const createOptions = () => require('./sample-other-handler-options.json');
 
     const opts = {
@@ -282,9 +300,27 @@ test('generateHandlerFunction simulating failure (with custom settings)', t => {
     // Create a sample function to be executed within the Lambda handler function
     const fn = sampleFunction(undefined, expectedError);
 
+    const context = {};
+    // noinspection JSUnusedLocalSymbols
+    const preSuccessCallback = function preSuccessCallback(response1, event1, context1) {
+      t.fail(`### preSuccessCallback must NOT be invoked with response (${JSON.stringify(response1)})`);
+    };
+    const preFailureCallback = function preFailureCallback(error1, errorResponse1, event1, context1) {
+      t.pass(`*** preFailureCallback must be invoked`);
+      t.equal(error1, error, `preFailureCallback error1 must be ${error}`);
+      t.ok(errorResponse1, `preFailureCallback errorResponse1 must exist`);
+      t.equal(event1, event, `preFailureCallback event1 must be event`);
+      t.equal(context1, context, `preFailureCallback context1 must be context`);
+    };
+
     // Create a sample AWS Lambda handler function
-    const createContext = () => ({});
-    const createSettings = () => ({handler: {toErrorResponse: toCustomErrorResponse}});
+    const createContext = () => context;
+    const handlerSettings = {
+      toErrorResponse: toCustomErrorResponse,
+      preSuccessCallback: preSuccessCallback,
+      preFailureCallback: preFailureCallback
+    };
+    const createSettings = () => ({handler: handlerSettings});
     const createOptions = () => require('./sample-other-handler-options.json');
 
     const opts = {

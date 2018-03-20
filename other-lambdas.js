@@ -103,7 +103,7 @@ function generateHandlerFunction(createContext, createSettings, createOptions, f
           // Log the given success message (if any)
           if (isNotBlank(opts.successMsg)) context.info(opts.successMsg);
 
-          succeedLambdaCallback(callback, response, context);
+          succeedLambdaCallback(callback, response, event, context);
         })
         .catch(err => {
           // Fail the Lambda callback
@@ -180,18 +180,59 @@ function mergeHandlerOpts(from, to) {
     if (from.toErrorResponse && !to.toErrorResponse) {
       to.toErrorResponse = from.toErrorResponse;
     }
+    if (from.preSuccessCallback && !to.preSuccessCallback) {
+      to.preSuccessCallback = from.preSuccessCallback;
+    }
+    if (from.preFailureCallback && !to.preFailureCallback) {
+      to.preFailureCallback = from.preFailureCallback;
+    }
   }
   return to;
+}
+
+/**
+ * Executes the custom configured `preSuccessCallback` function (if any).
+ * @param {Object} response - a normal or Lambda Proxy integration response to be returned
+ * @param {AWSEvent} event - the AWS event passed to your handler
+ * @param {StandardHandlerContext} context - the context to use
+ * @param {PreSuccessCallback|undefined} [context.handler.preSuccessCallback] - an optional function to be used by an
+ *        AWS Lambda `handler` to run any needed shutdown logic immediately before succeeding the Lambda callback
+ * @return {Promise.<*>} a promise of anything - any errors are logged, but no rejections can escape
+ */
+function executePreSuccessCallback(response, event, context) {
+  const preSuccessCallback = context.handler && context.handler.preSuccessCallback;
+  return typeof preSuccessCallback === 'function' ?
+    Promises.try(() => preSuccessCallback(response, event, context)).catch(err => context.error(err)) :
+    Promise.resolve();
+}
+
+/**
+ * Executes the custom configured `preSuccessCallback` function (if any).
+ * @param {AppError} error - the error with which your Lambda was failed
+ * @param {Object} errorResponse - the error response derived from the error with which your Lambda was failed
+ * @param {AWSEvent} event - the AWS event passed to your handler
+ * @param {StandardHandlerContext} context - the context being used
+ * @param {PreFailureCallback|undefined} [context.handler.preFailureCallback] - an optional function to be used by an
+ *        AWS Lambda `handler` to run any needed shutdown logic immediately before failing the Lambda callback
+ * @return {Promise.<*>} a promise of anything - any errors are logged, but no rejections can escape
+ */
+function executePreFailureCallback(error, errorResponse, event, context) {
+  const preFailureCallback = context.handler && context.handler.preFailureCallback;
+  return typeof preFailureCallback === 'function' ?
+    Promises.try(() => preFailureCallback(error, errorResponse, event, context)).catch(err => context.error(err)) :
+    Promise.resolve();
 }
 
 /**
  * Succeeds the given callback of an AWS Lambda, by invoking the given callback with the given response.
  * @param {Function} callback - the callback function passed as the last argument to your Lambda function on invocation.
  * @param {Object} response - a normal or Lambda Proxy integration response to be returned
+ * @param {AWSEvent} event - the AWS event passed to your handler
  * @param {StandardHandlerContext} context - the context to use
  */
-function succeedLambdaCallback(callback, response, context) {
-  callback(null, response);
+function succeedLambdaCallback(callback, response, event, context) {
+  executePreSuccessCallback(response, event, context)
+    .then(() => callback(null, response));
 }
 
 /**
@@ -205,7 +246,7 @@ function succeedLambdaCallback(callback, response, context) {
  * @param {Error} error - the error with which you need to fail your Lambda
  * @param {string|undefined} [error.auditRef] - an optional audit reference
  * @param {string|undefined} [error.awsRequestId] - an optional AWS request ID
- * @param {Object} event - the AWS event passed to your handler
+ * @param {AWSEvent} event - the AWS event passed to your handler
  * @param {StandardHandlerContext} context - the context being used
  */
 function failLambdaCallback(callback, error, event, context) {
@@ -220,30 +261,39 @@ function failLambdaCallback(callback, error, event, context) {
   apiError.auditRef = trim(apiError.auditRef) || trim(error.auditRef) || undefined;
 
   const errorResponse = toCustomOrDefaultErrorResponse(apiError, event, context);
-  callback(JSON.stringify(errorResponse), null);
+
+  executePreFailureCallback(apiError, errorResponse, event, context)
+    .then(() => callback(JSON.stringify(errorResponse), null));
 }
 
 /**
  * Resolves the error response to be returned for the given AppError and event, using the configured `toErrorResponse`
  * function (if any); otherwise using the `toDefaultErrorResponse` function.
- * @param {AppError} apiError - the error with which your Lambda was failed
+ * @param {AppError} error - the error with which your Lambda was failed
  * @param {Object} event - the AWS event passed to your handler
  * @param {StandardHandlerContext} context - the context being used
+ * @param {ToErrorResponse|undefined} [context.handler.toErrorResponse] - an optional function to be used by an AWS
+ *        Lambda `handler` function to convert an AppError into an appropriate error response object
  * @return {Object} the error response (to be subsequently stringified & returned)
  */
-function toCustomOrDefaultErrorResponse(apiError, event, context) {
+function toCustomOrDefaultErrorResponse(error, event, context) {
   try {
     const toErrorResponse = context.handler && context.handler.toErrorResponse;
     return typeof toErrorResponse === 'function' ?
-      toErrorResponse(apiError, event, context) || toDefaultErrorResponse(apiError) :
-      toDefaultErrorResponse(apiError);
+      toErrorResponse(error, event, context) || toDefaultErrorResponse(error) :
+      toDefaultErrorResponse(error);
   } catch (err) {
     console.error('ERROR', err);
     // fallback to default function if given function fails
-    return toDefaultErrorResponse(apiError);
+    return toDefaultErrorResponse(error);
   }
 }
 
-function toDefaultErrorResponse(apiError) {
-  return apiError && apiError.toJSON();
+/**
+ * A default conversion from an error to an error response
+ * @param {AppError} error - an error to convert
+ * @return {Object} an error response
+ */
+function toDefaultErrorResponse(error) {
+  return error && error.toJSON();
 }
