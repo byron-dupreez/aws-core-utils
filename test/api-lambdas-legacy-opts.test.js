@@ -13,6 +13,9 @@ const apiLambdas = require('../api-lambdas');
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
 
+const copy = require('core-functions/copying').copy;
+const deep = {deep: true};
+
 const Promises = require('core-functions/promises');
 
 const Strings = require('core-functions/strings');
@@ -106,12 +109,17 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = undefined;
-    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
+    const createOptions = () => {
+      const options = copy(require('./api-lambdas-context-options-LEGACY.json'), deep);
+      options.handler = {
+        useLambdaProxy: false,
+        defaultHeaders: undefined,
+        allowedHttpStatusCodes: undefined
+      };
+      return options;
+    };
 
     const opts = {
-      useLambdaProxy: false,
-      defaultHeaders: undefined,
-      allowedHttpStatusCodes: undefined,
       logRequestResponseAtLogLevel: LogLevel.INFO,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
@@ -166,12 +174,17 @@ test('generateHandlerFunction simulating failure (with useLambdaProxy false & NO
 
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
-    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
+    const createOptions = () => {
+      const options = copy(require('./api-lambdas-context-options-LEGACY.json'), deep);
+      options.handler = {
+        useLambdaProxy: false,
+        defaultHeaders: undefined,
+        allowedHttpStatusCodes: undefined
+      };
+      return options;
+    };
 
     const opts = {
-      useLambdaProxy: false,
-      defaultHeaders: undefined,
-      allowedHttpStatusCodes: undefined,
       logRequestResponseAtLogLevel: LogLevel.TRACE,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
@@ -240,12 +253,17 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = () => undefined;
-    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
+    const createOptions = () => {
+      const options = copy(require('./api-lambdas-context-options-LEGACY.json'), deep);
+      options.handler = {
+        useLambdaProxy: true,
+        defaultHeaders: {hdr1: 'dh1', hdr2: 'dh2'},
+        allowedHttpStatusCodes: undefined
+      };
+      return options;
+    };
 
     const opts = {
-      useLambdaProxy: true,
-      defaultHeaders: {hdr1: 'dh1', hdr2: 'dh2'},
-      allowedHttpStatusCodes: undefined,
       logRequestResponseAtLogLevel: LogLevel.INFO,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
@@ -309,12 +327,17 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = () => undefined;
-    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
+    const createOptions = () => {
+      const options = copy(require('./api-lambdas-context-options-LEGACY.json'), deep);
+      options.handler = {
+        useLambdaProxy: true,
+        defaultHeaders: {hdr1: 'dh1', hdr2: 'dh2'},
+        allowedHttpStatusCodes: undefined
+      };
+      return options;
+    };
 
     const opts = {
-      useLambdaProxy: true,
-      defaultHeaders: {hdr1: 'dh1', hdr2: 'dh2'},
-      allowedHttpStatusCodes: undefined,
       logRequestResponseAtLogLevel: LogLevel.INFO,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
@@ -334,7 +357,12 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
         const expectedResponse = {
           statusCode: error.httpStatus,
           headers: {hdr1: 'h1', hdr3: 'h3', hdr2: 'dh2'}, // merged headers
-          body: JSON.stringify({message: error.message, code: error.code, auditRef: error.auditRef, awsRequestId: awsContext.awsRequestId})
+          body: JSON.stringify({
+            message: error.message,
+            code: error.code,
+            auditRef: error.auditRef,
+            awsRequestId: awsContext.awsRequestId
+          })
         };
         t.deepEqual(response, expectedResponse, `response must be ${JSON.stringify(expectedResponse)}`);
         t.end();
@@ -377,14 +405,18 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
 
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
-    const createSettings = undefined;
-    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
+    const createSettings = () => ({handler: {toErrorResponse: toCustomErrorResponse}});
+    const createOptions = () => {
+      const options = copy(require('./api-lambdas-context-options-LEGACY.json'), deep);
+      options.handler = {
+        useLambdaProxy: true,
+        defaultHeaders: {hdr1: 'dh1', hdr2: 'dh2'},
+        allowedHttpStatusCodes: undefined
+      };
+      return options;
+    };
 
     const opts = {
-      useLambdaProxy: true,
-      defaultHeaders: {hdr1: 'dh1', hdr2: 'dh2'},
-      allowedHttpStatusCodes: undefined,
-      toErrorResponse: toCustomErrorResponse,
       logRequestResponseAtLogLevel: LogLevel.INFO,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',

@@ -3,8 +3,6 @@
 const arns = require('./arns');
 const getArnResources = arns.getArnResources;
 
-const appErrors = require('core-functions/app-errors');
-
 /**
  * Utilities for working with AWS Lambda:
  * - Enables extraction of function names, versions and, most importantly, aliases from AWS contexts and their invoked
@@ -25,9 +23,6 @@ exports.getAlias = getAlias;
 exports.getInvokedFunctionArn = getInvokedFunctionArn;
 exports.getInvokedFunctionArnFunctionName = getInvokedFunctionArnFunctionName;
 exports.getInvokedFunctionNameWithAliasOrVersion = getInvokedFunctionNameWithAliasOrVersion;
-
-// Function to assist with failing the callback of an AWS Lambda (not exposed via API Gateway) and preserve the information of the error thrown
-exports.failCallback = failCallback;
 
 /**
  * Returns the function name from the given AWS context
@@ -143,28 +138,4 @@ function getAlias(awsContext) {
   const aliasOrVersion = resources.aliasOrVersion;
   return aliasOrVersion && aliasOrVersion !== versionFromContext ? //&& aliasOrVersion !== version ?
     aliasOrVersion : '';
-}
-
-/**
- * Fails the given callback of an AWS Lambda, which is NOT exposed via API Gateway, with the given error, by first
- * attempting to convert the given error into one of the standard app errors (see {@linkcode core-functions/app-errors})
- * and then invoking the given lambdaCallback with a JSON stringified version of the converted error. The given AWS
- * context is used to add your Lambda's AWS request ID to the error.
- *
- * Note that this function must NOT be used for any Lambda invoked by API Gateway - for these you MUST instead use the
- * {@linkcode aws-core-utils/api-lambdas#failCallback} function.
- *
- * @see core-functions/app-errors.js
- *
- * @param {Function} lambdaCallback - the callback function passed as the last argument to your Lambda function on invocation.
- * @param {Error} error - the error with which you need to fail your Lambda
- * @param {AWSContext|undefined} [awsContext] - the AWS context passed as the second argument to your Lambda function on invocation
- * @param {string|undefined} [awsContext.awsRequestId] - the AWS context's request ID
- * @param {string|undefined} [message] - an optional message; will use error's message if not specified and needed
- * @param {string|undefined} [code] - an optional code; will use error's code if not specified and needed
- */
-function failCallback(lambdaCallback, error, awsContext, message, code) {
-  const appError = appErrors.toAppError(error, message, code);
-  if (awsContext && !appError.awsRequestId) appError.awsRequestId = awsContext.awsRequestId;
-  lambdaCallback(JSON.stringify(appError));
 }

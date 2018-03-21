@@ -28,7 +28,7 @@ function funcFactory(t, src) {
   return func;
 }
 
-const standardOptions = require('./sample-standard-options.json');
+const standardOptions = require('./contexts-standard-options.json');
 
 const standardSettings = {
   loggingSettings: {

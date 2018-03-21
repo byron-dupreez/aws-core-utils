@@ -106,7 +106,7 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = undefined;
-    const createOptions = () => require('./sample-api-handler-options-1.json');
+    const createOptions = () => require('./api-lambdas-context-options-1.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.INFO,
@@ -163,7 +163,7 @@ test('generateHandlerFunction simulating failure (with useLambdaProxy false & NO
 
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
-    const createOptions = () => require('./sample-api-handler-options-1.json');
+    const createOptions = () => require('./api-lambdas-context-options-1.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.TRACE,
@@ -257,7 +257,7 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
       preFailureCallback: preFailureCallback
     };
     const createSettings = () => ({handler: handlerSettings});
-    const createOptions = () => require('./sample-api-handler-options-2.json');
+    const createOptions = () => require('./api-lambdas-context-options-2.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.INFO,
@@ -316,7 +316,7 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = () => undefined;
-    const createOptions = () => require('./sample-api-handler-options-2.json');
+    const createOptions = () => require('./api-lambdas-context-options-2.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.INFO,
@@ -400,7 +400,7 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
       preFailureCallback: preFailureCallback
     };
     const createSettings = () => ({handler: handlerSettings});
-    const createOptions = () => require('./sample-api-handler-options-2.json');
+    const createOptions = () => require('./api-lambdas-context-options-2.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.INFO,

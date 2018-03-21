@@ -586,6 +586,16 @@
  */
 
 /**
+ * @typedef {Object} HandlerOpts - optional opts to use when generating a handler function
+ * @property {LogLevel|string|undefined} [logRequestResponseAtLogLevel] - an optional log level at which to log the
+ *           request (i.e. AWS event) and response; if log level is undefined or invalid, then logs neither
+ * @property {string|undefined} [invalidRequestMsg] - an optional message to log at warn level if your given function
+ *           (fn) throws a BadRequest
+ * @property {string|undefined} [failureMsg] - an optional message to log at error level on failure
+ * @property {string|undefined} [successMsg] an optional message to log at info level on success
+ */
+
+/**
  * @typedef {Object} HandlerOptions - options to be used to configure a standard handler context for an AWS Lambda
  *          `handler` function
  * @property {boolean|undefined} [useLambdaProxy] - whether your Lambda is using Lambda Proxy Integration or not

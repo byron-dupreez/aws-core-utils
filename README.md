@@ -1,4 +1,4 @@
-# aws-core-utils v7.2.0
+# aws-core-utils v8.0.0
 
 Core utilities for working with Amazon Web Services (AWS), including ARNs, regions, stages, Lambdas, AWS errors, stream events, Kinesis, DynamoDB.DocumentClients, etc.
 
@@ -67,34 +67,29 @@ const apiLambdas = require('aws-core-utils/api-lambdas');
 const isInstanceOf = require('core-functions/objects').isInstanceOf;
 const appErrors = require('core-functions/app-errors');
 const BadRequest = appErrors.BadRequest;
-const context = {}; // or your own pre-configured context
-const standardOptions = require('./test/context-options.json'); // with whatever options you want to use to configure stage handling, logging, custom settings, ...
-const standardSettings = undefined; // or whatever settings object you want to use to configure stage handling, logging, custom settings, ...
+
+const createContext = () => ({}); // or your own pre-configured context
+
+// To configure your handler to use Lambda Proxy integration and custom default response headers
+const createOptions = () => require('./test/api-lambdas-context-options-2.json'); // with whatever options you want to use to configure your handler, stage handling, logging, custom settings, ...
+
+const createSettings = () => undefined; // or whatever settings object you want to use to configure your handler, stage handling, logging, custom settings, ...
+
 function exampleFunction(event, context) { /* ... */ } // implement and name your own function that does the actual work
 
-// Simplest approach - generate your API Gateway exposed Lambda's handler function
-module.exports.handler = apiLambdas.generateHandlerFunction(context, standardSettings, standardOptions, exampleFunction);
-  
-// OR ... using all optional arguments to use Lambda Proxy integration with a custom default response header and to 
-// change the allowed HTTP status codes and customise logging in the handler function
 const opts = {
-  useLambdaProxy: true,
-  defaultHeaders: {myCustomHeader: 'myCustomHeaderValue'},
-  allowedHttpStatusCodes: [400, 404, 500],
-  logRequestResponseAtLogLevel: 'info', 
+  logRequestResponseAtLogLevel: 'INFO', 
   invalidRequestMsg: 'Invalid request ...', 
   failureMsg: 'Failed to ...', 
   successMsg: 'Finished ...'
 };
-module.exports.handler = apiLambdas.generateHandlerFunction(context, standardSettings, standardOptions, exampleFunction, opts); 
 
+// Simplest approach - generate your API Gateway exposed Lambda's handler function
+exports.handler = apiLambdas.generateHandlerFunction(createContext, createSettings, createOptions, exampleFunction, opts);
 
-// OR ... develop your own Lambda handler function (e.g. simplistic example below - see apiLamdas.generateHandlerFunction for a better version)
-module.exports.handler = (event, awsContext, callback) => {
+// OR ... develop your own Lambda handler function (e.g. simplistic example below - see apiLamdas.generateHandlerFunction for a MUCH better version)
+exports.handler = (event, awsContext, callback) => {
   const opts = {
-    // useLambdaProxy: false,
-    // defaultHeaders: undefined
-    // allowedHttpStatusCodes: undefined,
     // logRequestResponseAtLogLevel: 'info', 
     // invalidRequestMsg: 'Invalid request ...', 
     // failureMsg: 'Failed to ...', 
@@ -102,15 +97,15 @@ module.exports.handler = (event, awsContext, callback) => {
   };
   
   // Configure a standard context
-  const context = {};
+  let context = {};
   try {
-    apiLambdas.configureStandardContext(context, standardSettings, standardOptions, event, awsContext);
+    context = apiLambdas.configureHandlerContext(createContext, createSettings, createOptions, event, awsContext);
     
     // ... execute Lambda specific code passing the context to your functions as needed
     exampleFunction(event, context)
       .then(response => {
         context.info(opts.successMsg || 'Finished ...');
-        apiLambdas.succeedCallback(callback, response, opts);
+        apiLambdas.succeedLambdaCallback(callback, response, event, context);
       })
       .catch(err => {
         // Fail your Lambda callback and map the error to one of the default set of HTTP status codes:
@@ -120,30 +115,26 @@ module.exports.handler = (event, awsContext, callback) => {
         } else {
           context.error(opts.failureMsg || 'Failed to ...', err);
         }
-        apiLambdas.failCallback(callback, err, awsContext, undefined, undefined, opts);
+        apiLambdas.failLambdaCallback(callback, err, event, context);
       });
   
   } catch (err) {
     // Fail your Lambda callback and map the error to one of the default set of HTTP status codes:
     // i.e. [400, 401, 403, 404, 408, 429, 500, 502, 503, 504]
     context.error('Failed to ...', err);
-    apiLambdas.failCallback(callback, err, awsContext, undefined, undefined, opts);
+    apiLambdas.failLambdaCallback(callback, err, event, context);
   }
 };
-```
-ALTERNATIVE opts for `succeedCallback` & `failCallback`: 
-```js
-const apiLambdas = require('aws-core-utils/api-lambdas');
-// ...
+
+// ALTERNATIVE handler options for `succeedLambdaCallback` & `failLambdaCallback`: 
 
 // Fail your Lambda callback: using Lambda Proxy integration; using a custom response header; and map the error to one of a specified set of HTTP status codes
-const opts = {
+context.handler = { // simplistic example - should rather be set through an appropriate `context-options.json` file
   useLambdaProxy: true,
   defaultHeaders: {MyCustomHeader: 'MyCustomHeaderValue'},
   allowedHttpStatusCodes: [400, 404, 418, 500, 508]
 };
-
-apiLambdas.failCallback(callback, err, awsContext, 'My error msg', 'MyErrorCode', opts);
+apiLambdas.failLambdaCallback(callback, new Error('Boom'), event, context);
 ```
 
 * To use the AWS ARN utilities
@@ -156,11 +147,15 @@ const arnService = arns.getArnService(arn);
 const arnRegion = arns.getArnRegion(arn);
 const arnAccountId = arns.getArnAccountId(arn);
 const arnResources = arns.getArnResources(arn);
+
+assert(arnComponent && arnPartition && arnService && arnRegion && arnAccountId && arnResources);
 ```
 
 * To use the AWS errors utilities 
 ```js
 const awsErrors = require('aws-core-utils/aws-errors');
+
+assert(awsErrors);
 ```
 
 * To use the `contexts.js` module:
@@ -220,6 +215,8 @@ const optionsUsed2 = dynamoDBDocClientCache.getDynamoDBDocClientOptionsUsed('us-
 
 // To delete and remove a cached DynamoDB.DocumentClient instance from the cache
 const deleted = dynamoDBDocClientCache.deleteDynamoDBDocClient('eu-west-1');
+
+assert(dynamoDBDocClient && dynamoDBDocClient1 && dynamoDBDocClient2 && optionsUsed1 && optionsUsed2 && deleted);
 ```
 
 * To use the Kinesis cache to configure and cache an AWS Kinesis instance per region
@@ -258,6 +255,8 @@ const optionsUsed2 = kinesisCache.getKinesisOptionsUsed('us-west-1');
 
 // To delete and remove a cached Kinesis instance from the cache
 const deleted = kinesisCache.deleteKinesis('eu-west-1');
+
+assert(kinesis && kinesis1 && kinesis2 && optionsUsed1 && optionsUsed2 && deleted);
 ```
 * To use the KMS cache to configure and cache an AWS KMS instance per region
 ```js
@@ -295,6 +294,8 @@ const optionsUsed2 = kmsCache.getKMSOptionsUsed('us-west-1');
 
 // To delete and remove a cached KMS instance from the cache
 const deleted = kmsCache.deleteKMS('eu-west-1');
+
+assert(kms && kms1 && kms2 && optionsUsed1 && optionsUsed2 && deleted);
 ```
 
 * To use the AWS.KMS utilities
@@ -368,6 +369,8 @@ const optionsUsed2 = lambdaCache.getLambdaOptionsUsed('us-west-1');
 
 // To delete and remove a cached Lambda instance from the cache
 const deleted = lambdaCache.deleteLambda('eu-west-1');
+
+assert(lambda && lambda1 && lambda2 && optionsUsed1 && optionsUsed2 && deleted);
 ```
 
 * To use the AWS.Lambda utilities
@@ -406,9 +409,7 @@ const functionNameVersionAndAlias = lambdas.getFunctionNameVersionAndAlias(awsCo
 const invokedFunctionArn = lambdas.getInvokedFunctionArn(awsContext);
 const invokedFunctionArnFunctionName = lambdas.getInvokedFunctionArnFunctionName(awsContext);
 
-// Fail a Lambda's callback with a standard error and preserve HTTP status codes (for non-API Gateway Lambdas) 
-// See core-functions/app-errors.js for standard errors to use
-lambdas.failCallback(lambdaCallback, error, awsContext, message, code);
+assert(alias && functionName && functionVersion && functionNameVersionAndAlias && invokedFunctionArn && invokedFunctionArnFunctionName);
 ```
 
 * To get the current AWS region & configure it on a context
@@ -565,4 +566,4 @@ $ tape test/*.js
 See the [package source](https://github.com/byron-dupreez/aws-core-utils) for more details.
 
 ## Changes
-See [release_notes.md](./release_notes.md)
+See [CHANGES.md](CHANGES.md)

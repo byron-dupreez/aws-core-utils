@@ -62,3 +62,7 @@ typings/
 *.iml
 
 .serverless
+
+# All test-related files
+test/
+copy.sh

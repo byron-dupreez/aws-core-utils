@@ -1,5 +1,32 @@
 ## Changes
 
+### 8.0.0
+- Breaking changes to `api-lambdas` module:
+  - Removed deprecated `succeedCallback` function - replaced by `succeedLambdaCallback` function
+  - Removed deprecated `failCallback` function - replaced by `failLambdaCallback` function
+  - Removed deprecated `failCallbackForApiGateway` function - replaced by `failLambdaCallback` function
+  - Removed `useLambdaProxy`, `defaultHeaders` & `allowedHttpStatusCodes` properties and `toErrorResponse` function from 
+    the `opts` argument of the `generateHandlerFunction` function in favour of rather configuring these properties via 
+    the `generateHandlerFunction` function's existing `createSettings` & `createOptions` arguments
+  - Removed `opts` from the `configureHandlerContext` function in favour of rather configuring its properties via the 
+    function's existing `createSettings` & `createOptions` arguments
+  - Dropped support for the legacy 6th `allowedHttpStatusCodes` argument of the `generateHandlerFunction` function -
+    i.e. any code still using legacy 5th to 9th parameters: `logRequestResponseAtLogLevel`, `allowedHttpStatusCodes`, 
+    `invalidRequestMsg`, `failureMsg` & `successMsg` (instead of `opts`) will now ignore any `allowedHttpStatusCodes` 
+    argument  
+- Breaking changes to `other-lambdas` module:
+  - Removed `toErrorResponse` function from the `opts` argument of the `generateHandlerFunction` function in favour of 
+    rather configuring the `generateHandlerFunction` function with the `toErrorResponse` function (and others) via its 
+    existing `createSettings` argument
+  - Removed `opts` from the `configureHandlerContext` function in favour of rather configuring its `toErrorResponse` 
+    function via the `configureHandlerContext` function's existing `createSettings` argument
+- Breaking changes to `lambdas` module:
+  - Removed out-of-date `failCallback` function - replaced by `failLambdaCallback` & other functions of the 
+    `other-lambdas` module
+- Added `.npmignore`
+- Renamed `release_notes.md` to `CHANGES.md`
+- Updated dependencies
+
 ### 7.2.0
 - Changes to `api-lambdas` module:
   - Added support for configuring a custom `preSuccessCallback` function to be run before succeeding the Lambda callback

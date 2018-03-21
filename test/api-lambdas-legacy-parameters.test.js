@@ -91,7 +91,7 @@ test('generateHandlerFunction simulating successful response (with LEGACY parame
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = undefined;
-    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
+    const createOptions = () => require('./api-lambdas-context-options-LEGACY.json');
     const handler = apiLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, LogLevel.INFO);
     //, undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
 
@@ -141,7 +141,7 @@ test('generateHandlerFunction simulating invalid request (with LEGACY parameters
 
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
-    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
+    const createOptions = () => require('./api-lambdas-context-options-LEGACY.json');
     const handler = apiLambdas.generateHandlerFunction(createContext, undefined, createOptions, fn, LogLevel.DEBUG,
       undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
 
@@ -201,7 +201,7 @@ test('generateHandlerFunction simulating failure (with LEGACY parameters, i.e. i
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = undefined;
-    const createOptions = () => require('./sample-api-handler-options-LEGACY.json');
+    const createOptions = () => require('./api-lambdas-context-options-LEGACY.json');
     const handler = apiLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, LogLevel.TRACE,
       undefined, 'Invalid do something request', 'Failed to do something useful', 'Did something useful');
 

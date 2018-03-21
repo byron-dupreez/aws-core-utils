@@ -60,16 +60,7 @@ exports.failLambdaCallback = failLambdaCallback;
  *        options from which to copy initial options to use)
  * @param {function(event: AWSEvent, context: StandardHandlerContext)} fn - your function that must accept the AWS event and a
  *        standard context and ideally return a Promise
- * @param {Object|LogLevel|string|undefined} [opts] - optional opts to use (or legacy LogLevel/string
- *        `logRequestResponseAtLogLevel` parameter)
- * @param {LogLevel|string|undefined} [opts.logRequestResponseAtLogLevel] - an optional log level at which to log the
- *        request (i.e. AWS event) and response; if log level is undefined or invalid, then logs neither
- * @param {string|undefined} [opts.invalidRequestMsg] - an optional message to log at warn level if your given function
- *        (fn) throws a BadRequest
- * @param {string|undefined} [opts.failureMsg] - an optional message to log at error level on failure
- * @param {string|undefined} [opts.successMsg] an optional message to log at info level on success
- * @param {ToErrorResponse|undefined} [opts.toErrorResponse] - an optional function to use to convert an AppError into
- *        an appropriate error response object (to be subsequently stringified & returned)
+ * @param {HandlerOpts|Object|undefined} [opts] - optional opts to use
  * @returns {AwsLambdaHandlerFunction} a handler function for your API Gateway exposed Lambda
  */
 function generateHandlerFunction(createContext, createSettings, createOptions, fn, opts) {
@@ -84,7 +75,7 @@ function generateHandlerFunction(createContext, createSettings, createOptions, f
   function handler(event, awsContext, callback) {
     let context;
     try {
-      context = configureHandlerContext(createContext, createSettings, createOptions, event, awsContext, opts);
+      context = configureHandlerContext(createContext, createSettings, createOptions, event, awsContext);
 
       // Optionally log the request
       const logLevel = opts.logRequestResponseAtLogLevel;
@@ -141,10 +132,9 @@ function generateHandlerFunction(createContext, createSettings, createOptions, f
  *        options from which to copy initial options to use)
  * @param {Object} event - the AWS event passed to your handler
  * @param {Object} awsContext - the AWS context passed to your handler
- * @param {HandlerSettings|HandlerOptions|undefined} [opts] - optional opts to use
  * @return {StandardHandlerContext} the handler context to use
  */
-function configureHandlerContext(createContext, createSettings, createOptions, event, awsContext, opts) {
+function configureHandlerContext(createContext, createSettings, createOptions, event, awsContext) {
   // Configure the context as a standard context
   let context = typeof createContext === 'function' ? createContext() :
     createContext && typeof createContext === 'object' ? copy(createContext, deep) : {};
@@ -159,9 +149,8 @@ function configureHandlerContext(createContext, createSettings, createOptions, e
   // Configure the context as a standard context
   contexts.configureStandardContext(context, settings, options, event, awsContext, false);
 
-  // Merge the relevant opts into handler options, then merge handler options into handler settings and finally merge
-  // the result into context.handler
-  const handlerOptions = mergeHandlerOpts(opts, (options && options.handler) || {});
+  // Merge the handler options into the handler settings and finally merge their result into context.handler
+  const handlerOptions = (options && options.handler) || {};
   const handlerSettings = settings && settings.handler ?
     mergeHandlerOpts(handlerOptions, settings.handler) : handlerOptions;
   context.handler = context.handler ? mergeHandlerOpts(handlerSettings, context.handler) : handlerSettings;
@@ -172,7 +161,7 @@ function configureHandlerContext(createContext, createSettings, createOptions, e
 /**
  * Copies the relevant handler-related values from the given `from` handler opts to the given `to` handler opts, but
  * ONLY if the same options or settings do NOT already exist in the `to` handler opts.
- * @param {HandlerSettings|HandlerOptions|Object} from - the source handler configuration
+ * @param {HandlerSettings|HandlerOptions|Object|undefined} [from] - the source handler configuration
  * @param {HandlerSettings|HandlerOptions} to - the destination handler configuration
  */
 function mergeHandlerOpts(from, to) {

@@ -103,7 +103,7 @@ test('generateHandlerFunction simulating successful response', t => {
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = undefined;
-    const createOptions = () => require('./sample-other-handler-options.json');
+    const createOptions = () => require('./other-lambdas-context-options.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.INFO,
@@ -161,7 +161,7 @@ test('generateHandlerFunction simulating failure', t => {
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = undefined;
-    const createOptions = () => require('./sample-other-handler-options.json');
+    const createOptions = () => require('./other-lambdas-context-options.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.TRACE,
@@ -245,7 +245,7 @@ test('generateHandlerFunction simulating successful response (with custom settin
       preFailureCallback: preFailureCallback
     };
     const createSettings = () => ({handler: handlerSettings});
-    const createOptions = () => require('./sample-other-handler-options.json');
+    const createOptions = () => require('./other-lambdas-context-options.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.INFO,
@@ -321,7 +321,7 @@ test('generateHandlerFunction simulating failure (with custom settings)', t => {
       preFailureCallback: preFailureCallback
     };
     const createSettings = () => ({handler: handlerSettings});
-    const createOptions = () => require('./sample-other-handler-options.json');
+    const createOptions = () => require('./other-lambdas-context-options.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.TRACE,
