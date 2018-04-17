@@ -1,5 +1,8 @@
 ## Changes
 
+### 8.0.1
+- Updated `aws-core-test-utils` dependency
+
 ### 8.0.0
 - Breaking changes to `api-lambdas` module:
   - Removed deprecated `succeedCallback` function - replaced by `succeedLambdaCallback` function
