@@ -1,5 +1,8 @@
 ## Changes
 
+### 8.0.2
+- Updated `aws-sdk` dev dependency to match latest used in AWS Lambda
+
 ### 8.0.1
 - Updated `aws-core-test-utils` dependency
 
