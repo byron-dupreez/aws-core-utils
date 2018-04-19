@@ -6,11 +6,13 @@ const copying = require('core-functions/copying');
 const copy = copying.copy;
 const merging = require('core-functions/merging');
 const merge = merging.merge;
+
 const isInstanceOf = require('core-functions/objects').isInstanceOf;
 
 const appErrors = require('core-functions/app-errors');
 const AppError = appErrors.AppError;
 const BadRequest = appErrors.BadRequest;
+
 const strings = require('core-functions/strings');
 const isString = strings.isString;
 const isNotBlank = strings.isNotBlank;
@@ -99,19 +101,25 @@ function generateHandlerFunction(createContext, createSettings, createOptions, f
       // Optionally log the request
       const logLevel = opts.logRequestResponseAtLogLevel;
       if (logLevel && logging.isValidLogLevel(logLevel)) {
-        context.log(logLevel, 'Request:', JSON.stringify(event));
+        log(context, logLevel, 'Request:', stringify(event));
       }
 
-      // Execute the given function
-      return Promises.try(() => fn(event, context))
+      // If a `postConfigure` function was configured then execute it now, BEFORE executing the given function
+      return executePostConfigure(event, context)
+        .then(c => {
+          context = c || context;
+
+          // Execute the given function
+          return fn(event, context);
+        })
         .then(response => {
           // Optionally log the response
           if (logLevel && logging.isValidLogLevel(logLevel)) {
-            context.log(logLevel, 'Response:', JSON.stringify(response));
+            log(context, logLevel, 'Response:', stringify(response));
           }
 
           // Log the given success message (if any)
-          if (isNotBlank(opts.successMsg)) context.info(opts.successMsg);
+          if (isNotBlank(opts.successMsg)) log(context, LogLevel.INFO, opts.successMsg);
 
           succeedLambdaCallback(callback, response, event, context);
         })
@@ -119,11 +127,11 @@ function generateHandlerFunction(createContext, createSettings, createOptions, f
           // Fail the Lambda callback
           if (isInstanceOf(err, BadRequest) || appErrors.getHttpStatus(err) === 400) {
             // Log the invalid request
-            context.warn(isNotBlank(opts.invalidRequestMsg) ? opts.invalidRequestMsg : 'Invalid request', '-', err.message);
+            log(context, LogLevel.WARN, isNotBlank(opts.invalidRequestMsg) ? opts.invalidRequestMsg : 'Invalid request', '-', err.message);
             failLambdaCallback(callback, err, event, context);
           } else {
             // Log the error encountered
-            context.error(isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
+            log(context, LogLevel.ERROR, isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
             failLambdaCallback(callback, err, event, context);
           }
         });
@@ -200,6 +208,9 @@ function mergeHandlerOpts(from, to) {
     if (from.toErrorResponse && !to.toErrorResponse) {
       to.toErrorResponse = from.toErrorResponse;
     }
+    if (from.postConfigure && !to.postConfigure) {
+      to.postConfigure = from.postConfigure;
+    }
     if (from.preSuccessCallback && !to.preSuccessCallback) {
       to.preSuccessCallback = from.preSuccessCallback;
     }
@@ -208,6 +219,28 @@ function mergeHandlerOpts(from, to) {
     }
   }
   return to;
+}
+
+/**
+ * Executes the custom configured `postConfigure` function (if any).
+ * @param {AWSEvent} event - the AWS event passed to your handler
+ * @param {StandardHandlerContext} context - the context to use
+ * @param {PostConfigure|undefined} [context.handler.postConfigure] - an optional function to be used by an AWS Lambda
+ *        `handler` to add any additional configuration needed to the context AFTER the primary configuration of the
+ *        context has completed and BEFORE the main function is executed
+ * @return {Promise.<*>} a promise of anything - any errors are logged and result in rejections
+ */
+function executePostConfigure(event, context) {
+  const handler = context && context.handler;
+  const postConfigure = handler && handler.postConfigure;
+  return typeof postConfigure === 'function' ?
+    Promises.try(() => postConfigure(event, context))
+      .then(c => c || context)
+      .catch(err => {
+        log(context, LogLevel.ERROR, err);
+        throw err;
+      }) :
+    Promise.resolve(context);
 }
 
 /**
@@ -220,9 +253,11 @@ function mergeHandlerOpts(from, to) {
  * @return {Promise.<*>} a promise of anything - any errors are logged, but no rejections can escape
  */
 function executePreSuccessCallback(response, event, context) {
-  const preSuccessCallback = context.handler && context.handler.preSuccessCallback;
+  const handler = context && context.handler;
+  const preSuccessCallback = handler && handler.preSuccessCallback;
   return typeof preSuccessCallback === 'function' ?
-    Promises.try(() => preSuccessCallback(response, event, context)).catch(err => context.error(err)) :
+    Promises.try(() => preSuccessCallback(response, event, context))
+      .catch(err => log(context, LogLevel.ERROR, err)) :
     Promise.resolve();
 }
 
@@ -237,9 +272,11 @@ function executePreSuccessCallback(response, event, context) {
  * @return {Promise.<*>} a promise of anything - any errors are logged, but no rejections can escape
  */
 function executePreFailureCallback(error, errorResponse, event, context) {
-  const preFailureCallback = context.handler && context.handler.preFailureCallback;
+  const handler = context && context.handler;
+  const preFailureCallback = handler && handler.preFailureCallback;
   return typeof preFailureCallback === 'function' ?
-    Promises.try(() => preFailureCallback(error, errorResponse, event, context)).catch(err => context.error(err)) :
+    Promises.try(() => preFailureCallback(error, errorResponse, event, context))
+      .catch(err => log(context, LogLevel.ERROR, err)) :
     Promise.resolve();
 }
 
@@ -252,10 +289,11 @@ function executePreFailureCallback(error, errorResponse, event, context) {
  * @param {StandardHandlerContext} context - the context to use
  */
 function succeedLambdaCallback(callback, response, event, context) {
-  if (context.handler && context.handler.useLambdaProxy) {
+  const handler = context && context.handler;
+  if (handler && handler.useLambdaProxy) {
     const statusCode = response && isNotBlank(response.statusCode) ? response.statusCode : 200;
     const body = (response && response.body) || response || {};
-    const proxyResponse = toLambdaProxyResponse(statusCode, response && response.headers, body, context.handler.defaultHeaders);
+    const proxyResponse = toLambdaProxyResponse(statusCode, response && response.headers, body, handler.defaultHeaders);
     executePreSuccessCallback(proxyResponse, event, context)
       .then(() => callback(null, proxyResponse));
   } else {
@@ -282,20 +320,22 @@ function succeedLambdaCallback(callback, response, event, context) {
  */
 function failLambdaCallback(callback, error, event, context) {
   // Convert the error into an "API" error
-  const allowedHttpStatusCodes = context.handler && context.handler.allowedHttpStatusCodes;
+  const handler = context && context.handler;
+  const allowedHttpStatusCodes = handler && handler.allowedHttpStatusCodes;
   const apiError = appErrors.toAppErrorForApiGateway(error, undefined, undefined, allowedHttpStatusCodes);
 
   // Resolve the AWS request id (if available)
-  apiError.awsRequestId = trim(apiError.awsRequestId) || trim(error.awsRequestId) || trim(context.awsRequestId) ||
-    (context.awsContext && trim(context.awsContext.awsRequestId)) || undefined;
+  apiError.awsRequestId = trim(apiError.awsRequestId) || trim(error.awsRequestId) ||
+    (context && (trim(context.awsRequestId) || (context.awsContext && trim(context.awsContext.awsRequestId)))) ||
+    undefined;
 
   // Resolve the audit reference (if available)
   apiError.auditRef = trim(apiError.auditRef) || trim(error.auditRef) || undefined;
 
-  if (context.handler && context.handler.useLambdaProxy) {
+  if (handler && handler.useLambdaProxy) {
     const statusCode = apiError.httpStatus;
     const body = toCustomOrDefaultErrorResponseBody(apiError, event, context);
-    const defaultHeaders = context.handler && context.handler.defaultHeaders;
+    const defaultHeaders = handler.defaultHeaders;
     const proxyResponse = toLambdaProxyResponse(statusCode, error.headers, body, defaultHeaders);
     executePreFailureCallback(apiError, proxyResponse, event, context)
       .then(() => callback(null, proxyResponse));
@@ -340,12 +380,13 @@ function toLambdaProxyResponse(statusCode, headers, body, defaultHeaders) {
  */
 function toCustomOrDefaultErrorResponseBody(error, event, context) {
   try {
-    const toErrorResponse = context.handler && context.handler.toErrorResponse;
+    const handler = context && context.handler;
+    const toErrorResponse = handler && handler.toErrorResponse;
     return typeof toErrorResponse === 'function' ?
       toErrorResponse(error, event, context) || toDefaultErrorResponseBody(error) :
       toDefaultErrorResponseBody(error);
   } catch (err) {
-    console.error('ERROR', err);
+    log(context, LogLevel.ERROR, err);
     // fallback to default function if given function fails
     return toDefaultErrorResponseBody(error);
   }
@@ -363,12 +404,13 @@ function toCustomOrDefaultErrorResponseBody(error, event, context) {
  */
 function toCustomOrDefaultErrorResponse(error, event, context) {
   try {
-    const toErrorResponse = context.handler && context.handler.toErrorResponse;
+    const handler = context && context.handler;
+    const toErrorResponse = handler && handler.toErrorResponse;
     return typeof toErrorResponse === 'function' ?
       toErrorResponse(error, event, context) || toDefaultErrorResponse(error) :
       toDefaultErrorResponse(error);
   } catch (err) {
-    console.error('ERROR', err);
+    log(context, LogLevel.ERROR, err);
     // fallback to default function if given function fails
     return toDefaultErrorResponse(error);
   }
@@ -397,4 +439,13 @@ function toDefaultErrorResponseBody(error) {
  */
 function toDefaultErrorResponse(error) {
   return error && error.toJSON();
+}
+
+function stringify(o) {
+  try {
+    return JSON.stringify(o);
+  } catch (err) {
+    log(context, LogLevel.ERROR, err);
+    return strings.stringify(o);
+  }
 }

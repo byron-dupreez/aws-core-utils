@@ -28,21 +28,21 @@ function funcFactory(t, src) {
   return func;
 }
 
-const standardOptions = require('./contexts-standard-options.json');
+const standardOptions = require('./contexts-standard-options-legacy.json');
 
 const standardSettings = {
-  logging: {
+  loggingSettings: {
     logLevel: "error",
     useLevelPrefixes: false,
     useConsoleTrace: true
   },
-  stageHandling: {
+  stageHandlingSettings: {
     streamNameStageSeparator: "-",
     resourceNameStageSeparator: "-",
     extractInCase: "upper",
     injectInCase: "lower"
   },
-  custom: {
+  customSettings: {
     myCustomSetting1: "myCustomSetting1",
     myCustomSetting3: "myCustomSetting3"
   },

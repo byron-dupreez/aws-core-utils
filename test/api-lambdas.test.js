@@ -248,11 +248,21 @@ test('generateHandlerFunction simulating successful response (with useLambdaProx
     const preFailureCallback = function preFailureCallback(error1, errorResponse1, event1, context1) {
       t.fail(`### preFailureCallback must NOT be invoked with error (${error1})`);
     };
+    const postConfigure = function postConfigure(event1, context1) {
+      t.pass(`*** postConfigure must be invoked`);
+      t.equal(event1, event, `postConfigure event1 must be event`);
+      t.equal(context1, context, `postConfigure context1 must be context`);
+
+      t.equals(context1.handler.postConfigure, postConfigure, `context1.handler.postConfigure must be postConfigure`);
+      t.equals(context1.handler.preSuccessCallback, preSuccessCallback, `context1.handler.preSuccessCallback must be preSuccessCallback`);
+      t.equals(context1.handler.preFailureCallback, preFailureCallback, `context1.handler.preFailureCallback must be preFailureCallback`);
+    };
 
     // Create a sample AWS Lambda handler function
     const createContext = () => context;
     const handlerSettings = {
       toErrorResponse: toCustomErrorResponse,
+      postConfigure: postConfigure,
       preSuccessCallback: preSuccessCallback,
       preFailureCallback: preFailureCallback
     };
@@ -391,11 +401,21 @@ test('generateHandlerFunction simulating failure response (with useLambdaProxy t
       t.equal(event1, event, `preFailureCallback event1 must be event`);
       t.equal(context1, context, `preFailureCallback context1 must be context`);
     };
+    const postConfigure = function postConfigure(event1, context1) {
+      t.pass(`*** postConfigure must be invoked`);
+      t.equal(event1, event, `postConfigure event1 must be event`);
+      t.equal(context1, context, `postConfigure context1 must be context`);
+
+      t.equals(context1.handler.postConfigure, postConfigure, `context1.handler.postConfigure must be postConfigure`);
+      t.equals(context1.handler.preSuccessCallback, preSuccessCallback, `context1.handler.preSuccessCallback must be preSuccessCallback`);
+      t.equals(context1.handler.preFailureCallback, preFailureCallback, `context1.handler.preFailureCallback must be preFailureCallback`);
+    };
 
     // Create a sample AWS Lambda handler function
     const createContext = () => context;
     const handlerSettings = {
       toErrorResponse: toCustomErrorResponse,
+      postConfigure: postConfigure,
       preSuccessCallback: preSuccessCallback,
       preFailureCallback: preFailureCallback
     };

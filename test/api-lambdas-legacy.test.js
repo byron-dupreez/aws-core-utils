@@ -1,14 +1,17 @@
 'use strict';
 
 /**
- * Unit tests for aws-core-utils/other-lambdas.js
+ * Unit tests for aws-core-utils/api-lambdas.js
  * @author Byron du Preez
  */
 
 const test = require('tape');
 
 // The test subject
-const otherLambdas = require('../other-lambdas');
+const apiLambdas = require('../api-lambdas');
+
+const appErrors = require('core-functions/app-errors');
+const BadRequest = appErrors.BadRequest;
 
 const Promises = require('core-functions/promises');
 
@@ -26,7 +29,7 @@ const samples = require('./samples');
 const sampleInvokedFunctionArn = samples.sampleInvokedFunctionArn;
 const sampleAwsContext = samples.sampleAwsContext;
 
-// const uuid = require('uuid');
+const uuid = require('uuid');
 
 function sampleFunction(resolvedResponse, rejectedError, ms) {
   if (!ms) ms = 1;
@@ -82,10 +85,10 @@ function toCustomErrorResponse(error, event, context) {
 }
 
 // =====================================================================================================================
-// generateHandlerFunction simulating successful response
+// generateHandlerFunction simulating successful response (with useLambdaProxy false & NON-legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating successful response', t => {
+test('generateHandlerFunction simulating successful response (with useLambdaProxy false & NON-legacy parameters & NON-legacy opts)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -103,7 +106,7 @@ test('generateHandlerFunction simulating successful response', t => {
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
     const createSettings = undefined;
-    const createOptions = () => require('./other-lambdas-context-options.json');
+    const createOptions = () => require('./api-lambdas-context-options-1-legacy.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.INFO,
@@ -112,7 +115,7 @@ test('generateHandlerFunction simulating successful response', t => {
       successMsg: 'Did something useful'
     };
 
-    const handler = otherLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, opts);
+    const handler = apiLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, opts);
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
     const handlerWithPromise = Promises.wrap(handler);
@@ -140,10 +143,10 @@ test('generateHandlerFunction simulating successful response', t => {
 });
 
 // =====================================================================================================================
-// generateHandlerFunction simulating failure
+// generateHandlerFunction simulating failure (with useLambdaProxy false & NON-legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating failure', t => {
+test('generateHandlerFunction simulating failure (with useLambdaProxy false & NON-legacy parameters & NON-legacy opts)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
@@ -160,8 +163,7 @@ test('generateHandlerFunction simulating failure', t => {
 
     // Create a sample AWS Lambda handler function
     const createContext = () => ({});
-    const createSettings = undefined;
-    const createOptions = () => require('./other-lambdas-context-options.json');
+    const createOptions = () => require('./api-lambdas-context-options-1-legacy.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.TRACE,
@@ -170,7 +172,7 @@ test('generateHandlerFunction simulating failure', t => {
       successMsg: 'Did something useful'
     };
 
-    const handler = otherLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, opts);
+    const handler = apiLambdas.generateHandlerFunction(createContext, undefined, createOptions, fn, opts);
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
     const handlerWithPromise = Promises.wrap(handler);
@@ -206,23 +208,33 @@ test('generateHandlerFunction simulating failure', t => {
 });
 
 // =====================================================================================================================
-// generateHandlerFunction simulating successful response (with custom settings)
+// generateHandlerFunction simulating successful response (with useLambdaProxy true & NON-legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating successful response (with custom settings)', t => {
+test('generateHandlerFunction simulating successful response (with useLambdaProxy true & NON-legacy parameters & NON-legacy opts)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
 
     // Create sample AWS event and AWS context
-    const event = {body: {abc: 123}};
+    const event = require('./sample-lamba-proxy-request.json');
     const invokedFunctionArn = sampleInvokedFunctionArn(region, 'myLambdaFunctionName', 'dev77');
     const awsContext = sampleAwsContext('myLambdaFunctionName', '1.0.1', invokedFunctionArn, 500);
 
-    const expectedResponse = {def: 456};
+    const body = {def: 456};
+    const response = {
+      // statusCode: 200,
+      headers: {hdr1: 'h1', hdr3: 'h3'},
+      body: body
+    };
+    const expectedResponse = {
+      statusCode: 200,
+      headers: {hdr1: 'h1', hdr3: 'h3', hdr2: 'dh2'}, // merged headers
+      body: JSON.stringify(body)
+    };
 
     // Create a sample function to be executed within the Lambda handler function
-    const fn = sampleFunction(expectedResponse, undefined);
+    const fn = sampleFunction(response, undefined);
 
     const context = {};
     const preSuccessCallback = function preSuccessCallback(response1, event1, context1) {
@@ -255,7 +267,7 @@ test('generateHandlerFunction simulating successful response (with custom settin
       preFailureCallback: preFailureCallback
     };
     const createSettings = () => ({handler: handlerSettings});
-    const createOptions = () => require('./other-lambdas-context-options.json');
+    const createOptions = () => require('./api-lambdas-context-options-2-legacy.json');
 
     const opts = {
       logRequestResponseAtLogLevel: LogLevel.INFO,
@@ -263,8 +275,7 @@ test('generateHandlerFunction simulating successful response (with custom settin
       failedMsg: 'Failed to do something useful',
       successMsg: 'Did something useful'
     };
-
-    const handler = otherLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, opts);
+    const handler = apiLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, opts);
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
     const handlerWithPromise = Promises.wrap(handler);
@@ -273,7 +284,7 @@ test('generateHandlerFunction simulating successful response (with custom settin
     handlerWithPromise(event, awsContext)
       .then(response => {
         t.pass(`handler should have passed`);
-        t.equal(response, expectedResponse, `response must be ${JSON.stringify(expectedResponse)}`);
+        t.deepEqual(response, expectedResponse, `response must be ${JSON.stringify(expectedResponse)}`);
         t.end();
       })
       .catch(err => {
@@ -292,23 +303,91 @@ test('generateHandlerFunction simulating successful response (with custom settin
 });
 
 // =====================================================================================================================
-// generateHandlerFunction simulating failure (with custom settings)
+// generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters)
 // =====================================================================================================================
 
-test('generateHandlerFunction simulating failure (with custom settings)', t => {
+test('generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters & NON-legacy opts)', t => {
   try {
     // Set up environment for testing
     const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
 
     // Create sample AWS event and AWS context
-    const event = {body: {abc: 123}};
+    const event = require('./sample-lamba-proxy-request.json');
     const invokedFunctionArn = sampleInvokedFunctionArn(region, 'myLambdaFunctionName', 'dev77');
     const awsContext = sampleAwsContext('myLambdaFunctionName', '1.0.1', invokedFunctionArn, 500);
 
-    const expectedError = new Error('Kaboom');
+    const error = new BadRequest('Invalid request');
+    error.headers = {hdr1: 'h1', hdr3: 'h3'};
+    error.auditRef = uuid();
 
     // Create a sample function to be executed within the Lambda handler function
-    const fn = sampleFunction(undefined, expectedError);
+    const fn = sampleFunction(undefined, error);
+
+    // Create a sample AWS Lambda handler function
+    const createContext = () => ({});
+    const createSettings = () => undefined;
+    const createOptions = () => require('./api-lambdas-context-options-2-legacy.json');
+
+    const opts = {
+      logRequestResponseAtLogLevel: LogLevel.INFO,
+      invalidRequestMsg: 'Invalid do something request',
+      failedMsg: 'Failed to do something useful',
+      successMsg: 'Did something useful'
+    };
+
+    const handler = apiLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, opts);
+
+    // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
+    const handlerWithPromise = Promises.wrap(handler);
+
+    // Invoke the handler function
+    handlerWithPromise(event, awsContext)
+      .then(response => {
+        t.pass(`handler should have passed`);
+
+        const expectedResponse = {
+          statusCode: error.httpStatus,
+          headers: {hdr1: 'h1', hdr3: 'h3', hdr2: 'dh2'}, // merged headers
+          body: JSON.stringify({message: error.message, code: error.code, auditRef: error.auditRef, awsRequestId: awsContext.awsRequestId})
+        };
+        t.deepEqual(response, expectedResponse, `response must be ${JSON.stringify(expectedResponse)}`);
+        t.end();
+      })
+      .catch(err => {
+        t.fail(`handler should not have failed - ${err}`);
+        t.end();
+      });
+
+  } catch (err) {
+    t.fail(`handler should not have failed in try-catch - ${err}`);
+    t.end();
+
+  } finally {
+    // Clean up environment
+    setRegionStageAndDeleteCachedInstances(undefined, undefined);
+  }
+});
+
+// =====================================================================================================================
+// generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters & custom settings)
+// =====================================================================================================================
+
+test('generateHandlerFunction simulating failure response (with useLambdaProxy true & NON-legacy parameters & NON-legacy opts & custom settings)', t => {
+  try {
+    // Set up environment for testing
+    const region = setRegionStageAndDeleteCachedInstances('us-west-2', 'dev99');
+
+    // Create sample AWS event and AWS context
+    const event = require('./sample-lamba-proxy-request.json');
+    const invokedFunctionArn = sampleInvokedFunctionArn(region, 'myLambdaFunctionName', 'dev77');
+    const awsContext = sampleAwsContext('myLambdaFunctionName', '1.0.1', invokedFunctionArn, 500);
+
+    const error = new BadRequest('Invalid request');
+    error.headers = {hdr1: 'h1', hdr3: 'h3'};
+    error.auditRef = uuid();
+
+    // Create a sample function to be executed within the Lambda handler function
+    const fn = sampleFunction(undefined, error);
 
     const context = {};
     // noinspection JSUnusedLocalSymbols
@@ -341,16 +420,16 @@ test('generateHandlerFunction simulating failure (with custom settings)', t => {
       preFailureCallback: preFailureCallback
     };
     const createSettings = () => ({handler: handlerSettings});
-    const createOptions = () => require('./other-lambdas-context-options.json');
+    const createOptions = () => require('./api-lambdas-context-options-2-legacy.json');
 
     const opts = {
-      logRequestResponseAtLogLevel: LogLevel.TRACE,
+      logRequestResponseAtLogLevel: LogLevel.INFO,
       invalidRequestMsg: 'Invalid do something request',
       failedMsg: 'Failed to do something useful',
       successMsg: 'Did something useful'
     };
 
-    const handler = otherLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, opts);
+    const handler = apiLambdas.generateHandlerFunction(createContext, createSettings, createOptions, fn, opts);
 
     // Wrap the callback-based AWS Lambda handler function as a Promise returning function purely for testing purposes
     const handlerWithPromise = Promises.wrap(handler);
@@ -358,17 +437,24 @@ test('generateHandlerFunction simulating failure (with custom settings)', t => {
     // Invoke the handler function
     handlerWithPromise(event, awsContext)
       .then(response => {
-        t.fail(`handler should NOT have passed with response ${stringify(response)}`);
+        t.pass(`handler should have ended "normally" with the error`);
+
+        const expectedResponse = {
+          statusCode: error.httpStatus,
+          headers: {hdr1: 'h1', hdr3: 'h3', hdr2: 'dh2'}, // merged headers
+          // body: JSON.stringify({message: error.message, code: error.code, auditRef: error.auditRef, awsRequestId: awsContext.awsRequestId})
+          body: JSON.stringify({
+            ErrorType: error.code,
+            HttpStatus: error.httpStatus,
+            AuditReferenceNumber: error.auditRef || awsContext.awsRequestId,
+            Message: error.message
+          })
+        };
+        t.deepEqual(response, expectedResponse, `response must be ${JSON.stringify(expectedResponse)}`);
         t.end();
       })
       .catch(err => {
-        //console.error(`################### err = ${err}`);
-        t.pass(`handler should have failed - ${err}`);
-        const e = JSON.parse(err);
-        t.equal(e.Message, expectedError.message, `e.Message must be "${expectedError.message}"`);
-        t.equal(e.ErrorType, "Error", `e.ErrorType must be "Error"`);
-        t.equal(e.HttpStatus, 500, `e.HttpStatus must be 500`);
-        t.equal(e.AuditReferenceNumber, awsContext.awsRequestId, `e.AuditReferenceNumber must be "${awsContext.awsRequestId}"`);
+        t.fail(`handler should not have failed - ${err}`);
         t.end();
       });
 

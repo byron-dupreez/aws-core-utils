@@ -1,12 +1,12 @@
 {
-  "logging": {
+  "loggingOptions": {
     "logLevel": "TRACE",
     "useLevelPrefixes": true,
     "envLogLevelName": "LOG_LEVEL",
     "useConsoleTrace": false
   },
 
-  "stageHandling": {
+  "stageHandlingOptions": {
     "envStageName": "STAGE",
     "streamNameStageSeparator": "_",
     "resourceNameStageSeparator": "_",
@@ -14,7 +14,7 @@
     "injectInCase": "upper"
   },
 
-  "custom": {
+  "customOptions": {
     "myCustomSetting1": "myCustomOption1",
     "myCustomSetting2": "myCustomOption2"
   },
@@ -27,9 +27,5 @@
     "maxRetries": 1
   },
 
-  "handler": {
-    "useLambdaProxy": false,
-    "defaultHeaders": null,
-    "allowedHttpStatusCodes": null
-  }
+  "handler": {}
 }

@@ -1,5 +1,27 @@
 ## Changes
 
+### 8.1.0
+- Changes to `api-lambdas` module:
+  - Added support for an optional `postConfigure` function, which can be configured onto `context.handler`, that can be 
+    used by an AWS Lambda `handler` to add any additional configuration needed to the context AFTER the primary 
+    configuration of the context has completed and BEFORE the main function is executed
+  - Added more checks to better handle missing `context` failure cases 
+  - Added `stringify` function to better survive responses with circular dependencies
+- Changes to `other-lambdas` module:
+  - Added support for an optional `postConfigure` function, which can be configured onto `context.handler`, that can be 
+    used by an AWS Lambda `handler` to add any additional configuration needed to the context AFTER the primary 
+    configuration of the context has completed and BEFORE the main function is executed
+  - Added more checks to better handle missing `context` failure cases 
+  - Added `stringify` function to better survive responses with circular dependencies
+- Changes to `stages` module:
+  - Enabled configuration of logging options via a new `logging` property or the legacy `loggingOptions` property
+  - Enabled configuration of logging settings via a new `logging` property or the legacy `loggingSettings` property
+- Changes to `contexts` module:
+  - Enabled configuration of staging options via a new `staging` property or the legacy `stagingOptions` property
+  - Enabled configuration of staging settings via a new `staging` property or the legacy `stagingSettings` property
+  - Enabled configuration of custom options via a new `custom` property or the legacy `customOptions` property
+  - Enabled configuration of custom settings via a new `custom` property or the legacy `customSettings` property
+
 ### 8.0.2
 - Updated `aws-sdk` dev dependency to match latest used in AWS Lambda
 

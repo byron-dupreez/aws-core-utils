@@ -1,12 +1,12 @@
 {
-  "loggingOptions": {
+  "logging": {
     "logLevel": "TRACE",
     "useLevelPrefixes": true,
     "envLogLevelName": "LOG_LEVEL",
     "useConsoleTrace": false
   },
 
-  "stageHandlingOptions": {
+  "stageHandling": {
     "envStageName": "STAGE",
     "streamNameStageSeparator": "_",
     "resourceNameStageSeparator": "_",
@@ -14,7 +14,7 @@
     "injectInCase": "upper"
   },
 
-  "customOptions": {
+  "custom": {
     "myCustomSetting1": "myCustomOption1",
     "myCustomSetting2": "myCustomOption2"
   },

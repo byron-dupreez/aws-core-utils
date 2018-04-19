@@ -43,11 +43,17 @@
 
 /**
  * @typedef {Object} StandardSettings - settings to be used to configure a standard context (see StandardContext)
- * @property {LoggingSettings|undefined} [loggingSettings] - optional logging settings to use to configure logging
- * @property {StageHandlingSettings|undefined} [stageHandlingSettings] - optional stage handling settings to use to
- *           configure stage handling
- * @property {CustomSettings|undefined} [customSettings] - custom settings to be merged into an existing or new
- *           context.custom object
+ * @property {LoggingSettings|undefined} [logging] - optional logging settings to use to configure logging
+ * @property {LoggingSettings|undefined} [loggingSettings] - LEGACY optional logging settings to use to configure
+ *           logging (NB: loggingSettings will be ignored if logging is defined)
+ * @property {StageHandlingSettings|undefined} [stageHandling] - optional stage handling settings to use to configure
+ *           stage handling
+ * @property {StageHandlingSettings|undefined} [stageHandlingSettings] - LEGACY optional stage handling settings to use
+ *           to configure stage handling (NB: stageHandlingSettings will be ignored if stageHandling is defined)
+ * @property {CustomSettings|undefined} [custom] - custom settings to be merged into an existing or new context.custom
+ *           object
+ * @property {CustomSettings|undefined} [customSettings] - LEGACY custom settings to be merged into an existing or new
+ *           context.custom object (NB: customSettings will be ignored if custom is defined)
  * @property {Object|undefined} [kinesisOptions] - optional Kinesis constructor options to use to configure an
  *           AWS.Kinesis instance
  * @property {Object|undefined} [dynamoDBDocClientOptions] - optional DynamoDB.DocumentClient constructor options to use
@@ -56,11 +62,17 @@
 
 /**
  * @typedef {Object} StandardOptions - options to be used to configure a standard context (see StandardContext)
- * @property {LoggingOptions|undefined} [loggingOptions] - optional logging options to use to configure logging
- * @property {StageHandlingOptions|undefined} [stageHandlingOptions] - optional stage handling options to use to
- *           configure stage handling
- * @property {CustomOptions|undefined} [customOptions] - custom options to be merged into an existing or new
- *           context.custom object
+ * @property {LoggingOptions|undefined} [logging] - optional logging options to use to configure logging
+ * @property {LoggingOptions|undefined} [loggingOptions] - LEGACY optional logging options to use to configure logging
+ *           (NB: loggingOptions will be ignored if logging is defined)
+ * @property {StageHandlingOptions|undefined} [stageHandling] - optional stage handling options to use to configure
+ *           stage handling
+ * @property {StageHandlingOptions|undefined} [stageHandlingOptions] - LEGACY optional stage handling options to use to
+ *           configure stage handling (NB: stageHandlingOptions will be ignored if stageHandling is defined)
+ * @property {CustomOptions|undefined} [custom] - custom options to be merged into an existing or new context.custom
+ *           object
+ * @property {CustomOptions|undefined} [customOptions] - LEGACY custom options to be merged into an existing or new
+ *           context.custom object (NB: customOptions will be ignored if custom is defined)
  * @property {Object|undefined} [kinesisOptions] - optional Kinesis constructor options to use to configure an
  *           AWS.Kinesis instance
  * @property {Object|undefined} [dynamoDBDocClientOptions] - optional DynamoDB.DocumentClient constructor options to use
@@ -614,6 +626,9 @@
  *          Lambda `handler` function
  * @property {ToErrorResponse|undefined} [toErrorResponse] - an optional function to be used by an AWS Lambda `handler`
  *           function to convert an AppError into an appropriate error response object
+ * @property {PostConfigure|undefined} [postConfigure] - an optional function to be used by an AWS Lambda `handler` to
+ *           add any additional configuration needed to the context AFTER the primary configuration of the context has
+ *           completed and BEFORE the main function is executed
  * @property {PreSuccessCallback|undefined} [preSuccessCallback] - an optional function to be used by an AWS Lambda
  *           `handler` to run any needed shutdown logic immediately before succeeding the Lambda callback
  * @property {PreFailureCallback|undefined} [preFailureCallback] - an optional function to be used by an AWS Lambda
@@ -623,6 +638,12 @@
 /**
  * @typedef {function(error: AppError, event: AWSEvent, context: StandardHandlerContext): Object} ToErrorResponse -
  *          a function to use to generate an error response (or an error response body for a Lambda Proxy response)
+ */
+
+/**
+ * @typedef {function(event: AWSEvent, context: StandardHandlerContext)} PostConfigure - a function to be used to add
+ *          any additional configuration needed to the context AFTER the primary configuration of the context has
+ *          completed and BEFORE the main function is executed
  */
 
 /**

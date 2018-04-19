@@ -1,11 +1,11 @@
 ﻿{
-  "loggingOptions": {
+  "logging": {
     "logLevel": "trace",
     "useLevelPrefixes": true,
     "useConsoleTrace": false
   },
 
-  "stageHandlingOptions": {
+  "stageHandling": {
     "envStageName": "STAGE",
     "streamNameStageSeparator": "_",
     "resourceNameStageSeparator": "_",

@@ -126,9 +126,13 @@ function isStageHandlingConfigured(context) {
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
  * @param {StageHandlingSettings} settings - the new stage handling settings to use
  * @param {Object|StandardSettings|undefined} [otherSettings] - optional other configuration settings to use
- * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {LoggingSettings|undefined} [otherSettings.logging] - optional logging settings to use to configure logging
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - LEGACY optional logging settings to use to
+ *        configure logging (NB: otherSettings.loggingSettings will be ignored if otherSettings.logging is defined)
  * @param {Object|StandardOptions|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
- * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
+ * @param {LoggingOptions|undefined} [otherOptions.logging] - optional logging options to use to configure logging
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - LEGACY optional logging options to use to configure
+ *        logging (NB: otherOptions.loggingOptions will be ignored if otherOptions.logging is defined)
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured stage handling settings on the given context
  * @return {StageHandling|StandardContext} the context object configured with stage handling settings and logging functionality
@@ -171,9 +175,13 @@ function configureStageHandlingWithSettings(context, settings, otherSettings, ot
  * @param {StageHandlingSettings} [context.stageHandling] - previously configured stage handling settings on the context (if any)
  * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override the default options
  * @param {Object|StandardSettings|undefined} [otherSettings] - optional other configuration settings to use
- * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {LoggingSettings|undefined} [otherSettings.logging] - optional logging settings to use to configure logging
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - LEGACY optional logging settings to use to
+ *        configure logging (NB: otherSettings.loggingSettings will be ignored if otherSettings.logging is defined)
  * @param {Object|StandardOptions|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
- * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
+ * @param {LoggingOptions|undefined} [otherOptions.logging] - optional logging options to use to configure logging
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - LEGACY optional logging options to use to configure
+ *        logging (NB: otherOptions.loggingOptions will be ignored if otherOptions.logging is defined)
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the default settings, which
  * will override any previously configured stage handling settings on the given context
  * @return {StageHandling|StandardContext} the context object configured with stage handling settings (either existing or defaults or
@@ -271,9 +279,13 @@ function getStageHandlingFunction(context, settingName) {
  * @param {StageHandlingSettings|undefined} [settings] - optional stage handling settings to use to configure stage handling
  * @param {StageHandlingOptions|undefined} [options] - optional stage handling options to use to override default options
  * @param {Object|StandardSettings|undefined} [otherSettings] - optional other settings to use to configure dependencies
- * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {LoggingSettings|undefined} [otherSettings.logging] - optional logging settings to use to configure logging
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - LEGACY optional logging settings to use to
+ *        configure logging (NB: otherSettings.loggingSettings will be ignored if otherSettings.logging is defined)
  * @param {Object|StandardOptions|undefined} [otherOptions] - optional other options to use to configure dependencies if corresponding settings are not provided
- * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
+ * @param {LoggingOptions|undefined} [otherOptions.logging] - optional logging options to use to configure logging
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - LEGACY optional logging options to use to configure
+ *        logging (NB: otherOptions.loggingOptions will be ignored if otherOptions.logging is defined)
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured stage handling settings on the given context
  * @return {StageHandling|StandardContext} the given context object configured with stage handling settings and logging functionality
@@ -306,17 +318,21 @@ function configureStageHandling(context, settings, options, otherSettings, other
  *
  * @param {Object|StandardContext|Logger} context - the context onto which to configure the given stage handling dependencies
  * @param {Object|StandardSettings|undefined} [otherSettings] - optional other configuration settings to use
- * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - optional logging settings to use to configure logging
+ * @param {LoggingSettings|undefined} [otherSettings.logging] - optional logging settings to use to configure logging
+ * @param {LoggingSettings|undefined} [otherSettings.loggingSettings] - LEGACY optional logging settings to use to
+ *        configure logging (NB: otherSettings.loggingSettings will be ignored if otherSettings.logging is defined)
  * @param {Object|StandardOptions|undefined} [otherOptions] - optional other configuration options to use if no corresponding other settings are provided
- * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - optional logging options to use to configure logging
+ * @param {LoggingOptions|undefined} [otherOptions.logging] - optional logging options to use to configure logging
+ * @param {LoggingOptions|undefined} [otherOptions.loggingOptions] - LEGACY optional logging options to use to configure
+ *        logging (NB: otherOptions.loggingOptions will be ignored if otherOptions.logging is defined)
  * @param {boolean|undefined} [forceConfiguration] - whether or not to force configuration of the given settings, which
  * will override any previously configured dependencies' settings on the given context
  * @returns {Logger|StandardContext} the context object configured with stage handling dependencies (i.e. logging functionality)
  */
 function configureDependencies(context, otherSettings, otherOptions, forceConfiguration) {
   // Configure logging if not configured yet
-  logging.configureLogging(context, otherSettings ? otherSettings.loggingSettings : undefined,
-    otherOptions ? otherOptions.loggingOptions : undefined, forceConfiguration);
+  logging.configureLogging(context, otherSettings ? (otherSettings.logging || otherSettings.loggingSettings) :
+    undefined, otherOptions ? (otherOptions.logging || otherOptions.loggingOptions) : undefined, forceConfiguration);
 }
 
 /**
