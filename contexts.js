@@ -60,16 +60,18 @@ exports.configureCustomSettings = configureCustomSettings;
  */
 function configureStandardContext(context, settings, options, event, awsContext, forceConfiguration) {
   // Configure the given context with stage handling and its dependencies (i.e. logging)
-  stages.configureStageHandling(context, settings ? (settings.stageHandling || settings.stageHandlingSettings) :
-    undefined, options ? (options.stageHandling || options.stageHandlingOptions) : undefined, settings, options,
+  const stageHandlingSettings = settings ? settings.stageHandling || settings.stageHandlingSettings : undefined;
+  const stageHandlingOptions = options ? options.stageHandling || options.stageHandlingOptions : undefined;
+  stages.configureStageHandling(context, stageHandlingSettings, stageHandlingOptions, settings, options,
     forceConfiguration);
 
   // Configure the region after configuring logging
   regions.configureRegion(context);
 
   // Configure the given context with any custom settings and/or custom options
-  configureCustomSettings(context, settings ? (settings.custom || settings.customSettings) : undefined,
-    options ? (options.custom || options.customOptions) : undefined);
+  const customSettings = settings ? settings.custom || settings.customSettings : undefined;
+  const customOptions = options ? options.custom || options.customOptions : undefined;
+  configureCustomSettings(context, customSettings, customOptions);
 
   // Configure a Kinesis instance (if NOT already configured AND kinesisOptions were provided)
   if (!context.kinesis) {

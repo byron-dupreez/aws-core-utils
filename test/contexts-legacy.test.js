@@ -13,6 +13,9 @@ const LogLevel = logging.LogLevel;
 const strings = require('core-functions/strings');
 const stringify = strings.stringify;
 
+const copy = require('core-functions/copying').copy;
+const deep = {deep: true};
+
 const regions = require("../regions");
 const kinesisCache = require("../kinesis-cache");
 const dynamoDBDocClientCache = require("../dynamodb-doc-client-cache");
@@ -28,31 +31,35 @@ function funcFactory(t, src) {
   return func;
 }
 
-const standardOptions = require('./contexts-standard-options-legacy.json');
+function createStandardOptions() {
+  return copy(require('./contexts-standard-options-legacy.json'), deep);
+}
 
-const standardSettings = {
-  loggingSettings: {
-    logLevel: "error",
-    useLevelPrefixes: false,
-    useConsoleTrace: true
-  },
-  stageHandlingSettings: {
-    streamNameStageSeparator: "-",
-    resourceNameStageSeparator: "-",
-    extractInCase: "upper",
-    injectInCase: "lower"
-  },
-  customSettings: {
-    myCustomSetting1: "myCustomSetting1",
-    myCustomSetting3: "myCustomSetting3"
-  },
-  kinesisOptions: {
-    maxRetries: 1
-  },
-  dynamoDBDocClientOptions: {
-    maxRetries: 2
-  }
-};
+function createStandardSettings() {
+  return {
+    loggingSettings: {
+      logLevel: "error",
+      useLevelPrefixes: false,
+      useConsoleTrace: true
+    },
+    stageHandlingSettings: {
+      streamNameStageSeparator: "-",
+      resourceNameStageSeparator: "-",
+      extractInCase: "upper",
+      injectInCase: "lower"
+    },
+    customSettings: {
+      myCustomSetting1: "myCustomSetting1",
+      myCustomSetting3: "myCustomSetting3"
+    },
+    kinesisOptions: {
+      maxRetries: 1
+    },
+    dynamoDBDocClientOptions: {
+      maxRetries: 2
+    }
+  };
+}
 
 function sampleAwsEvent(streamName, partitionKey, data, omitEventSourceARN) {
   const region = process.env.AWS_REGION;
@@ -284,6 +291,7 @@ test('configureStandardContext with options only', t => {
   let context = {};
 
   regions.setRegion(awsRegion);
+  const standardOptions = createStandardOptions();
   contexts.configureStandardContext(context, undefined, standardOptions, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
@@ -316,6 +324,7 @@ test('configureStandardContext with settings only', t => {
   let context = {};
 
   regions.setRegion(awsRegion);
+  const standardSettings = createStandardSettings();
   contexts.configureStandardContext(context, standardSettings, undefined, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
@@ -351,6 +360,8 @@ test('configureStandardContext with settings and options only', t => {
   let context = {};
 
   regions.setRegion(awsRegion);
+  const standardOptions = createStandardOptions();
+  const standardSettings = createStandardSettings();
   contexts.configureStandardContext(context, standardSettings, standardOptions, undefined, undefined, false);
 
   t.ok(context.stageHandling, 'context.stageHandling must be defined');
@@ -396,9 +407,15 @@ test('configureStandardContext with settings, options, event & awsContext', t =>
     const awsContext = sampleAwsContext('1.0.1', 'dev1');
 
     const functionName = 'sample-function-name';
-    const invoked = `${functionName}:dev1`;
-    const invokedLambda = {functionName: functionName, version: '1.0.1', alias: 'dev1', invoked: invoked};
+    process.env.AWS_LAMBDA_FUNCTION_NAME = ''; //functionName;
+    const functionVersion = '1.0.1';
+    process.env.AWS_LAMBDA_FUNCTION_VERSION = ''; //functionVersion;
 
+    const invoked = `${functionName}:dev1`;
+    const invokedLambda = {functionName: functionName, version: functionVersion, alias: 'dev1', invoked: invoked};
+
+    const standardOptions = createStandardOptions();
+    const standardSettings = createStandardSettings();
     contexts.configureStandardContext(context, standardSettings, standardOptions, event, awsContext, false);
 
     t.ok(context.stageHandling, 'context.stageHandling must be defined');
@@ -470,6 +487,8 @@ test('configureEventAwsContextAndStage', t => {
     const invokedLambda = {functionName: functionName, version: functionVersion, alias: 'dev1', invoked: invoked};
 
     // Initial configuration WITHOUT event & AWS context
+    const standardOptions = createStandardOptions();
+    const standardSettings = createStandardSettings();
     contexts.configureStandardContext(context, standardSettings, standardOptions, undefined, undefined, false);
 
     t.notOk(context.event, 'context.event must not be defined');

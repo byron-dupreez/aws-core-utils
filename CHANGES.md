@@ -13,6 +13,7 @@
     configuration of the context has completed and BEFORE the main function is executed
   - Added more checks to better handle missing `context` failure cases 
   - Added `stringify` function to better survive responses with circular dependencies
+  - Fixed intermittent unit test issues
 - Changes to `stages` module:
   - Enabled configuration of logging options via a new `logging` property or the legacy `loggingOptions` property
   - Enabled configuration of logging settings via a new `logging` property or the legacy `loggingSettings` property
@@ -21,6 +22,7 @@
   - Enabled configuration of staging settings via a new `staging` property or the legacy `stagingSettings` property
   - Enabled configuration of custom options via a new `custom` property or the legacy `customOptions` property
   - Enabled configuration of custom settings via a new `custom` property or the legacy `customSettings` property
+  - Fixed unit test defect
 
 ### 8.0.2
 - Updated `aws-sdk` dev dependency to match latest used in AWS Lambda
