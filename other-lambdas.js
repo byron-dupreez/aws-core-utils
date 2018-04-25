@@ -21,6 +21,8 @@ const log = logging.log;
 
 const deep = {deep: true};
 
+const cycle = require('./_cycle');
+
 /**
  * Utilities for generating `handler` functions for and for working with "other" AWS Lambdas that are NOT exposed via
  * API Gateway and IDEALLY NOT triggered by a Kinesis or DynamoDB stream event source mapping.
@@ -102,25 +104,25 @@ function generateHandlerFunction(createContext, createSettings, createOptions, f
           // Log the given success message (if any)
           if (isNotBlank(opts.successMsg)) log(context, LogLevel.INFO, opts.successMsg);
 
-          succeedLambdaCallback(callback, response, event, context);
+          return succeedLambdaCallback(callback, response, event, context);
         })
         .catch(err => {
           // Fail the Lambda callback
           if (isInstanceOf(err, BadRequest) || appErrors.getHttpStatus(err) === 400) {
             // Log the invalid request
             log(context, LogLevel.WARN, isNotBlank(opts.invalidRequestMsg) ? opts.invalidRequestMsg : 'Invalid request', '-', err.message);
-            failLambdaCallback(callback, err, event, context);
+            return failLambdaCallback(callback, err, event, context);
           } else {
             // Log the error encountered
             log(context, LogLevel.ERROR, isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
-            failLambdaCallback(callback, err, event, context);
+            return failLambdaCallback(callback, err, event, context);
           }
         });
 
     } catch (err) {
       log(context, LogLevel.ERROR, isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
       // Fail the Lambda callback
-      failLambdaCallback(callback, err, event, context);
+      return failLambdaCallback(callback, err, event, context);
     }
   }
 
@@ -257,8 +259,12 @@ function executePreFailureCallback(error, errorResponse, event, context) {
  * @param {StandardHandlerContext} context - the context to use
  */
 function succeedLambdaCallback(callback, response, event, context) {
-  executePreSuccessCallback(response, event, context)
-    .then(() => callback(null, response));
+  return executePreSuccessCallback(response, event, context)
+    .then(() => callback(null, response))
+    .catch(err => {
+      console.error(`Unexpected failure after executePreSuccessCallback`, err);
+      return callback(null, response);
+    });
 }
 
 /**
@@ -276,21 +282,29 @@ function succeedLambdaCallback(callback, response, event, context) {
  * @param {StandardHandlerContext} context - the context being used
  */
 function failLambdaCallback(callback, error, event, context) {
-  // Convert the error into an "API" error with an HTTP status code
-  const apiError = appErrors.toAppError(error);
+  return Promises.try(() => {
+    // Convert the error into an "API" error with an HTTP status code
+    const apiError = appErrors.toAppError(error);
 
-  // Resolve the AWS request id (if available)
-  apiError.awsRequestId = trim(apiError.awsRequestId) || trim(error.awsRequestId) ||
-    (context && (trim(context.awsRequestId) || (context.awsContext && trim(context.awsContext.awsRequestId)))) ||
-    undefined;
+    // Resolve the AWS request id (if available)
+    apiError.awsRequestId = trim(apiError.awsRequestId) || trim(error.awsRequestId) ||
+      (context && (trim(context.awsRequestId) || (context.awsContext && trim(context.awsContext.awsRequestId)))) ||
+      undefined;
 
-  // Resolve the audit reference (if available)
-  apiError.auditRef = trim(apiError.auditRef) || trim(error.auditRef) || undefined;
+    // Resolve the audit reference (if available)
+    apiError.auditRef = trim(apiError.auditRef) || trim(error.auditRef) || undefined;
 
-  const errorResponse = toCustomOrDefaultErrorResponse(apiError, event, context);
-
-  executePreFailureCallback(apiError, errorResponse, event, context)
-    .then(() => callback(JSON.stringify(errorResponse), null));
+    const errorResponse = toCustomOrDefaultErrorResponse(apiError, event, context);
+    return executePreFailureCallback(apiError, errorResponse, event, context)
+      .then(() => callback(stringify(errorResponse), null))
+      .catch(err => {
+        console.error(`Unexpected failure after executePreFailureCallback`, err);
+        return callback(stringify(errorResponse), null);
+      });
+  }).catch(err => {
+    console.error(`Unexpected failure during failLambdaCallback`, err);
+    return callback(stringify(error), null);
+  });
 }
 
 /**
@@ -329,8 +343,19 @@ function toDefaultErrorResponse(error) {
 function stringify(o) {
   try {
     return JSON.stringify(o);
-  } catch (err) {
+  }
+  catch (err) {
     log(context, LogLevel.ERROR, err);
-    return strings.stringify(o);
+
+    try {
+      // First replace any circular references with path references & then retry JSON.stringify again
+      const decycled = cycle.decycle(o);
+      return JSON.stringify(decycled);
+    }
+    catch (err) {
+      // Give up and use strings.stringify, which will at least show structure, but may NOT be parseable
+      log(context, LogLevel.ERROR, err);
+      return strings.stringify(o);
+    }
   }
 }

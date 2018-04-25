@@ -25,6 +25,8 @@ const log = logging.log;
 const deep = {deep: true};
 const noReplace = {deep: false, replace: false};
 
+const cycle = require('./_cycle');
+
 /**
  * Utilities for generating `handler` functions for and for working with AWS Lambdas that are exposed via API Gateway.
  * - For Kinesis stream triggered AWS Lambdas, instead consider using the `kinesis-stream-consumer` module.
@@ -121,25 +123,25 @@ function generateHandlerFunction(createContext, createSettings, createOptions, f
           // Log the given success message (if any)
           if (isNotBlank(opts.successMsg)) log(context, LogLevel.INFO, opts.successMsg);
 
-          succeedLambdaCallback(callback, response, event, context);
+          return succeedLambdaCallback(callback, response, event, context);
         })
         .catch(err => {
           // Fail the Lambda callback
           if (isInstanceOf(err, BadRequest) || appErrors.getHttpStatus(err) === 400) {
             // Log the invalid request
             log(context, LogLevel.WARN, isNotBlank(opts.invalidRequestMsg) ? opts.invalidRequestMsg : 'Invalid request', '-', err.message);
-            failLambdaCallback(callback, err, event, context);
+            return failLambdaCallback(callback, err, event, context);
           } else {
             // Log the error encountered
             log(context, LogLevel.ERROR, isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
-            failLambdaCallback(callback, err, event, context);
+            return failLambdaCallback(callback, err, event, context);
           }
         });
 
     } catch (err) {
       log(context, LogLevel.ERROR, isNotBlank(opts.failureMsg) ? opts.failureMsg : 'Failed to execute Lambda', err);
       // Fail the Lambda callback
-      failLambdaCallback(callback, err, event, context);
+      return failLambdaCallback(callback, err, event, context);
     }
   }
 
@@ -289,17 +291,30 @@ function executePreFailureCallback(error, errorResponse, event, context) {
  * @param {StandardHandlerContext} context - the context to use
  */
 function succeedLambdaCallback(callback, response, event, context) {
-  const handler = context && context.handler;
-  if (handler && handler.useLambdaProxy) {
-    const statusCode = response && isNotBlank(response.statusCode) ? response.statusCode : 200;
-    const body = (response && response.body) || response || {};
-    const proxyResponse = toLambdaProxyResponse(statusCode, response && response.headers, body, handler.defaultHeaders);
-    executePreSuccessCallback(proxyResponse, event, context)
-      .then(() => callback(null, proxyResponse));
-  } else {
-    executePreSuccessCallback(response, event, context)
-      .then(() => callback(null, response));
-  }
+  return Promises.try(() => {
+    const handler = context && context.handler;
+    if (handler && handler.useLambdaProxy) {
+      const statusCode = response && isNotBlank(response.statusCode) ? response.statusCode : 200;
+      const body = (response && response.body) || response || {};
+      const proxyResponse = toLambdaProxyResponse(statusCode, response && response.headers, body, handler.defaultHeaders);
+      return executePreSuccessCallback(proxyResponse, event, context)
+        .then(() => callback(null, proxyResponse))
+        .catch(err => {
+          console.error(`Unexpected failure after executePreSuccessCallback`, err);
+          return callback(null, proxyResponse);
+        });
+    } else {
+      return executePreSuccessCallback(response, event, context)
+        .then(() => callback(null, response))
+        .catch(err => {
+          console.error(`Unexpected failure after executePreSuccessCallback`, err);
+          return callback(null, response);
+        });
+    }
+  }).catch(err => {
+    console.error(`Unexpected failure during succeedLambdaCallback`, err);
+    return callback(null, response);
+  });
 }
 
 /**
@@ -319,31 +334,44 @@ function succeedLambdaCallback(callback, response, event, context) {
  * @param {StandardHandlerContext} context - the context being used
  */
 function failLambdaCallback(callback, error, event, context) {
-  // Convert the error into an "API" error
-  const handler = context && context.handler;
-  const allowedHttpStatusCodes = handler && handler.allowedHttpStatusCodes;
-  const apiError = appErrors.toAppErrorForApiGateway(error, undefined, undefined, allowedHttpStatusCodes);
+  return Promises.try(() => {
+    // Convert the error into an "API" error
+    const handler = context && context.handler;
+    const allowedHttpStatusCodes = handler && handler.allowedHttpStatusCodes;
+    const apiError = appErrors.toAppErrorForApiGateway(error, undefined, undefined, allowedHttpStatusCodes);
 
-  // Resolve the AWS request id (if available)
-  apiError.awsRequestId = trim(apiError.awsRequestId) || trim(error.awsRequestId) ||
-    (context && (trim(context.awsRequestId) || (context.awsContext && trim(context.awsContext.awsRequestId)))) ||
-    undefined;
+    // Resolve the AWS request id (if available)
+    apiError.awsRequestId = trim(apiError.awsRequestId) || trim(error.awsRequestId) ||
+      (context && (trim(context.awsRequestId) || (context.awsContext && trim(context.awsContext.awsRequestId)))) ||
+      undefined;
 
-  // Resolve the audit reference (if available)
-  apiError.auditRef = trim(apiError.auditRef) || trim(error.auditRef) || undefined;
+    // Resolve the audit reference (if available)
+    apiError.auditRef = trim(apiError.auditRef) || trim(error.auditRef) || undefined;
 
-  if (handler && handler.useLambdaProxy) {
-    const statusCode = apiError.httpStatus;
-    const body = toCustomOrDefaultErrorResponseBody(apiError, event, context);
-    const defaultHeaders = handler.defaultHeaders;
-    const proxyResponse = toLambdaProxyResponse(statusCode, error.headers, body, defaultHeaders);
-    executePreFailureCallback(apiError, proxyResponse, event, context)
-      .then(() => callback(null, proxyResponse));
-  } else {
-    const errorResponse = toCustomOrDefaultErrorResponse(apiError, event, context);
-    executePreFailureCallback(apiError, errorResponse, event, context)
-      .then(() => callback(JSON.stringify(errorResponse), null));
-  }
+    if (handler && handler.useLambdaProxy) {
+      const statusCode = apiError.httpStatus;
+      const body = toCustomOrDefaultErrorResponseBody(apiError, event, context);
+      const defaultHeaders = handler.defaultHeaders;
+      const proxyResponse = toLambdaProxyResponse(statusCode, error.headers, body, defaultHeaders);
+      return executePreFailureCallback(apiError, proxyResponse, event, context)
+        .then(() => callback(null, proxyResponse))
+        .catch(err => {
+          console.error(`Unexpected failure after executePreFailureCallback`, err);
+          return callback(null, proxyResponse);
+        });
+    } else {
+      const errorResponse = toCustomOrDefaultErrorResponse(apiError, event, context);
+      return executePreFailureCallback(apiError, errorResponse, event, context)
+        .then(() => callback(stringify(errorResponse), null))
+        .catch(err => {
+          console.error(`Unexpected failure after executePreFailureCallback`, err);
+          return callback(stringify(errorResponse), null);
+        });
+    }
+  }).catch(err => {
+    console.error(`Unexpected failure during failLambdaCallback`, err);
+    return callback(stringify(error), null);
+  });
 }
 
 /**
@@ -363,7 +391,7 @@ function toLambdaProxyResponse(statusCode, headers, body, defaultHeaders) {
     proxyResponse.headers = headersWithDefaults;
   }
 
-  proxyResponse.body = isString(body) ? body : JSON.stringify(body);
+  proxyResponse.body = isString(body) ? body : stringify(body);
 
   return proxyResponse;
 }
@@ -423,11 +451,13 @@ function toCustomOrDefaultErrorResponse(error, event, context) {
  */
 function toDefaultErrorResponseBody(error) {
   const json = error && error.toJSON();
-  if (json.httpStatus) {
-    delete json.httpStatus; // don't really need `httpStatus` inside `body` too, since have it in response as `statusCode`
-  }
-  if (json.headers) {
-    delete json.headers; // don't want error's `headers` inside `body`, since have more comprehensive `headers` in response
+  if (json) {
+    if (json.httpStatus) {
+      delete json.httpStatus; // don't really need `httpStatus` inside `body` too, since have it in response as `statusCode`
+    }
+    if (json.headers) {
+      delete json.headers; // don't want error's `headers` inside `body`, since have more comprehensive `headers` in response
+    }
   }
   return json;
 }
@@ -444,8 +474,19 @@ function toDefaultErrorResponse(error) {
 function stringify(o) {
   try {
     return JSON.stringify(o);
-  } catch (err) {
+  }
+  catch (err) {
     log(context, LogLevel.ERROR, err);
-    return strings.stringify(o);
+
+    try {
+      // First replace any circular references with path references & then retry JSON.stringify again
+      const decycled = cycle.decycle(o);
+      return JSON.stringify(decycled);
+    }
+    catch (err) {
+      // Give up and use strings.stringify, which will at least show structure, but may NOT be parseable
+      log(context, LogLevel.ERROR, err);
+      return strings.stringify(o);
+    }
   }
 }
