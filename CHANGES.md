@@ -1,5 +1,8 @@
 ## Changes
 
+### 8.1.2
+- Updated dependencies
+
 ### 8.1.1
 - Changes to `api-lambdas` and `other-lambdas` modules:
   - Changed `succeedLambdaCallback` and `failLambdaCallback` functions to return promises of the callback results
