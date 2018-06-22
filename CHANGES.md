@@ -1,5 +1,8 @@
 ## Changes
 
+### 8.1.3
+- Updated dependencies
+
 ### 8.1.2
 - Updated dependencies
 
